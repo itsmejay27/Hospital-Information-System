@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, Page, Patient, HealthRecord, DiagnosticResult, MedicationOrder, TreatmentLog, AdmissionEntry, AuditLog } from "./types";
 import {
   DEMO_USERS,
@@ -862,6 +862,10 @@ export default function App() {
   // Default active role: Maria Santos (Patient)
   const [user, setUser] = useState<User | null>(DEMO_USERS["patient01"].user);
   const [showLogin, setShowLogin] = useState(false);
+
+  useEffect(() => {
+    document.title = "CityCare General Hospital";
+  }, []);
 
   // Core Hospital Shared Data States
   const [patients, setPatients] = useState<Patient[]>(INITIAL_PATIENTS);

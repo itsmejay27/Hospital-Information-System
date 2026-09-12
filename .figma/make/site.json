@@ -1,4 +1,5 @@
 {
+  "title": "CityCare General Hospital",
   "description": "Provides patients and staff secure access to hospital info, patient records, lab results, and treatment details for streamlined healthcare management.",
   "robots": {
     "index": false
