@@ -14,6 +14,19 @@ export type Page =
   | "registration-admission"
   | "privacy";
 
+export type OpdTab =
+  | "dashboard"
+  | "queue"
+  | "registration"
+  | "workbench"
+  | "vitals"
+  | "prescriptions"
+  | "diagnostics"
+  | "philhealth"
+  | "referrals"
+  | "reports"
+  | "admin";
+
 export interface User {
   id: string;
   name: string;
@@ -45,6 +58,28 @@ export interface PhilHealthInfo {
   category: PhilHealthCategory;
   eligibilityStatus: "Active / Eligible" | "Under Verification" | "Sponsored (Indigent)";
   coverageDetails: string;
+}
+
+export type ClaimStatus =
+  | "Ready for Submission"
+  | "Transmitted"
+  | "Under Adjudication"
+  | "Approved / Reimbursed"
+  | "Returned / Pending Docs";
+
+export interface PhilHealthClaim {
+  id: string;
+  patientId: string;
+  pin: string;
+  memberName: string;
+  membershipType: string;
+  diagnosisWithIcd: string;
+  caseRateAmount: string; // e.g. "Php 6,000 - Medical Case"
+  claimStatus: ClaimStatus;
+  submissionDate?: string;
+  hospitalCharges: number;
+  philhealthBenefit: number;
+  patientPayable: number;
 }
 
 export interface PatientConsents {
@@ -92,6 +127,8 @@ export interface Patient {
   medicalHistory?: MedicalHistory;
 }
 
+export type BmiCategory = "Underweight" | "Normal" | "Overweight" | "Obese";
+
 export interface VitalsData {
   systolicBp: number;
   diastolicBp: number;
@@ -100,6 +137,9 @@ export interface VitalsData {
   spo2: number;
   temperature: number;
   weightKg?: number;
+  heightCm?: number;
+  bmi?: number;
+  bmiCategory?: BmiCategory;
   fluidIntakeMl?: number; // IV + Oral fluid intake
   urineOutputMl?: number;  // Urine output
   fluidNotes?: string;
@@ -117,6 +157,7 @@ export interface HealthRecord {
   doctorLicense?: string;
   diagnosis: string;
   icd10Code?: string;
+  differentialDiagnosis?: string[];
   subjective: string;
   objective: string;
   assessment: string;
@@ -130,6 +171,9 @@ export interface HealthRecord {
     wt: string;
     spo2?: string;
     rr?: string;
+    height?: string;
+    bmi?: string;
+    bmiCategory?: string;
     systolic?: number;
     diastolic?: number;
     fluidIntakeMl?: number;
@@ -283,3 +327,45 @@ export interface PrivacyConsentSettings {
   twoFactorAuth: boolean;
   lastUpdated: string;
 }
+
+export type QueueStatus = "Waiting" | "In-Consultation" | "Completed" | "Referred" | "No-Show";
+
+export interface OpdQueueItem {
+  id: string;
+  queueNumber: number; // 1, 2, 3...
+  patientId: string;
+  patientName: string;
+  age: number;
+  gender: string;
+  triageTier: TriageTier;
+  checkInTime: string;
+  chiefComplaint: string;
+  assignedDoctor: string;
+  status: QueueStatus;
+  roomOrBooth: string;
+}
+
+export interface OpdReferral {
+  id: string;
+  patientId: string;
+  patientName: string;
+  referredFrom: string;
+  referredTo: string;
+  reason: string;
+  priority: "Routine" | "Urgent" | "Stat Emergency";
+  timestamp: string;
+  referringDoctor: string;
+  status: "Pending" | "Accepted" | "Completed";
+}
+
+export interface OpdDischarge {
+  id: string;
+  patientId: string;
+  patientName: string;
+  dischargeDate: string;
+  disposition: "Treated & Sent Home" | "Admitted to Inpatient Ward" | "Transferred to Tertiary Center" | "Follow-up Scheduled";
+  followUpDate?: string;
+  instructions: string;
+  clearedByDoctor: string;
+}
+

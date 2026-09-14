@@ -12,6 +12,11 @@ import {
   VisitorLog,
   ShiftEndorsement,
   HospitalConfig,
+  OpdTab,
+  OpdQueueItem,
+  PhilHealthClaim,
+  OpdReferral,
+  OpdDischarge,
 } from "./types";
 import {
   DEMO_USERS,
@@ -25,13 +30,24 @@ import {
   INITIAL_VISITOR_LOGS,
   INITIAL_SHIFT_ENDORSEMENTS,
   INITIAL_HOSPITAL_CONFIG,
+  INITIAL_OPD_QUEUE,
+  INITIAL_PHILHEALTH_CLAIMS,
+  INITIAL_OPD_REFERRALS,
+  INITIAL_OPD_DISCHARGES,
 } from "./mockData";
+import OpdSidebar from "./components/OpdSidebar";
+import OpdTopNav from "./components/OpdTopNav";
+import OpdDashboardView from "./views/OpdDashboardView";
+import OpdQueueView from "./views/OpdQueueView";
+import PhilHealthClaimsView from "./views/PhilHealthClaimsView";
+import OpdReportsView from "./views/OpdReportsView";
 import RoleSwitcher from "./components/RoleSwitcher";
 import DoctorWorkbench from "./views/DoctorWorkbench";
 import NurseStation from "./views/NurseStation";
 import StaffAdmissions from "./views/StaffAdmissions";
 import AdminCompliance from "./views/AdminCompliance";
 import BackButton from "./components/BackButton";
+
 import {
   Siren,
   Activity,
@@ -880,6 +896,37 @@ export default function App() {
   const [visitorLogs, setVisitorLogs] = useState<VisitorLog[]>(INITIAL_VISITOR_LOGS);
   const [shiftEndorsements, setShiftEndorsements] = useState<ShiftEndorsement[]>(INITIAL_SHIFT_ENDORSEMENTS);
 
+
+  // OPD System State
+  const [opdTab, setOpdTab] = useState<OpdTab>("dashboard");
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(INITIAL_PATIENTS[0]);
+  const [opdQueue, setOpdQueue] = useState<OpdQueueItem[]>(INITIAL_OPD_QUEUE);
+  const [philHealthClaims, setPhilHealthClaims] = useState<PhilHealthClaim[]>(INITIAL_PHILHEALTH_CLAIMS);
+  const [opdReferrals, setOpdReferrals] = useState<OpdReferral[]>(INITIAL_OPD_REFERRALS);
+  const [opdDischarges, setOpdDischarges] = useState<OpdDischarge[]>(INITIAL_OPD_DISCHARGES);
+  const [viewPublicSite, setViewPublicSite] = useState(false);
+
+  const handleCallNextPatient = () => {
+    const nextIdx = opdQueue.findIndex(q => q.status === "Waiting");
+    if (nextIdx !== -1) {
+      const updated = [...opdQueue];
+      updated[nextIdx] = {
+        ...updated[nextIdx],
+        status: "In-Consultation",
+        roomOrBooth: "Consultation Room 1",
+      };
+      setOpdQueue(updated);
+
+      const patient = patients.find(p => p.id === updated[nextIdx].patientId);
+      if (patient) {
+        setSelectedPatient(patient);
+        setOpdTab("workbench");
+      }
+    }
+  };
+
+
   const navigateTo = (newPage: Page) => {
     if (page !== newPage) {
       setHistoryStack(prev => [...prev, page]);
@@ -1215,25 +1262,55 @@ export default function App() {
     setAuditLogs(prev => [newLog, ...prev]);
   };
 
-  // — STRICT ROLE-BASED ISOLATED RENDERING (NO PATIENT PORTAL) —
-  const renderRoleSpecificView = () => {
-    if (!user) {
-      return (
-        <HomePage
-          setPage={navigateTo}
-          onLogin={() => setShowLogin(true)}
-          user={user}
-          config={hospitalConfig}
-        />
-      );
-    }
+  // — 11 OPD CORE MODULES ROUTER —
+  const renderOpdTabContent = () => {
+    switch (opdTab) {
+      case "dashboard":
+        return (
+          <OpdDashboardView
+            queue={opdQueue}
+            patients={patients}
+            onSelectPatient={(p) => {
+              setSelectedPatient(p);
+              setOpdTab("workbench");
+            }}
+            onNavigateTab={(tab) => setOpdTab(tab)}
+            onCallNextPatient={handleCallNextPatient}
+            currentUser={user}
+          />
+        );
 
-    switch (user.role) {
-      case "doctor":
+      case "queue":
+        return (
+          <OpdQueueView
+            queue={opdQueue}
+            onUpdateQueue={setOpdQueue}
+            patients={patients}
+            onSelectPatient={(p) => setSelectedPatient(p)}
+            onNavigateToWorkbench={() => setOpdTab("workbench")}
+          />
+        );
+
+      case "registration":
+        return (
+          <StaffAdmissions
+            user={user?.role === "staff" ? user : DEMO_USERS["staff.jendy"].user}
+            patients={patients}
+            onAddPatient={handleAddPatient}
+            admissions={admissions}
+            onAddAdmission={handleAddAdmission}
+            onUpdatePatientStatus={handleUpdatePatientStatus}
+            visitorLogs={visitorLogs}
+            onAddVisitorLog={handleAddVisitorLog}
+            onCheckOutVisitor={handleCheckOutVisitor}
+            onSignOut={handleLogout}
+          />
+        );
+
+      case "workbench":
         return (
           <DoctorWorkbench
-            key={`portal-doctor-${user.id}`}
-            user={user}
+            user={user?.role === "doctor" ? user : DEMO_USERS["dr.reyes"].user}
             patients={patients}
             records={records}
             onAddRecord={handleAddRecord}
@@ -1241,15 +1318,19 @@ export default function App() {
             onAddLabResult={handleAddResult}
             medications={medications}
             onAddMedication={handleAddMedication}
+            initialPatientId={selectedPatient?.id}
+            referrals={opdReferrals}
+            onAddReferral={(ref) => setOpdReferrals(prev => [ref, ...prev])}
+            discharges={opdDischarges}
+            onAddDischarge={(dis) => setOpdDischarges(prev => [dis, ...prev])}
             onSignOut={handleLogout}
           />
         );
 
-      case "nurse":
+      case "vitals":
         return (
           <NurseStation
-            key={`portal-nurse-${user.id}`}
-            user={user}
+            user={user?.role === "nurse" ? user : DEMO_USERS["nurse.angel"].user}
             patients={patients}
             medications={medications}
             onAdministerMedication={handleAdministerMedication}
@@ -1265,28 +1346,87 @@ export default function App() {
           />
         );
 
-      case "staff":
+      case "prescriptions":
         return (
-          <StaffAdmissions
-            key={`portal-staff-${user.id}`}
-            user={user}
+          <DoctorWorkbench
+            key="wb-rx"
+            user={user?.role === "doctor" ? user : DEMO_USERS["dr.reyes"].user}
             patients={patients}
-            onAddPatient={handleAddPatient}
-            admissions={admissions}
-            onAddAdmission={handleAddAdmission}
-            onUpdatePatientStatus={handleUpdatePatientStatus}
-            visitorLogs={visitorLogs}
-            onAddVisitorLog={handleAddVisitorLog}
-            onCheckOutVisitor={handleCheckOutVisitor}
+            records={records}
+            onAddRecord={handleAddRecord}
+            labResults={labResults}
+            onAddLabResult={handleAddResult}
+            medications={medications}
+            onAddMedication={handleAddMedication}
+            initialPatientId={selectedPatient?.id}
+            referrals={opdReferrals}
+            discharges={opdDischarges}
             onSignOut={handleLogout}
+          />
+        );
+
+      case "diagnostics":
+        return (
+          <DoctorWorkbench
+            key="wb-diag"
+            user={user?.role === "doctor" ? user : DEMO_USERS["dr.reyes"].user}
+            patients={patients}
+            records={records}
+            onAddRecord={handleAddRecord}
+            labResults={labResults}
+            onAddLabResult={handleAddResult}
+            medications={medications}
+            onAddMedication={handleAddMedication}
+            initialPatientId={selectedPatient?.id}
+            referrals={opdReferrals}
+            discharges={opdDischarges}
+            onSignOut={handleLogout}
+          />
+        );
+
+      case "philhealth":
+        return (
+          <PhilHealthClaimsView
+            claims={philHealthClaims}
+            onUpdateClaims={setPhilHealthClaims}
+            hospitalConfig={hospitalConfig}
+          />
+        );
+
+      case "referrals":
+        return (
+          <DoctorWorkbench
+            key="wb-ref"
+            user={user?.role === "doctor" ? user : DEMO_USERS["dr.reyes"].user}
+            patients={patients}
+            records={records}
+            onAddRecord={handleAddRecord}
+            labResults={labResults}
+            onAddLabResult={handleAddResult}
+            medications={medications}
+            onAddMedication={handleAddMedication}
+            initialPatientId={selectedPatient?.id}
+            referrals={opdReferrals}
+            onAddReferral={(ref) => setOpdReferrals(prev => [ref, ...prev])}
+            discharges={opdDischarges}
+            onAddDischarge={(dis) => setOpdDischarges(prev => [dis, ...prev])}
+            onSignOut={handleLogout}
+          />
+        );
+
+      case "reports":
+        return (
+          <OpdReportsView
+            patients={patients}
+            claims={philHealthClaims}
+            hospitalConfig={hospitalConfig}
           />
         );
 
       case "admin":
         return (
           <AdminCompliance
-            key={`portal-admin-${user.id}`}
-            user={user}
+            user={user?.role === "admin" ? user : DEMO_USERS["admin.ramos"].user}
             auditLogs={auditLogs}
             hospitalConfig={hospitalConfig}
             onUpdateHospitalConfig={handleUpdateHospitalConfig}
@@ -1299,73 +1439,125 @@ export default function App() {
 
       default:
         return (
-          <HomePage
-            setPage={navigateTo}
-            onLogin={() => setShowLogin(true)}
-            user={user}
-            config={hospitalConfig}
+          <OpdDashboardView
+            queue={opdQueue}
+            patients={patients}
+            onSelectPatient={(p) => {
+              setSelectedPatient(p);
+              setOpdTab("workbench");
+            }}
+            onNavigateTab={(tab) => setOpdTab(tab)}
+            onCallNextPatient={handleCallNextPatient}
+            currentUser={user}
           />
         );
     }
   };
 
-  // Main Page Content Router
-  const renderContent = () => {
-    switch (page) {
-      case "home":
-        return (
-          <HomePage
-            setPage={navigateTo}
-            onLogin={() => setShowLogin(true)}
-            user={user}
-            config={hospitalConfig}
+  // If user is not logged in or chose public site view
+  if (viewPublicSite || !user) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[var(--background)]">
+        <RoleSwitcher
+          currentUser={user}
+          onSwitchUser={(u) => {
+            handleSwitchUser(u);
+            setViewPublicSite(false);
+          }}
+          onSignOut={handleLogout}
+        />
+        <EmergencyBanner config={hospitalConfig} />
+        <Nav
+          page={page}
+          setPage={navigateTo}
+          user={user}
+          config={hospitalConfig}
+          onLogin={() => setShowLogin(true)}
+          onLogout={handleLogout}
+        />
+        <main className="flex-1">
+          {page === "home" ? (
+            <div className="p-6 text-center space-y-4">
+              <HomePage
+                setPage={navigateTo}
+                onLogin={() => setShowLogin(true)}
+                user={user}
+                config={hospitalConfig}
+              />
+              <div className="py-6">
+                <button
+                  onClick={() => {
+                    if (!user) setUser(DEMO_USERS["dr.reyes"].user);
+                    setViewPublicSite(false);
+                  }}
+                  className="px-6 py-3 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold shadow-lg text-sm"
+                >
+                  Enter OPD Clinical System Workbench →
+                </button>
+              </div>
+            </div>
+          ) : page === "about" ? (
+            <AboutPage onBack={handleBack} config={hospitalConfig} />
+          ) : page === "departments" ? (
+            <DepartmentsPage onBack={handleBack} />
+          ) : page === "announcements" ? (
+            <AnnouncementsPage onBack={handleBack} />
+          ) : page === "staff" ? (
+            <StaffPage onBack={handleBack} />
+          ) : (
+            <ContactPage onBack={handleBack} config={hospitalConfig} />
+          )}
+        </main>
+        <Footer setPage={navigateTo} config={hospitalConfig} />
+        {showLogin && (
+          <LoginModal
+            onClose={() => setShowLogin(false)}
+            onSuccess={(u) => {
+              handleLogin(u);
+              setViewPublicSite(false);
+            }}
           />
-        );
-      case "about":
-        return <AboutPage onBack={handleBack} config={hospitalConfig} />;
-      case "departments":
-        return <DepartmentsPage onBack={handleBack} />;
-      case "announcements":
-        return <AnnouncementsPage onBack={handleBack} />;
-      case "staff":
-        return <StaffPage onBack={handleBack} />;
-      case "contact":
-        return <ContactPage onBack={handleBack} config={hospitalConfig} />;
-      case "dashboard":
-      default:
-        return renderRoleSpecificView();
-    }
-  };
+        )}
+      </div>
+    );
+  }
 
+  // — MAIN PROFESSIONAL FULL-WIDTH OPD WORKSPACE —
   return (
-    <div className="min-h-screen flex flex-col bg-[var(--background)]">
-      {/* Role Switcher Toolbar for instant live role testing */}
-      <RoleSwitcher
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-100/70 font-sans text-slate-800 antialiased">
+      {/* Persistent Collapsible Sidebar */}
+      <OpdSidebar
+        currentTab={opdTab}
+        onSelectTab={setOpdTab}
+        collapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         currentUser={user}
-        onSwitchUser={handleSwitchUser}
-        onSignOut={handleLogout}
+        queueCount={opdQueue.filter(q => q.status === "Waiting").length}
       />
 
-      {/* Hospital Emergency Hotline Banner */}
-      <EmergencyBanner config={hospitalConfig} />
+      {/* Main Content Workspace Column */}
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+        {/* Compact Top Navigation Bar */}
+        <OpdTopNav
+          currentUser={user}
+          onSwitchUser={handleSwitchUser}
+          onSignOut={handleLogout}
+          patients={patients}
+          onSelectPatient={(p) => {
+            setSelectedPatient(p);
+            setOpdTab("workbench");
+          }}
+          selectedPatient={selectedPatient}
+          emergencyHotline={hospitalConfig.emergencyHotline}
+        />
 
-      {/* Top Header Navigation */}
-      <Nav
-        page={page}
-        setPage={navigateTo}
-        user={user}
-        config={hospitalConfig}
-        onLogin={() => setShowLogin(true)}
-        onLogout={handleLogout}
-      />
+        {/* Dynamic OPD Tab Workspace — Utilizes full screen width with zero wasted margins */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 min-w-0">
+          {renderOpdTabContent()}
+        </main>
+      </div>
 
-      {/* Main Page Content */}
-      <main className="flex-1">{renderContent()}</main>
-
-      {/* Footer */}
-      <Footer setPage={navigateTo} config={hospitalConfig} />
-
-      {/* Login / Authentication Modal */}
+      {/* Login / Auth Modal if triggered */}
       {showLogin && (
         <LoginModal
           onClose={() => setShowLogin(false)}
@@ -1374,4 +1566,5 @@ export default function App() {
       )}
     </div>
   );
+
 }
