@@ -1,6 +1,6 @@
 import { User, Role } from "../types";
 import { DEMO_USERS } from "../mockData";
-import { User as UserIcon, Stethoscope, Syringe, ClipboardList, ShieldCheck, LogOut } from "./Icons";
+import { Stethoscope, Syringe, ClipboardList, ShieldCheck, LogOut, User as UserIcon } from "./Icons";
 
 interface RoleSwitcherProps {
   currentUser: User | null;
@@ -13,8 +13,6 @@ export default function RoleSwitcher({ currentUser, onSwitchUser, onSignOut }: R
 
   const renderRoleIcon = (role: Role, size = 16) => {
     switch (role) {
-      case "patient":
-        return <UserIcon size={size} strokeWidth={2} className="text-slate-400" />;
       case "doctor":
         return <Stethoscope size={size} strokeWidth={2} className="text-slate-400" />;
       case "nurse":
@@ -30,8 +28,6 @@ export default function RoleSwitcher({ currentUser, onSwitchUser, onSignOut }: R
 
   const getRoleBadgeStyle = (role: Role) => {
     switch (role) {
-      case "patient":
-        return "bg-teal-950 text-teal-300 border-teal-800";
       case "doctor":
         return "bg-blue-950 text-blue-300 border-blue-800";
       case "nurse":
@@ -46,28 +42,33 @@ export default function RoleSwitcher({ currentUser, onSwitchUser, onSignOut }: R
   };
 
   return (
-    <div className="bg-slate-900 text-slate-200 text-xs py-2 px-4 border-b border-slate-800 sticky top-0 z-50">
+    <div className="bg-slate-900 text-slate-200 text-xs py-2 px-4 border-b border-slate-800 sticky top-0 z-50 shadow-xs">
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
-            DEMO ROLE SWITCHER
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300 border border-slate-700 tracking-wider">
+            STAFF SESSIONS
           </span>
-          <span className="text-slate-400 hidden sm:inline">Active:</span>
+          <span className="text-slate-400 hidden sm:inline">Active Staff:</span>
           {currentUser ? (
-            <span className="font-medium text-white flex items-center gap-1.5">
+            <span className="font-medium text-white flex items-center gap-1.5 flex-wrap">
               <span>{currentUser.name}</span>
-              <span className={`px-2 py-0.5 text-[11px] font-semibold rounded border inline-flex items-center gap-1 ${getRoleBadgeStyle(currentUser.role)}`}>
-                {renderRoleIcon(currentUser.role, 14)}
-                <span>{currentUser.role?.toUpperCase()}</span>
+              {currentUser.licenseNumber && (
+                <span className="text-[10px] font-mono text-slate-300 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
+                  {currentUser.licenseNumber}
+                </span>
+              )}
+              <span className={`px-2 py-0.5 text-[10px] font-semibold rounded border inline-flex items-center gap-1 ${getRoleBadgeStyle(currentUser.role)}`}>
+                {renderRoleIcon(currentUser.role, 12)}
+                <span>{currentUser.role.toUpperCase()}</span>
               </span>
             </span>
           ) : (
-            <span className="text-slate-400 italic">Not logged in (Public Visitor)</span>
+            <span className="text-slate-400 italic">Not logged in</span>
           )}
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-slate-400 text-[11px] hidden md:inline mr-1">Switch to:</span>
+          <span className="text-slate-400 text-[11px] hidden md:inline mr-1">Switch Role:</span>
           {accounts.map(acc => {
             const isCurrent = currentUser?.id === acc.id;
 
@@ -81,10 +82,10 @@ export default function RoleSwitcher({ currentUser, onSwitchUser, onSignOut }: R
                     ? "bg-cyan-600 text-white font-bold ring-1 ring-cyan-400 shadow-xs"
                     : "bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700"
                 }`}
-                title={`Switch session to ${acc.name} (${acc.role})`}
+                title={`Switch session to ${acc.name} (${acc.role}) - ${acc.licenseNumber || ""}`}
               >
-                {renderRoleIcon(acc.role, 14)}
-                <span className="truncate max-w-[110px]">{acc.name.split(" ")[0]} ({acc.role})</span>
+                {renderRoleIcon(acc.role, 13)}
+                <span className="truncate max-w-[120px]">{acc.name.split(" ")[0]} ({acc.role})</span>
               </button>
             );
           })}

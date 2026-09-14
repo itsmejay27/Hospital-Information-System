@@ -1,4 +1,4 @@
-export type Role = "patient" | "doctor" | "nurse" | "staff" | "admin";
+export type Role = "doctor" | "nurse" | "staff" | "admin";
 
 export type Page =
   | "home"
@@ -8,11 +8,11 @@ export type Page =
   | "staff"
   | "contact"
   | "dashboard"
-  | "records"                // 2. Creation and updating of electronic health records
-  | "lab"                    // 5. Laboratory and diagnostic result retrieval
-  | "medications"            // 3. Medication and treatment recording
-  | "registration-admission" // 1. Patient registration and admission
-  | "privacy";               // 4. Data privacy and confidentiality
+  | "records"
+  | "lab"
+  | "medications"
+  | "registration-admission"
+  | "privacy";
 
 export interface User {
   id: string;
@@ -21,7 +21,45 @@ export interface User {
   title: string;
   department: string;
   avatarInitials: string;
-  patientId?: string; // Links to patient record if role === "patient"
+  licenseNumber?: string; // e.g. PRC Lic. #0084721
+  credentials?: string;   // e.g. MD, FPCP, FPCC | RN, MAN, CCRN
+  status?: "active" | "suspended" | "inactive";
+  username?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+}
+
+export type TriageTier = "stable" | "observation" | "critical";
+
+export type PhilHealthCategory =
+  | "Direct Contributor - Private"
+  | "Direct Contributor - Government"
+  | "Direct Contributor - Self-Employed"
+  | "Indirect Contributor - Indigent"
+  | "Senior Citizen (RA 10645)"
+  | "PWD (RA 11228)"
+  | "Lifetime Member";
+
+export interface PhilHealthInfo {
+  pin: string; // PhilHealth Identification Number (e.g., 12-345678901-2)
+  category: PhilHealthCategory;
+  eligibilityStatus: "Active / Eligible" | "Under Verification" | "Sponsored (Indigent)";
+  coverageDetails: string;
+}
+
+export interface PatientConsents {
+  treatmentCareConsent: boolean;
+  healthInfoSharingConsent: boolean;
+  contactNoticeConsent: boolean;
+  signedDate: string;
+  witnessStaff: string;
+}
+
+export interface MedicalHistory {
+  pastMedical: string[];
+  pastSurgical: string[];
+  familyHistory: string[];
+  chronicConditions: string[];
 }
 
 export interface Patient {
@@ -41,12 +79,32 @@ export interface Patient {
   bloodType: string;
   allergies: string[];
   chiefComplaint: string;
+  triageTier: TriageTier;
+  triageReason?: string;
   admissionStatus: "Outpatient" | "Admitted" | "Observation" | "Discharged";
   ward?: string;
   bed?: string;
   attendingPhysician?: string;
   admissionDate?: string;
   registeredAt: string;
+  philhealth?: PhilHealthInfo;
+  consents?: PatientConsents;
+  medicalHistory?: MedicalHistory;
+}
+
+export interface VitalsData {
+  systolicBp: number;
+  diastolicBp: number;
+  heartRate: number;
+  respiratoryRate: number;
+  spo2: number;
+  temperature: number;
+  weightKg?: number;
+  fluidIntakeMl?: number; // IV + Oral fluid intake
+  urineOutputMl?: number;  // Urine output
+  fluidNotes?: string;
+  recordedAt: string;
+  recordedBy?: string;
 }
 
 export interface HealthRecord {
@@ -56,6 +114,7 @@ export interface HealthRecord {
   date: string;
   type: "OPD Visit" | "Inpatient Progress" | "Emergency Consultation" | "Specialist Follow-up";
   doctor: string;
+  doctorLicense?: string;
   diagnosis: string;
   icd10Code?: string;
   subjective: string;
@@ -71,6 +130,10 @@ export interface HealthRecord {
     wt: string;
     spo2?: string;
     rr?: string;
+    systolic?: number;
+    diastolic?: number;
+    fluidIntakeMl?: number;
+    urineOutputMl?: number;
   };
 }
 
@@ -92,6 +155,7 @@ export interface DiagnosticResult {
   status: "Ready" | "In-Progress" | "Pending Analysis";
   specimenType?: string;
   orderingPhysician: string;
+  orderingPhysicianLicense?: string;
   releasedBy: string;
   summary: string;
   items: LabTestItem[];
@@ -107,11 +171,13 @@ export interface MedicationOrder {
   freq: string;
   start: string;
   prescribedBy: string;
+  prescribedByLicense?: string;
   status: "Active" | "Completed" | "Discontinued";
   refillable: boolean;
   refillStatus?: "Not Requested" | "Pending Approval" | "Approved";
   lastAdministered?: string;
   administeredBy?: string;
+  administeredByLicense?: string;
   notes?: string;
 }
 
@@ -123,8 +189,12 @@ export interface TreatmentLog {
   treatmentName: string;
   category: "Bedside Nursing" | "Wound Care" | "IV Therapy" | "Respiratory Therapy" | "Physiotherapy";
   performedBy: string;
+  performedByLicense?: string;
   role: string;
   vitalsAtTreatment?: string;
+  structuredVitals?: VitalsData;
+  fluidIntakeMl?: number;
+  urineOutputMl?: number;
   notes: string;
 }
 
@@ -136,10 +206,59 @@ export interface AdmissionEntry {
   ward: string;
   bed: string;
   attendingPhysician: string;
+  attendingPhysicianLicense?: string;
   admittingStaff: string;
   reason: string;
+  triageTier?: TriageTier;
   status: "Admitted" | "Observation" | "Discharged";
   dischargeDate?: string;
+}
+
+export interface VisitorLog {
+  id: string;
+  patientId: string;
+  patientName: string;
+  wardBed: string;
+  visitorName: string;
+  relationship: string;
+  contactNumber: string;
+  idPresented: string;
+  badgeNumber: string;
+  timeIn: string;
+  timeOut?: string;
+  temperatureCelsius?: string;
+  purpose?: string;
+  status: "Currently Visiting" | "Departed";
+  loggedByStaff: string;
+}
+
+export interface ShiftEndorsement {
+  id: string;
+  timestamp: string;
+  shiftPeriod: string;
+  ward: string;
+  outgoingNurse: string;
+  outgoingNurseLicense: string;
+  incomingNurse: string;
+  incomingNurseLicense: string;
+  patientCensus: number;
+  situation: string;
+  background: string;
+  assessment: string;
+  recommendation: string;
+  urgentTasks: string[];
+}
+
+export interface HospitalConfig {
+  name: string;
+  tagline: string;
+  logoText: string;
+  phone: string;
+  emergencyHotline: string;
+  email: string;
+  dpoEmail: string;
+  address: string;
+  accreditation: string;
 }
 
 export interface AuditLog {
@@ -147,6 +266,7 @@ export interface AuditLog {
   timestamp: string;
   userName: string;
   userRole: Role;
+  userLicense?: string;
   action: string;
   targetPatient: string;
   patientId: string;
