@@ -16,6 +16,7 @@ import {
   ChevronDown,
   LogOut,
   X,
+  Building2,
 } from "./Icons";
 
 interface OpdTopNavProps {
@@ -121,6 +122,7 @@ export default function OpdTopNav({
       authLogout();
     }
     setIsRoleMenuOpen(false);
+    navigate("/login");
   };
 
   const accounts = Object.values(DEMO_USERS).map(u => u.user);
@@ -157,6 +159,16 @@ export default function OpdTopNav({
           <PhoneCall size={13} strokeWidth={2} className="text-rose-600 group-hover:scale-110 transition-transform" />
           <span className="text-[11px] uppercase tracking-wider font-bold">EMERGENCY: {emergencyHotline}</span>
         </a>
+
+        {/* Public Site Link */}
+        <button
+          onClick={() => navigate("/")}
+          className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-semibold transition-colors shadow-2xs cursor-pointer"
+          title="View Public Hospital Information"
+        >
+          <Building2 size={13} strokeWidth={2} className="text-slate-600" />
+          <span className="text-[11px] font-medium">Public Site</span>
+        </button>
 
         {/* Currently Active Patient Context Pill */}
         {activePatient ? (

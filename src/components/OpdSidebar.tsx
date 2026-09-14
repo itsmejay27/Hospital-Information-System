@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { OpdTab, User } from "../types";
+import { OpdTab, User, Role } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
 import {
@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
+  Building2,
 } from "./Icons";
 
 interface OpdSidebarProps {
@@ -35,7 +36,7 @@ interface NavItem {
   shortLabel: string;
   icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
   badge?: number | string;
-  roles?: string[];
+  roles?: Role[];
   group: "clinical" | "billing" | "management";
 }
 
@@ -62,6 +63,7 @@ export default function OpdSidebar({
       label: "OPD Dashboard",
       shortLabel: "Dashboard",
       icon: LayoutDashboard,
+      roles: ["doctor", "nurse", "staff", "admin"],
       group: "clinical",
     },
     {
@@ -71,6 +73,7 @@ export default function OpdSidebar({
       shortLabel: "Queue",
       icon: Users,
       badge: liveWaiting > 0 ? liveWaiting : undefined,
+      roles: ["doctor", "nurse", "staff", "admin"],
       group: "clinical",
     },
     {
@@ -79,6 +82,7 @@ export default function OpdSidebar({
       label: "Patient Registration",
       shortLabel: "Register",
       icon: UserPlus,
+      roles: ["staff", "admin"],
       group: "clinical",
     },
     {
@@ -87,6 +91,7 @@ export default function OpdSidebar({
       label: "Doctor Workbench",
       shortLabel: "Workbench",
       icon: Stethoscope,
+      roles: ["doctor", "admin"],
       group: "clinical",
     },
     {
@@ -95,6 +100,7 @@ export default function OpdSidebar({
       label: "Vitals & BMI Assessment",
       shortLabel: "Vitals",
       icon: Activity,
+      roles: ["nurse", "admin"],
       group: "clinical",
     },
     {
@@ -103,6 +109,7 @@ export default function OpdSidebar({
       label: "e-Prescriptions & Rx",
       shortLabel: "Prescriptions",
       icon: Pill,
+      roles: ["doctor", "admin"],
       group: "clinical",
     },
     {
@@ -111,6 +118,7 @@ export default function OpdSidebar({
       label: "Labs & Diagnostic Results",
       shortLabel: "Diagnostics",
       icon: FlaskConical,
+      roles: ["doctor", "nurse", "admin"],
       group: "clinical",
     },
     {
@@ -120,6 +128,7 @@ export default function OpdSidebar({
       shortLabel: "PhilHealth",
       icon: CreditCard,
       badge: "eClaims",
+      roles: ["doctor", "staff", "admin"],
       group: "billing",
     },
     {
@@ -128,6 +137,7 @@ export default function OpdSidebar({
       label: "Referrals & Discharge",
       shortLabel: "Referrals",
       icon: Send,
+      roles: ["doctor", "admin"],
       group: "billing",
     },
     {
@@ -136,6 +146,7 @@ export default function OpdSidebar({
       label: "Census & OPD Reports",
       shortLabel: "Reports",
       icon: PieChart,
+      roles: ["doctor", "nurse", "staff", "admin"],
       group: "management",
     },
     {
@@ -144,9 +155,20 @@ export default function OpdSidebar({
       label: "Admin & Security Audit",
       shortLabel: "Admin",
       icon: ShieldCheck,
+      roles: ["admin"],
       group: "management",
     },
   ];
+
+  const currentRole = user?.role;
+  const isItemVisible = (item: NavItem) => {
+    if (!item.roles || item.roles.length === 0) return true;
+    return currentRole ? item.roles.includes(currentRole) : false;
+  };
+
+  const clinicalItems = navItems.filter(i => i.group === "clinical" && isItemVisible(i));
+  const billingItems = navItems.filter(i => i.group === "billing" && isItemVisible(i));
+  const managementItems = navItems.filter(i => i.group === "management" && isItemVisible(i));
 
   const isItemActive = (item: NavItem) => {
     if (location.pathname === item.path) return true;
@@ -200,131 +222,152 @@ export default function OpdSidebar({
       </div>
 
       {/* Navigation list */}
-      <div className="flex-1 overflow-y-auto py-3 px-2 space-y-1 scrollbar-thin">
-        {!collapsed && (
-          <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Clinical Care
+      <div className="flex-1 overflow-y-auto py-3 px-2 space-y-2 scrollbar-thin">
+        {clinicalItems.length > 0 && (
+          <div>
+            {!collapsed && (
+              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Clinical Care
+              </div>
+            )}
+            <div className="space-y-1">
+              {clinicalItems.map(item => {
+                const Icon = item.icon;
+                const isActive = isItemActive(item);
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavClick(item)}
+                    title={collapsed ? item.label : undefined}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-teal-600 text-white shadow-xs font-semibold"
+                        : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
+                    } ${collapsed ? "justify-center px-0" : ""}`}
+                  >
+                    <Icon
+                      size={18}
+                      strokeWidth={2}
+                      className={isActive ? "text-white shrink-0" : "text-slate-400 shrink-0"}
+                    />
+                    {!collapsed && (
+                      <span className="truncate flex-1 text-left">{item.label}</span>
+                    )}
+                    {!collapsed && item.badge && (
+                      <span
+                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                          isActive
+                            ? "bg-white/20 text-white"
+                            : "bg-teal-500/20 text-teal-300 border border-teal-500/30"
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
-        {navItems
-          .filter(i => i.group === "clinical")
-          .map(item => {
-            const Icon = item.icon;
-            const isActive = isItemActive(item);
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item)}
-                title={collapsed ? item.label : undefined}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                  isActive
-                    ? "bg-teal-600 text-white shadow-xs font-semibold"
-                    : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
-                } ${collapsed ? "justify-center px-0" : ""}`}
-              >
-                <Icon
-                  size={18}
-                  strokeWidth={2}
-                  className={isActive ? "text-white shrink-0" : "text-slate-400 shrink-0"}
-                />
-                {!collapsed && (
-                  <span className="truncate flex-1 text-left">{item.label}</span>
-                )}
-                {!collapsed && item.badge && (
-                  <span
-                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+        {billingItems.length > 0 && (
+          <div className="pt-2">
+            {!collapsed && (
+              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Billing & Discharges
+              </div>
+            )}
+            <div className="space-y-1">
+              {billingItems.map(item => {
+                const Icon = item.icon;
+                const isActive = isItemActive(item);
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavClick(item)}
+                    title={collapsed ? item.label : undefined}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                       isActive
-                        ? "bg-white/20 text-white"
-                        : "bg-teal-500/20 text-teal-300 border border-teal-500/30"
-                    }`}
+                        ? "bg-teal-600 text-white shadow-xs font-semibold"
+                        : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
+                    } ${collapsed ? "justify-center px-0" : ""}`}
                   >
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-
-        <div className="pt-2">
-          {!collapsed && (
-            <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Billing & Discharges
+                    <Icon
+                      size={18}
+                      strokeWidth={2}
+                      className={isActive ? "text-white shrink-0" : "text-slate-400 shrink-0"}
+                    />
+                    {!collapsed && (
+                      <span className="truncate flex-1 text-left">{item.label}</span>
+                    )}
+                    {!collapsed && item.badge && (
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                          isActive
+                            ? "bg-white/20 text-white"
+                            : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-          )}
-          {navItems
-            .filter(i => i.group === "billing")
-            .map(item => {
-              const Icon = item.icon;
-              const isActive = isItemActive(item);
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleNavClick(item)}
-                  title={collapsed ? item.label : undefined}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                    isActive
-                      ? "bg-teal-600 text-white shadow-xs font-semibold"
-                      : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
-                  } ${collapsed ? "justify-center px-0" : ""}`}
-                >
-                  <Icon
-                    size={18}
-                    strokeWidth={2}
-                    className={isActive ? "text-white shrink-0" : "text-slate-400 shrink-0"}
-                  />
-                  {!collapsed && (
-                    <span className="truncate flex-1 text-left">{item.label}</span>
-                  )}
-                  {!collapsed && item.badge && (
-                    <span
-                      className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
-                        isActive
-                          ? "bg-white/20 text-white"
-                          : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                      }`}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-        </div>
+          </div>
+        )}
 
-        <div className="pt-2">
-          {!collapsed && (
-            <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Governance & Admin
+        {managementItems.length > 0 && (
+          <div className="pt-2">
+            {!collapsed && (
+              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Governance & Admin
+              </div>
+            )}
+            <div className="space-y-1">
+              {managementItems.map(item => {
+                const Icon = item.icon;
+                const isActive = isItemActive(item);
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavClick(item)}
+                    title={collapsed ? item.label : undefined}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                      isActive
+                        ? "bg-teal-600 text-white shadow-xs font-semibold"
+                        : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
+                    } ${collapsed ? "justify-center px-0" : ""}`}
+                  >
+                    <Icon
+                      size={18}
+                      strokeWidth={2}
+                      className={isActive ? "text-white shrink-0" : "text-slate-400 shrink-0"}
+                    />
+                    {!collapsed && (
+                      <span className="truncate flex-1 text-left">{item.label}</span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-          )}
-          {navItems
-            .filter(i => i.group === "management")
-            .map(item => {
-              const Icon = item.icon;
-              const isActive = isItemActive(item);
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => handleNavClick(item)}
-                  title={collapsed ? item.label : undefined}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                    isActive
-                      ? "bg-teal-600 text-white shadow-xs font-semibold"
-                      : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
-                  } ${collapsed ? "justify-center px-0" : ""}`}
-                >
-                  <Icon
-                    size={18}
-                    strokeWidth={2}
-                    className={isActive ? "text-white shrink-0" : "text-slate-400 shrink-0"}
-                  />
-                  {!collapsed && (
-                    <span className="truncate flex-1 text-left">{item.label}</span>
-                  )}
-                </button>
-              );
-            })}
+          </div>
+        )}
+
+        {/* Public Website Shortcut */}
+        <div className="pt-3 border-t border-slate-800/80 mt-3">
+          <button
+            onClick={() => navigate("/")}
+            title={collapsed ? "Public Hospital Site" : undefined}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-teal-300 hover:bg-slate-800/60 transition-colors cursor-pointer ${
+              collapsed ? "justify-center px-0" : ""
+            }`}
+          >
+            <Building2 size={18} strokeWidth={1.75} className="shrink-0 text-slate-400" />
+            {!collapsed && <span className="truncate flex-1 text-left">Public Hospital Site</span>}
+          </button>
         </div>
       </div>
 

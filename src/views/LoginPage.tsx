@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { DEMO_USERS } from "../mockData";
 import {
@@ -9,10 +10,13 @@ import {
   PhoneCall,
   LogIn,
   AlertCircle,
+  ArrowLeft,
+  ArrowRight,
 } from "../components/Icons";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const navigate = useNavigate();
+  const { user, login, isAuthenticated } = useAuth();
   const [username, setUsername] = useState("dr.reyes");
   const [password, setPassword] = useState("pass");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -20,14 +24,18 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const success = login(username, password);
-    if (!success) {
+    if (success) {
+      navigate("/dashboard");
+    } else {
       setErrorMsg("Invalid staff credentials. Please check your username or select a quick login below.");
     }
   };
 
   const handleQuickLogin = (uname: string) => {
     const success = login(uname, "pass");
-    if (!success) {
+    if (success) {
+      navigate("/dashboard");
+    } else {
       setErrorMsg(`Could not log in as ${uname}`);
     }
   };
@@ -53,7 +61,7 @@ export default function LoginPage() {
     },
     {
       name: "Jendy Perez",
-      username: "staff.jendy",
+      username: "staff.admissions",
       role: "Staff",
       license: "EMP-ADM-101",
       dept: "Outpatient Registration & Cashier",
@@ -62,7 +70,7 @@ export default function LoginPage() {
     },
     {
       name: "Atty. Roberto Ramos",
-      username: "admin.ramos",
+      username: "admin.privacy",
       role: "Admin",
       license: "IBP Roll #54219",
       dept: "Administration & Data Privacy",
@@ -84,6 +92,18 @@ export default function LoginPage() {
       {/* Main Login Card */}
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-slate-950/80 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6 backdrop-blur-md">
+          {/* Navigation link to public portal */}
+          <div className="flex items-center justify-between">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-teal-400 transition-colors cursor-pointer"
+            >
+              <ArrowLeft size={14} strokeWidth={2} />
+              <span>Hospital Public Website</span>
+            </Link>
+            <span className="text-[10px] text-slate-500 font-mono">HIS-OPD v3.2</span>
+          </div>
+
           {/* Hospital Brand Header */}
           <div className="text-center space-y-2">
             <div className="w-12 h-12 rounded-2xl bg-teal-600/20 border border-teal-500/40 text-teal-400 font-bold text-xl flex items-center justify-center mx-auto shadow-inner">
@@ -99,6 +119,22 @@ export default function LoginPage() {
               Please authenticate your medical staff session to access patient health records.
             </p>
           </div>
+
+          {isAuthenticated && user && (
+            <div className="p-3.5 rounded-xl bg-teal-950/50 border border-teal-700/60 flex items-center justify-between gap-3 text-xs">
+              <div className="min-w-0">
+                <div className="text-teal-300 font-semibold truncate">Active Session: {user.name}</div>
+                <div className="text-[10px] text-teal-400 uppercase font-medium">{user.role} • {user.title}</div>
+              </div>
+              <button
+                onClick={() => navigate("/dashboard")}
+                className="shrink-0 px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs flex items-center gap-1 shadow-xs cursor-pointer"
+              >
+                <span>Dashboard</span>
+                <ArrowRight size={13} strokeWidth={2} />
+              </button>
+            </div>
+          )}
 
           {errorMsg && (
             <div className="p-3 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-300 text-xs flex items-center gap-2">

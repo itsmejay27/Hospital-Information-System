@@ -1,10 +1,18 @@
 import React, { useState } from "react";
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { OpdDataProvider, useOpdData } from "./context/OpdDataContext";
 import OpdSidebar from "./components/OpdSidebar";
 import OpdTopNav from "./components/OpdTopNav";
 import LoginPage from "./views/LoginPage";
+import PublicLayout, {
+  PublicHomePage,
+  PublicAboutPage,
+  PublicDepartmentsPage,
+  PublicAnnouncementsPage,
+  PublicStaffPage,
+  PublicContactPage,
+} from "./views/PublicLayout";
 import OpdDashboardView from "./views/OpdDashboardView";
 import OpdQueueView from "./views/OpdQueueView";
 import DoctorWorkbench, { WorkbenchTab } from "./views/DoctorWorkbench";
@@ -13,7 +21,27 @@ import StaffAdmissions from "./views/StaffAdmissions";
 import PhilHealthClaimsView from "./views/PhilHealthClaimsView";
 import OpdReportsView from "./views/OpdReportsView";
 import AdminCompliance from "./views/AdminCompliance";
-import { User } from "./types";
+import { User, Role } from "./types";
+
+// — Protected Route with Role-Based Access Control Guard —
+interface ProtectedRouteProps {
+  allowedRoles?: Role[];
+  children?: React.ReactNode;
+}
+
+function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
+  const { user, isAuthenticated } = useAuth();
+
+  if (!isAuthenticated || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children ? <>{children}</> : <Outlet />;
+}
 
 // — Connected Route Wrapper Components —
 
@@ -228,14 +256,8 @@ function AdminRoute() {
 
 // — Professional Full-Width OPD Layout —
 function OpdAppLayout() {
-  const { user, isAuthenticated } = useAuth();
   const { hospitalConfig } = useOpdData();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-
-  // If user is not authenticated or session was cleared on logout, reset completely to Login
-  if (!isAuthenticated || !user) {
-    return <LoginPage />;
-  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-100/70 font-sans text-slate-800 antialiased">
@@ -252,36 +274,124 @@ function OpdAppLayout() {
 
         {/* Dynamic Routed Outpatient Department Workspace */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 min-w-0">
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<OpdDashboardView />} />
-            <Route path="/queue" element={<OpdQueueView />} />
-            <Route path="/registration" element={<RegistrationRoute />} />
-            <Route path="/workbench" element={<WorkbenchRoute initialTab="profile" />} />
-            <Route path="/vitals" element={<VitalsRoute />} />
-            <Route path="/prescriptions" element={<WorkbenchRoute initialTab="prescriptions" />} />
-            <Route path="/diagnostics" element={<WorkbenchRoute initialTab="diagnostics" />} />
-            <Route path="/philhealth" element={<PhilHealthRoute />} />
-            <Route path="/referrals" element={<WorkbenchRoute initialTab="referral" />} />
-            <Route path="/reports" element={<ReportsRoute />} />
-            <Route path="/admin" element={<AdminRoute />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
+          <Outlet />
         </main>
       </div>
     </div>
   );
 }
 
-// — Main Application Root with Global Providers —
+// — Main Application Root with Global Providers & Public/Private Routing —
 export default function App() {
   return (
     <HashRouter>
       <AuthProvider>
         <OpdDataProvider>
-          <OpdAppLayout />
+          <Routes>
+            {/* Public Layout and Routes */}
+            <Route element={<PublicLayout />}>
+              <Route path="/" element={<PublicHomePage />} />
+              <Route path="/home" element={<Navigate to="/" replace />} />
+              <Route path="/about" element={<PublicAboutPage />} />
+              <Route path="/departments" element={<PublicDepartmentsPage />} />
+              <Route path="/announcements" element={<PublicAnnouncementsPage />} />
+              <Route path="/staff" element={<PublicStaffPage />} />
+              <Route path="/contact" element={<PublicContactPage />} />
+            </Route>
+
+            {/* Standalone Authentication Login Route */}
+            <Route path="/login" element={<LoginPage />} />
+
+            {/* Protected OPD Layout and Clinical Workbenches */}
+            <Route
+              element={
+                <ProtectedRoute>
+                  <OpdAppLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/dashboard" element={<OpdDashboardView />} />
+              <Route path="/queue" element={<OpdQueueView />} />
+              <Route
+                path="/registration"
+                element={
+                  <ProtectedRoute allowedRoles={["staff", "admin"]}>
+                    <RegistrationRoute />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/workbench"
+                element={
+                  <ProtectedRoute allowedRoles={["doctor", "admin"]}>
+                    <WorkbenchRoute initialTab="profile" />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/vitals"
+                element={
+                  <ProtectedRoute allowedRoles={["nurse", "admin"]}>
+                    <VitalsRoute />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/prescriptions"
+                element={
+                  <ProtectedRoute allowedRoles={["doctor", "admin"]}>
+                    <WorkbenchRoute initialTab="prescriptions" />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/diagnostics"
+                element={
+                  <ProtectedRoute allowedRoles={["doctor", "nurse", "admin"]}>
+                    <WorkbenchRoute initialTab="diagnostics" />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/philhealth"
+                element={
+                  <ProtectedRoute allowedRoles={["doctor", "staff", "admin"]}>
+                    <PhilHealthRoute />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/referrals"
+                element={
+                  <ProtectedRoute allowedRoles={["doctor", "admin"]}>
+                    <WorkbenchRoute initialTab="referral" />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/reports"
+                element={
+                  <ProtectedRoute allowedRoles={["doctor", "nurse", "staff", "admin"]}>
+                    <ReportsRoute />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminRoute />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+
+            {/* Catch-all fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
         </OpdDataProvider>
       </AuthProvider>
     </HashRouter>
   );
 }
+

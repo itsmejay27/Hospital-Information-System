@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { User } from "../types";
+import React, { createContext, useContext, useState } from "react";
+import { User, Role } from "../types";
 import { DEMO_USERS } from "../mockData";
 
 interface AuthSession {
@@ -10,6 +10,7 @@ interface AuthSession {
 
 interface AuthContextType {
   user: User | null;
+  role: Role | null;
   token: string | null;
   isAuthenticated: boolean;
   login: (username: string, password?: string) => boolean;
@@ -37,8 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       console.error("Failed to parse stored auth session", e);
     }
-    // Default to Dr. Jose Reyes for demo preview if no stored session, but user can log out
-    return DEMO_USERS["dr.reyes"].user;
+    // Start unauthenticated so login page or public pages display first
+    return null;
   });
 
   const [token, setToken] = useState<string | null>(() => {
@@ -53,7 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // fallback
     }
-    return user ? `mock-jwt-token-${user.id}-${Date.now()}` : null;
+    return null;
   });
 
   // Save or clear session in localStorage whenever user/token changes
@@ -106,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     <AuthContext.Provider
       value={{
         user,
+        role: user?.role ?? null,
         token,
         isAuthenticated: !!user,
         login,
