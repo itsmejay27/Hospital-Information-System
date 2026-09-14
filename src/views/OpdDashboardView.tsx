@@ -136,7 +136,7 @@ export default function OpdDashboardView({
       const called = callNextPatient();
       if (called) {
         notify(`Called next patient: #${called.queueNumber} ${called.patientName}`);
-        navigate("/workbench");
+        navigate("/clinical/doctor-workbench");
       }
     }
   };
@@ -146,7 +146,7 @@ export default function OpdDashboardView({
     if (propsSelectPatient && pat) {
       propsSelectPatient(pat);
     }
-    navigate("/workbench");
+    navigate("/clinical/doctor-workbench");
   };
 
   // Submit Quick New Patient
@@ -258,7 +258,7 @@ export default function OpdDashboardView({
             </div>
 
             <button
-              onClick={() => navigate("/admin")}
+              onClick={() => navigate("/admin/accounts")}
               className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-2 shadow-md transition-all shrink-0 cursor-pointer"
             >
               <ShieldCheck size={16} strokeWidth={2} />
@@ -270,7 +270,7 @@ export default function OpdDashboardView({
         {/* 4 High-Level System Metrics */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div
-            onClick={() => navigate("/admin?tab=security")}
+            onClick={() => navigate("/admin/compliance")}
             className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:border-amber-300 cursor-pointer transition-all"
           >
             <div className="flex items-center justify-between">
@@ -288,7 +288,7 @@ export default function OpdDashboardView({
           </div>
 
           <div
-            onClick={() => navigate("/admin?tab=users")}
+            onClick={() => navigate("/admin/accounts")}
             className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:border-amber-300 cursor-pointer transition-all"
           >
             <div className="flex items-center justify-between">
@@ -306,7 +306,7 @@ export default function OpdDashboardView({
           </div>
 
           <div
-            onClick={() => navigate("/admin?tab=audit")}
+            onClick={() => navigate("/admin/audit-ledger")}
             className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:border-amber-300 cursor-pointer transition-all"
           >
             <div className="flex items-center justify-between">
@@ -324,7 +324,7 @@ export default function OpdDashboardView({
           </div>
 
           <div
-            onClick={() => navigate("/admin?tab=security")}
+            onClick={() => navigate("/admin/compliance")}
             className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:border-amber-300 cursor-pointer transition-all"
           >
             <div className="flex items-center justify-between">
@@ -353,7 +353,7 @@ export default function OpdDashboardView({
                 <p className="text-xs text-slate-500">System event logging & security status</p>
               </div>
               <button
-                onClick={() => navigate("/admin?tab=audit")}
+                onClick={() => navigate("/admin/audit-ledger")}
                 className="text-xs text-amber-700 hover:text-amber-800 font-semibold inline-flex items-center gap-1 cursor-pointer"
               >
                 <span>View All Logs</span>
@@ -409,7 +409,7 @@ export default function OpdDashboardView({
             </h4>
             <div className="space-y-2 text-xs">
               <button
-                onClick={() => navigate("/admin?tab=users")}
+                onClick={() => navigate("/admin/accounts")}
                 className="w-full p-3 rounded-lg bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 flex items-center justify-between text-left transition-all cursor-pointer group"
               >
                 <div className="flex items-center gap-2.5">
@@ -425,7 +425,7 @@ export default function OpdDashboardView({
               </button>
 
               <button
-                onClick={() => navigate("/admin?tab=branding")}
+                onClick={() => navigate("/admin/branding")}
                 className="w-full p-3 rounded-lg bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 flex items-center justify-between text-left transition-all cursor-pointer group"
               >
                 <div className="flex items-center gap-2.5">
@@ -441,7 +441,7 @@ export default function OpdDashboardView({
               </button>
 
               <button
-                onClick={() => navigate("/admin?tab=rbac")}
+                onClick={() => navigate("/admin/rbac")}
                 className="w-full p-3 rounded-lg bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 flex items-center justify-between text-left transition-all cursor-pointer group"
               >
                 <div className="flex items-center gap-2.5">
@@ -923,7 +923,7 @@ export default function OpdDashboardView({
                   type="button"
                   onClick={() => {
                     setIsNewPatientModalOpen(false);
-                    navigate("/registration");
+                    navigate("/registration/new-patient");
                   }}
                   className="text-teal-700 text-[11px] font-semibold hover:underline cursor-pointer"
                 >
@@ -1168,11 +1168,11 @@ export default function OpdDashboardView({
                   type="button"
                   onClick={() => {
                     setIsVitalsModalOpen(false);
-                    navigate("/vitals");
+                    navigate("/clinical/vitals-bmi");
                   }}
                   className="text-teal-700 text-[11px] font-semibold hover:underline cursor-pointer"
                 >
-                  Open Nurse Station →
+                  Open Vitals & Assessment →
                 </button>
                 <div className="flex gap-2">
                   <button

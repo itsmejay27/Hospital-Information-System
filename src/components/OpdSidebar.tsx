@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { OpdTab, User, Role } from "../types";
+import { User, Role } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
 import {
@@ -19,11 +19,14 @@ import {
   ChevronRight,
   ChevronDown,
   Building2,
+  Bed,
+  Lock,
+  KeyRound,
+  FileText,
+  Settings,
 } from "./Icons";
 
 interface OpdSidebarProps {
-  currentTab?: OpdTab;
-  onSelectTab?: (tab: OpdTab) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
   currentUser?: User | null;
@@ -37,20 +40,17 @@ interface SubNavItem {
 }
 
 interface NavItem {
-  id: OpdTab;
+  id: string;
   path: string;
   label: string;
-  shortLabel: string;
   icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
   badge?: number | string;
   roles?: Role[];
-  group: "clinical" | "billing" | "management";
+  group: "clinical" | "registration" | "billing" | "management";
   subItems?: SubNavItem[];
 }
 
 export default function OpdSidebar({
-  currentTab,
-  onSelectTab,
   collapsed,
   onToggleCollapse,
   currentUser: propsUser,
@@ -64,19 +64,19 @@ export default function OpdSidebar({
   const user = propsUser || authUser;
   const liveWaiting = propsQueueCount !== undefined ? propsQueueCount : waitingCount;
 
-  // Track expanded parent menus
+  // Track expanded parent sections
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
+    clinical: true,
     registration: true,
-    workbench: true,
     admin: true,
   });
 
   const navItems: NavItem[] = [
+    // --- Clinical Care ---
     {
       id: "dashboard",
       path: "/dashboard",
       label: "OPD Dashboard",
-      shortLabel: "Dashboard",
       icon: LayoutDashboard,
       roles: ["doctor", "nurse", "staff", "admin"],
       group: "clinical",
@@ -85,79 +85,47 @@ export default function OpdSidebar({
       id: "queue",
       path: "/queue",
       label: "Patient Live Queue",
-      shortLabel: "Queue",
       icon: Users,
       badge: liveWaiting > 0 ? liveWaiting : undefined,
       roles: ["doctor", "nurse", "staff"],
       group: "clinical",
     },
     {
-      id: "registration",
-      path: "/registration",
-      label: "Patient Registration",
-      shortLabel: "Register",
-      icon: UserPlus,
-      roles: ["staff"],
-      group: "clinical",
-      subItems: [
-        { id: "register", label: "Add New Patient", path: "/registration?subTab=register" },
-        { id: "roster", label: "Edit Profile & Directory", path: "/registration?subTab=roster" },
-        { id: "admit", label: "Search & Bed Allocation", path: "/registration?subTab=admit" },
-        { id: "visitors", label: "Front Desk Visitor Log", path: "/registration?subTab=visitors" },
-      ],
-    },
-    {
-      id: "workbench",
-      path: "/workbench",
-      label: "Doctor Workbench",
-      shortLabel: "Workbench",
+      id: "clinical-group",
+      path: "/clinical/doctor-workbench",
+      label: "Clinical Care",
       icon: Stethoscope,
-      roles: ["doctor"],
-      group: "clinical",
-      subItems: [
-        { id: "profile", label: "Patient Profile & EHR", path: "/workbench" },
-        { id: "prescriptions", label: "e-Prescriptions & Rx", path: "/prescriptions" },
-        { id: "diagnostics", label: "Labs & Diagnostics", path: "/diagnostics" },
-        { id: "referrals", label: "Referrals & Discharge", path: "/referrals" },
-      ],
-    },
-    {
-      id: "vitals",
-      path: "/vitals",
-      label: "Vitals & BMI Assessment",
-      shortLabel: "Vitals",
-      icon: Activity,
-      roles: ["nurse"],
-      group: "clinical",
-      subItems: [
-        { id: "vitals", label: "Bedside Vitals & Assessment", path: "/vitals" },
-        { id: "mar", label: "Medication Admin (MAR)", path: "/vitals" },
-        { id: "shift", label: "Shift Endorsements", path: "/vitals" },
-      ],
-    },
-    {
-      id: "prescriptions",
-      path: "/prescriptions",
-      label: "e-Prescriptions & Rx",
-      shortLabel: "Prescriptions",
-      icon: Pill,
-      roles: ["doctor"],
-      group: "clinical",
-    },
-    {
-      id: "diagnostics",
-      path: "/diagnostics",
-      label: "Labs & Diagnostic Results",
-      shortLabel: "Diagnostics",
-      icon: FlaskConical,
       roles: ["doctor", "nurse"],
       group: "clinical",
+      subItems: [
+        { id: "doctor-workbench", label: "Doctor Workbench", path: "/clinical/doctor-workbench" },
+        { id: "vitals-bmi", label: "Vitals & BMI Assessment", path: "/clinical/vitals-bmi" },
+        { id: "prescriptions", label: "e-Prescriptions & Rx", path: "/prescriptions" },
+        { id: "diagnostics", label: "Labs & Diagnostics", path: "/diagnostics" },
+      ],
     },
+
+    // --- Patient Registration ---
+    {
+      id: "registration-group",
+      path: "/registration/new-patient",
+      label: "Patient Registration",
+      icon: UserPlus,
+      roles: ["staff", "nurse"],
+      group: "registration",
+      subItems: [
+        { id: "new-patient", label: "New Patient Intake", path: "/registration/new-patient" },
+        { id: "beds", label: "Inpatient Bed Allocation", path: "/registration/beds" },
+        { id: "directory", label: "Master Patient Directory", path: "/registration/directory" },
+        { id: "visitors", label: "Front Desk Visitor Log", path: "/registration/visitors" },
+      ],
+    },
+
+    // --- Billing & Discharges ---
     {
       id: "philhealth",
       path: "/philhealth",
       label: "PhilHealth & eClaims",
-      shortLabel: "PhilHealth",
       icon: CreditCard,
       badge: "eClaims",
       roles: ["doctor", "staff"],
@@ -167,7 +135,6 @@ export default function OpdSidebar({
       id: "referrals",
       path: "/referrals",
       label: "Referrals & Discharge",
-      shortLabel: "Referrals",
       icon: Send,
       roles: ["doctor"],
       group: "billing",
@@ -176,25 +143,25 @@ export default function OpdSidebar({
       id: "reports",
       path: "/reports",
       label: "Census & OPD Reports",
-      shortLabel: "Reports",
       icon: PieChart,
       roles: ["doctor", "nurse", "staff"],
-      group: "management",
+      group: "billing",
     },
+
+    // --- Governance & Admin ---
     {
-      id: "admin",
-      path: "/admin",
-      label: "Admin & Security Audit",
-      shortLabel: "Admin",
+      id: "admin-group",
+      path: "/admin/accounts",
+      label: "Governance & Admin",
       icon: ShieldCheck,
       roles: ["admin"],
       group: "management",
       subItems: [
-        { id: "users", label: "Account Directory & Roles", path: "/admin?tab=users" },
-        { id: "branding", label: "Dynamic Branding & Contacts", path: "/admin?tab=branding" },
-        { id: "audit", label: "System Activity & Audit Logs", path: "/admin?tab=audit" },
-        { id: "rbac", label: "RBAC Permissions Matrix", path: "/admin?tab=rbac" },
-        { id: "security", label: "Security & NPC Guidelines", path: "/admin?tab=security" },
+        { id: "accounts", label: "Account Directory & Roles", path: "/admin/accounts" },
+        { id: "branding", label: "Dynamic Hospital Branding", path: "/admin/branding" },
+        { id: "audit-ledger", label: "Cryptographic Audit Ledger", path: "/admin/audit-ledger" },
+        { id: "rbac", label: "RBAC Permissions Matrix", path: "/admin/rbac" },
+        { id: "compliance", label: "Security & NPC Guidelines", path: "/admin/compliance" },
       ],
     },
   ];
@@ -206,31 +173,31 @@ export default function OpdSidebar({
   };
 
   const clinicalItems = navItems.filter(i => i.group === "clinical" && isItemVisible(i));
+  const registrationItems = navItems.filter(i => i.group === "registration" && isItemVisible(i));
   const billingItems = navItems.filter(i => i.group === "billing" && isItemVisible(i));
   const managementItems = navItems.filter(i => i.group === "management" && isItemVisible(i));
 
-  // Auto-expand menu if location matches sub-item
+  // Auto-expand group if current route is inside it
   useEffect(() => {
     navItems.forEach(item => {
       if (item.subItems) {
-        const hasMatchingSubItem = item.subItems.some(sub => location.pathname + location.search === sub.path || location.pathname === sub.path.split("?")[0]);
-        if (hasMatchingSubItem || location.pathname === item.path) {
+        const matches = item.subItems.some(sub => location.pathname === sub.path);
+        if (matches) {
           setExpandedMenus(prev => ({ ...prev, [item.id]: true }));
         }
       }
     });
-  }, [location.pathname, location.search]);
+  }, [location.pathname]);
 
   const isItemActive = (item: NavItem) => {
     if (location.pathname === item.path) return true;
     if (location.pathname === "/" && item.path === "/dashboard") return true;
-    if (currentTab && currentTab === item.id) return true;
-    if (item.subItems?.some(s => location.pathname + location.search === s.path)) return true;
+    if (item.subItems?.some(s => location.pathname === s.path)) return true;
     return false;
   };
 
   const isSubItemActive = (sub: SubNavItem) => {
-    return location.pathname + location.search === sub.path;
+    return location.pathname === sub.path;
   };
 
   const toggleExpand = (itemId: string, e: React.MouseEvent) => {
@@ -240,9 +207,6 @@ export default function OpdSidebar({
 
   const handleNavClick = (item: NavItem) => {
     navigate(item.path);
-    if (onSelectTab) {
-      onSelectTab(item.id);
-    }
     if (item.subItems) {
       setExpandedMenus(prev => ({ ...prev, [item.id]: true }));
     }
@@ -263,16 +227,18 @@ export default function OpdSidebar({
         <div
           onClick={() => handleNavClick(item)}
           title={collapsed ? item.label : undefined}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer select-none ${
-            isActive
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer select-none ${
+            isActive && !hasSubItems
               ? "bg-teal-600 text-white shadow-xs font-semibold"
+              : isActive && hasSubItems
+              ? "bg-slate-800 text-teal-300 font-semibold"
               : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
           } ${collapsed ? "justify-center px-0" : ""}`}
         >
           <Icon
             size={18}
             strokeWidth={2}
-            className={isActive ? "text-white shrink-0" : "text-slate-400 shrink-0"}
+            className={isActive ? (hasSubItems ? "text-teal-400 shrink-0" : "text-white shrink-0") : "text-slate-400 shrink-0"}
           />
           {!collapsed && (
             <span className="truncate flex-1 text-left">{item.label}</span>
@@ -291,25 +257,25 @@ export default function OpdSidebar({
           {!collapsed && hasSubItems && (
             <button
               onClick={(e) => toggleExpand(item.id, e)}
-              className="p-1 text-slate-400 hover:text-white transition-colors"
+              className="p-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
             >
               {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             </button>
           )}
         </div>
 
-        {/* Embedded Sub-menu Items */}
+        {/* Embedded Sub-menu Dedicated Direct Links */}
         {!collapsed && hasSubItems && isExpanded && (
-          <div className="ml-4 pl-3 border-l border-slate-800 space-y-1 py-1">
+          <div className="ml-3 pl-3 border-l border-slate-800 space-y-1 py-1">
             {item.subItems!.map(sub => {
               const subActive = isSubItemActive(sub);
               return (
                 <button
                   key={sub.id}
                   onClick={() => handleSubItemClick(sub)}
-                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
                     subActive
-                      ? "bg-teal-500/20 text-teal-300 font-bold border-l-2 border-teal-400 pl-2"
+                      ? "bg-teal-500/20 text-teal-300 font-bold border-l-2 border-teal-400 pl-2 shadow-xs"
                       : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
                   }`}
                 >
@@ -336,7 +302,7 @@ export default function OpdSidebar({
           onClick={() => navigate("/dashboard")}
           className="flex items-center gap-3 overflow-hidden cursor-pointer group"
         >
-          <div className="w-9 h-9 rounded-lg bg-teal-600/20 border border-teal-500/40 flex items-center justify-center shrink-0 text-teal-400 font-bold text-base shadow-inner group-hover:scale-105 transition-transform">
+          <div className="w-9 h-9 rounded-xl bg-teal-600/20 border border-teal-500/40 flex items-center justify-center shrink-0 text-teal-400 font-bold text-base shadow-inner group-hover:scale-105 transition-transform">
             CC
           </div>
           {!collapsed && (
@@ -354,7 +320,7 @@ export default function OpdSidebar({
         {/* Collapse toggle button */}
         <button
           onClick={onToggleCollapse}
-          className="w-7 h-7 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight size={16} strokeWidth={2} /> : <ChevronLeft size={16} strokeWidth={2} />}
@@ -362,7 +328,8 @@ export default function OpdSidebar({
       </div>
 
       {/* Navigation list */}
-      <div className="flex-1 overflow-y-auto py-3 px-2 space-y-2 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto py-3 px-2.5 space-y-3 scrollbar-thin">
+        {/* Clinical Care Section */}
         {clinicalItems.length > 0 && (
           <div>
             {!collapsed && (
@@ -376,6 +343,21 @@ export default function OpdSidebar({
           </div>
         )}
 
+        {/* Patient Registration Section */}
+        {registrationItems.length > 0 && (
+          <div className="pt-2">
+            {!collapsed && (
+              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Patient Registration
+              </div>
+            )}
+            <div className="space-y-1">
+              {registrationItems.map(item => renderNavItem(item))}
+            </div>
+          </div>
+        )}
+
+        {/* Billing & Census Section */}
         {billingItems.length > 0 && (
           <div className="pt-2">
             {!collapsed && (
@@ -389,6 +371,7 @@ export default function OpdSidebar({
           </div>
         )}
 
+        {/* Governance & Admin Section */}
         {managementItems.length > 0 && (
           <div className="pt-2">
             {!collapsed && (
@@ -407,7 +390,7 @@ export default function OpdSidebar({
           <button
             onClick={() => navigate("/")}
             title={collapsed ? "Public Hospital Site" : undefined}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium text-slate-400 hover:text-teal-300 hover:bg-slate-800/60 transition-colors cursor-pointer ${
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-teal-300 hover:bg-slate-800/60 transition-colors cursor-pointer ${
               collapsed ? "justify-center px-0" : ""
             }`}
           >

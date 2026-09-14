@@ -103,7 +103,7 @@ export default function OpdTopNav({
     }
     setIsSearchOpen(false);
     setSearchQuery("");
-    navigate("/workbench");
+    navigate("/clinical/doctor-workbench");
   };
 
   const handleSwitchSession = (targetUser: User) => {
@@ -173,7 +173,7 @@ export default function OpdTopNav({
         {/* Currently Active Patient Context Pill (Clinical Roles Only) */}
         {activePatient && user?.role !== "admin" ? (
           <div
-            onClick={() => navigate("/workbench")}
+            onClick={() => navigate("/clinical/doctor-workbench")}
             className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-md bg-teal-50 border border-teal-200 text-xs cursor-pointer hover:bg-teal-100/70 transition-colors"
             title="Click to view Active Patient in Doctor Workbench"
           >

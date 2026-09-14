@@ -15,12 +15,22 @@ import PublicLayout, {
 } from "./views/PublicLayout";
 import OpdDashboardView from "./views/OpdDashboardView";
 import OpdQueueView from "./views/OpdQueueView";
-import DoctorWorkbench, { WorkbenchTab } from "./views/DoctorWorkbench";
-import NurseStation from "./views/NurseStation";
-import StaffAdmissions from "./views/StaffAdmissions";
 import PhilHealthClaimsView from "./views/PhilHealthClaimsView";
 import OpdReportsView from "./views/OpdReportsView";
-import AdminCompliance from "./views/AdminCompliance";
+
+// Dedicated Isolated Route Components
+import DoctorWorkbenchView from "./views/DoctorWorkbenchView";
+import VitalsBmiView from "./views/VitalsBmiView";
+import PatientBedAllocationView from "./views/PatientBedAllocationView";
+import RegistrationNewPatientView from "./views/RegistrationNewPatientView";
+import RegistrationDirectoryView from "./views/RegistrationDirectoryView";
+import RegistrationVisitorsView from "./views/RegistrationVisitorsView";
+import AdminAccountsView from "./views/AdminAccountsView";
+import AdminBrandingView from "./views/AdminBrandingView";
+import AdminAuditLedgerView from "./views/AdminAuditLedgerView";
+import AdminRbacView from "./views/AdminRbacView";
+import AdminComplianceView from "./views/AdminComplianceView";
+
 import { User, Role } from "./types";
 
 // — Protected Route with Role-Based Access Control Guard —
@@ -37,59 +47,16 @@ function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    const redirectTarget = user.role === "admin" ? "/admin" : "/dashboard";
+    const redirectTarget = user.role === "admin" ? "/admin/accounts" : "/dashboard";
     return <Navigate to={redirectTarget} replace />;
   }
 
   return children ? <>{children}</> : <Outlet />;
 }
 
-// — Connected Route Wrapper Components —
+// — Connected Dedicated Route Wrapper Functions —
 
-function RegistrationRoute() {
-  const { user, logout } = useAuth();
-  const {
-    patients,
-    addPatient,
-    admissions,
-    addAdmission,
-    updatePatientAdmissionStatus,
-    visitorLogs,
-    addVisitorLog,
-    checkOutVisitor,
-  } = useOpdData();
-
-  const staffUser: User =
-    user?.role === "staff"
-      ? user
-      : {
-        id: user?.id || "USR-STAFF",
-        name: user?.name || "Admissions Staff",
-        role: "staff",
-        title: "Admissions Officer",
-        avatarInitials: "AS",
-        status: "active",
-        department: user?.department || "Outpatient Admissions Desk",
-        licenseNumber: user?.licenseNumber || "EMP-REG-101",
-      };
-
-  return (
-    <StaffAdmissions
-      user={staffUser}
-      patients={patients}
-      onAddPatient={addPatient}
-      admissions={admissions}
-      onAddAdmission={addAdmission}
-      onUpdatePatientStatus={updatePatientAdmissionStatus}
-      visitorLogs={visitorLogs}
-      onAddVisitorLog={addVisitorLog}
-      onCheckOutVisitor={checkOutVisitor}
-      onSignOut={logout}
-    />
-  );
-}
-
-function WorkbenchRoute({ initialTab = "profile" }: { initialTab?: WorkbenchTab }) {
+function DoctorWorkbenchRoute() {
   const { user, logout } = useAuth();
   const {
     patients,
@@ -100,30 +67,24 @@ function WorkbenchRoute({ initialTab = "profile" }: { initialTab?: WorkbenchTab 
     medications,
     addMedication,
     selectedPatient,
-    referrals,
-    addReferral,
-    discharges,
-    addDischarge,
   } = useOpdData();
 
-  // Active doctor derived from current authenticated session
   const doctorUser: User =
     user?.role === "doctor"
       ? user
       : {
-        id: user?.id || "DOC-001",
-        name: user?.name || "Attending Physician, MD",
-        role: "doctor",
-        title: "Attending Physician",
-        avatarInitials: "AP",
-        department: user?.department || "Outpatient Department",
-        licenseNumber: user?.licenseNumber || "PRC Lic. Verified",
-        status: "active",
-      };
+          id: user?.id || "DOC-001",
+          name: user?.name || "Attending Physician, MD",
+          role: "doctor",
+          title: "Attending Physician",
+          avatarInitials: "AP",
+          department: user?.department || "Outpatient Department",
+          licenseNumber: user?.licenseNumber || "PRC Lic. Verified",
+          status: "active",
+        };
 
   return (
-    <DoctorWorkbench
-      key={initialTab}
+    <DoctorWorkbenchView
       user={doctorUser}
       patients={patients}
       records={records}
@@ -133,65 +94,248 @@ function WorkbenchRoute({ initialTab = "profile" }: { initialTab?: WorkbenchTab 
       medications={medications}
       onAddMedication={addMedication}
       initialPatientId={selectedPatient?.id}
-      initialTab={initialTab}
-      referrals={referrals}
-      onAddReferral={addReferral}
-      discharges={discharges}
-      onAddDischarge={addDischarge}
       onSignOut={logout}
     />
   );
 }
 
-function VitalsRoute() {
+function VitalsBmiRoute() {
   const { user, logout } = useAuth();
-  const {
-    patients,
-    medications,
-    administerMedication,
-    treatments,
-    addTreatment,
-    admissions,
-    shiftEndorsements,
-    addShiftEndorsement,
-    visitorLogs,
-    addVisitorLog,
-    checkOutVisitor,
-  } = useOpdData();
+  const { patients, treatments, addTreatment, selectedPatient } = useOpdData();
 
-  const nurseUser: User =
-    user?.role === "nurse"
-      ? user
-      : {
-        id: user?.id || "NURSE-001",
-        name: user?.name || "Triage & OPD Nurse",
-        role: "nurse",
-        title: "Staff Nurse, RN",
-        avatarInitials: "RN",
-        department: user?.department || "Outpatient Nursing Station",
-        licenseNumber: user?.licenseNumber || "PRC Lic. Registered Nurse",
-        status: "active",
-      };
+  const clinicianUser: User =
+    user || {
+      id: "NURSE-001",
+      name: "Triage & Ward Nurse",
+      role: "nurse",
+      title: "Staff Nurse, RN",
+      avatarInitials: "RN",
+      department: "Nursing Station",
+      licenseNumber: "PRC Lic. Registered Nurse",
+      status: "active",
+    };
 
   return (
-    <NurseStation
-      user={nurseUser}
+    <VitalsBmiView
+      user={clinicianUser}
       patients={patients}
-      medications={medications}
-      onAdministerMedication={(medId, nurseName) =>
-        administerMedication(medId, nurseName, user?.licenseNumber)
-      }
       treatments={treatments}
       onAddTreatment={addTreatment}
+      initialPatientId={selectedPatient?.id}
+      onSignOut={logout}
+    />
+  );
+}
+
+function RegistrationNewPatientRoute() {
+  const { user, logout } = useAuth();
+  const { patients, addPatient } = useOpdData();
+
+  const staffUser: User =
+    user || {
+      id: "USR-STAFF",
+      name: "Admissions Staff",
+      role: "staff",
+      title: "Admissions Officer",
+      avatarInitials: "AS",
+      department: "Admissions Desk",
+      status: "active",
+    };
+
+  return (
+    <RegistrationNewPatientView
+      user={staffUser}
+      patients={patients}
+      onAddPatient={addPatient}
+      onSignOut={logout}
+    />
+  );
+}
+
+function PatientBedAllocationRoute() {
+  const { user, logout } = useAuth();
+  const { patients, admissions, addAdmission, updatePatientAdmissionStatus } = useOpdData();
+
+  const staffUser: User =
+    user || {
+      id: "USR-STAFF",
+      name: "Admissions Desk",
+      role: "staff",
+      title: "Bed Management Officer",
+      avatarInitials: "AS",
+      department: "Admissions & Ward Logistics",
+      status: "active",
+    };
+
+  return (
+    <PatientBedAllocationView
+      user={staffUser}
+      patients={patients}
       admissions={admissions}
-      shiftEndorsements={shiftEndorsements}
-      onAddShiftEndorsement={addShiftEndorsement}
+      onAddAdmission={addAdmission}
+      onUpdatePatientStatus={updatePatientAdmissionStatus}
+      onSignOut={logout}
+    />
+  );
+}
+
+function RegistrationDirectoryRoute() {
+  const { user, logout } = useAuth();
+  const { patients } = useOpdData();
+
+  const currentUser: User =
+    user || {
+      id: "USR-STAFF",
+      name: "Staff",
+      role: "staff",
+      title: "Records Officer",
+      avatarInitials: "RO",
+      department: "Medical Records",
+      status: "active",
+    };
+
+  return <RegistrationDirectoryView user={currentUser} patients={patients} onSignOut={logout} />;
+}
+
+function RegistrationVisitorsRoute() {
+  const { user, logout } = useAuth();
+  const { patients, visitorLogs, addVisitorLog, checkOutVisitor } = useOpdData();
+
+  const staffUser: User =
+    user || {
+      id: "USR-STAFF",
+      name: "Front Desk Officer",
+      role: "staff",
+      title: "Front Desk Officer",
+      avatarInitials: "FD",
+      department: "Admissions & Security",
+      status: "active",
+    };
+
+  return (
+    <RegistrationVisitorsView
+      user={staffUser}
+      patients={patients}
       visitorLogs={visitorLogs}
       onAddVisitorLog={addVisitorLog}
       onCheckOutVisitor={checkOutVisitor}
       onSignOut={logout}
     />
   );
+}
+
+function AdminAccountsRoute() {
+  const { user, logout } = useAuth();
+  const { usersList, addUser, toggleUserStatus } = useOpdData();
+
+  const adminUser: User =
+    user?.role === "admin"
+      ? user
+      : {
+          id: "ADM-001",
+          name: "System Administrator",
+          role: "admin",
+          title: "Hospital Administrator",
+          avatarInitials: "SA",
+          department: "Administration",
+          status: "active",
+        };
+
+  return (
+    <AdminAccountsView
+      user={adminUser}
+      usersList={usersList}
+      onAddUser={addUser}
+      onToggleUserStatus={toggleUserStatus}
+      onSignOut={logout}
+    />
+  );
+}
+
+function AdminBrandingRoute() {
+  const { user, logout } = useAuth();
+  const { hospitalConfig, updateHospitalConfig } = useOpdData();
+
+  const adminUser: User =
+    user?.role === "admin"
+      ? user
+      : {
+          id: "ADM-001",
+          name: "System Administrator",
+          role: "admin",
+          title: "Hospital Administrator",
+          avatarInitials: "SA",
+          department: "Administration",
+          status: "active",
+        };
+
+  return (
+    <AdminBrandingView
+      user={adminUser}
+      hospitalConfig={hospitalConfig}
+      onUpdateHospitalConfig={updateHospitalConfig}
+      onSignOut={logout}
+    />
+  );
+}
+
+function AdminAuditLedgerRoute() {
+  const { user, logout } = useAuth();
+  const { auditLogs } = useOpdData();
+
+  const adminUser: User =
+    user?.role === "admin"
+      ? user
+      : {
+          id: "ADM-001",
+          name: "Security Officer",
+          role: "admin",
+          title: "DPA Compliance Auditor",
+          avatarInitials: "SO",
+          department: "Information Security",
+          status: "active",
+        };
+
+  return <AdminAuditLedgerView user={adminUser} auditLogs={auditLogs} onSignOut={logout} />;
+}
+
+function AdminRbacRoute() {
+  const { user, logout } = useAuth();
+
+  const adminUser: User =
+    user?.role === "admin"
+      ? user
+      : {
+          id: "ADM-001",
+          name: "System Administrator",
+          role: "admin",
+          title: "Hospital Administrator",
+          avatarInitials: "SA",
+          department: "Administration",
+          status: "active",
+        };
+
+  return <AdminRbacView user={adminUser} onSignOut={logout} />;
+}
+
+function AdminComplianceRoute() {
+  const { user, logout } = useAuth();
+  const { hospitalConfig } = useOpdData();
+
+  const adminUser: User =
+    user?.role === "admin"
+      ? user
+      : {
+          id: "ADM-001",
+          name: "System Administrator",
+          role: "admin",
+          title: "Hospital Administrator",
+          avatarInitials: "SA",
+          department: "Administration",
+          status: "active",
+        };
+
+  return <AdminComplianceView user={adminUser} hospitalConfig={hospitalConfig} onSignOut={logout} />;
 }
 
 function PhilHealthRoute() {
@@ -212,45 +356,6 @@ function ReportsRoute() {
       patients={patients}
       claims={claims}
       hospitalConfig={hospitalConfig}
-    />
-  );
-}
-
-function AdminRoute() {
-  const { user, logout } = useAuth();
-  const {
-    auditLogs,
-    hospitalConfig,
-    updateHospitalConfig,
-    usersList,
-    addUser,
-    toggleUserStatus,
-  } = useOpdData();
-
-  const adminUser: User =
-    user?.role === "admin"
-      ? user
-      : {
-        id: user?.id || "ADM-001",
-        name: user?.name || "System Administrator",
-        role: "admin",
-        title: "Hospital Administrator",
-        avatarInitials: "SA",
-        department: "Hospital Administration & Security",
-        status: "active",
-        licenseNumber: user?.licenseNumber || "SYS-ADMIN-AUTH",
-      };
-
-  return (
-    <AdminCompliance
-      user={adminUser}
-      auditLogs={auditLogs}
-      hospitalConfig={hospitalConfig}
-      onUpdateHospitalConfig={updateHospitalConfig}
-      usersList={usersList}
-      onAddUser={addUser}
-      onToggleUserStatus={toggleUserStatus}
-      onSignOut={logout}
     />
   );
 }
@@ -311,7 +416,10 @@ export default function App() {
                 </ProtectedRoute>
               }
             >
+              {/* OPD Dashboard */}
               <Route path="/dashboard" element={<OpdDashboardView />} />
+
+              {/* Patient Live Queue */}
               <Route
                 path="/queue"
                 element={
@@ -320,35 +428,33 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+
+              {/* ============================================================ */}
+              {/* CLINICAL CARE & DOCTOR WORKBENCH (/clinical/*) */}
+              {/* ============================================================ */}
               <Route
-                path="/registration"
-                element={
-                  <ProtectedRoute allowedRoles={["staff"]}>
-                    <RegistrationRoute />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/workbench"
+                path="/clinical/doctor-workbench"
                 element={
                   <ProtectedRoute allowedRoles={["doctor"]}>
-                    <WorkbenchRoute initialTab="profile" />
+                    <DoctorWorkbenchRoute />
                   </ProtectedRoute>
                 }
               />
               <Route
-                path="/vitals"
+                path="/clinical/vitals-bmi"
                 element={
-                  <ProtectedRoute allowedRoles={["nurse"]}>
-                    <VitalsRoute />
+                  <ProtectedRoute allowedRoles={["doctor", "nurse"]}>
+                    <VitalsBmiRoute />
                   </ProtectedRoute>
                 }
               />
+
+              {/* Connected Clinical Actions */}
               <Route
                 path="/prescriptions"
                 element={
                   <ProtectedRoute allowedRoles={["doctor"]}>
-                    <WorkbenchRoute initialTab="prescriptions" />
+                    <DoctorWorkbenchRoute />
                   </ProtectedRoute>
                 }
               />
@@ -356,10 +462,112 @@ export default function App() {
                 path="/diagnostics"
                 element={
                   <ProtectedRoute allowedRoles={["doctor", "nurse"]}>
-                    <WorkbenchRoute initialTab="diagnostics" />
+                    <DoctorWorkbenchRoute />
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/referrals"
+                element={
+                  <ProtectedRoute allowedRoles={["doctor"]}>
+                    <DoctorWorkbenchRoute />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Legacy Clinical Route Redirects */}
+              <Route path="/workbench" element={<Navigate to="/clinical/doctor-workbench" replace />} />
+              <Route path="/vitals" element={<Navigate to="/clinical/vitals-bmi" replace />} />
+
+              {/* ============================================================ */}
+              {/* PATIENT REGISTRATION (/registration/*) */}
+              {/* ============================================================ */}
+              <Route
+                path="/registration/new-patient"
+                element={
+                  <ProtectedRoute allowedRoles={["staff"]}>
+                    <RegistrationNewPatientRoute />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/registration/beds"
+                element={
+                  <ProtectedRoute allowedRoles={["staff", "nurse"]}>
+                    <PatientBedAllocationRoute />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/registration/directory"
+                element={
+                  <ProtectedRoute allowedRoles={["staff", "doctor", "nurse"]}>
+                    <RegistrationDirectoryRoute />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/registration/visitors"
+                element={
+                  <ProtectedRoute allowedRoles={["staff", "nurse"]}>
+                    <RegistrationVisitorsRoute />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Legacy Registration Route Redirect */}
+              <Route path="/registration" element={<Navigate to="/registration/new-patient" replace />} />
+
+              {/* ============================================================ */}
+              {/* GOVERNANCE & ADMIN (/admin/*) */}
+              {/* ============================================================ */}
+              <Route
+                path="/admin/accounts"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminAccountsRoute />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/branding"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminBrandingRoute />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/audit-ledger"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminAuditLedgerRoute />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/rbac"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminRbacRoute />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/compliance"
+                element={
+                  <ProtectedRoute allowedRoles={["admin"]}>
+                    <AdminComplianceRoute />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Legacy Admin Route Redirect */}
+              <Route path="/admin" element={<Navigate to="/admin/accounts" replace />} />
+
+              {/* ============================================================ */}
+              {/* BILLING & REPORTS */}
+              {/* ============================================================ */}
               <Route
                 path="/philhealth"
                 element={
@@ -369,26 +577,10 @@ export default function App() {
                 }
               />
               <Route
-                path="/referrals"
-                element={
-                  <ProtectedRoute allowedRoles={["doctor"]}>
-                    <WorkbenchRoute initialTab="referral" />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/reports"
                 element={
                   <ProtectedRoute allowedRoles={["doctor", "nurse", "staff"]}>
                     <ReportsRoute />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <AdminRoute />
                   </ProtectedRoute>
                 }
               />
@@ -402,4 +594,3 @@ export default function App() {
     </HashRouter>
   );
 }
-

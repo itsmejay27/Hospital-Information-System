@@ -105,7 +105,7 @@ export default function OpdQueueView({
     } else {
       const called = callNextPatient();
       if (called) {
-        navigate("/workbench");
+        navigate("/clinical/doctor-workbench");
       }
     }
   };
@@ -123,7 +123,7 @@ export default function OpdQueueView({
     if (propsNavigateToWorkbench) {
       propsNavigateToWorkbench();
     } else {
-      navigate("/workbench");
+      navigate("/clinical/doctor-workbench");
     }
   };
 
