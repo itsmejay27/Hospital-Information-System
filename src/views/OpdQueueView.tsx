@@ -1,5 +1,7 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { OpdQueueItem, QueueStatus, Patient, TriageTier } from "../types";
+import { useOpdData } from "../context/OpdDataContext";
 import {
   Users,
   Search,
@@ -14,29 +16,58 @@ import {
 } from "../components/Icons";
 
 interface OpdQueueViewProps {
-  queue: OpdQueueItem[];
-  onUpdateQueue: (updated: OpdQueueItem[]) => void;
-  patients: Patient[];
-  onSelectPatient: (patient: Patient) => void;
-  onNavigateToWorkbench: () => void;
+  queue?: OpdQueueItem[];
+  onUpdateQueue?: (updated: OpdQueueItem[]) => void;
+  patients?: Patient[];
+  onSelectPatient?: (patient: Patient) => void;
+  onNavigateToWorkbench?: () => void;
 }
 
 export default function OpdQueueView({
-  queue,
-  onUpdateQueue,
-  patients,
-  onSelectPatient,
-  onNavigateToWorkbench,
+  queue: propsQueue,
+  onUpdateQueue: propsUpdateQueue,
+  patients: propsPatients,
+  onSelectPatient: propsSelectPatient,
+  onNavigateToWorkbench: propsNavigateToWorkbench,
 }: OpdQueueViewProps) {
-  const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
+  const {
+    queue: contextQueue,
+    setQueue: contextSetQueue,
+    patients: contextPatients,
+    setSelectedPatient: contextSetSelectedPatient,
+    callNextPatient,
+    consultPatient,
+    updateQueueStatus,
+    globalSearchQuery,
+  } = useOpdData();
+
+  const queue = propsQueue || contextQueue;
+  const patients = propsPatients || contextPatients;
+
+  const [searchTerm, setSearchTerm] = useState(globalSearchQuery || "");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [triageFilter, setTriageFilter] = useState<string>("All");
 
+  // Keep search term synchronized when header search query changes
+  React.useEffect(() => {
+    if (globalSearchQuery !== undefined) {
+      setSearchTerm(globalSearchQuery);
+    }
+  }, [globalSearchQuery]);
+
   const filteredQueue = queue.filter(item => {
+    const activeSearch = (searchTerm || globalSearchQuery || "").toLowerCase().trim();
+    const patientObj = patients.find(p => p.id === item.patientId);
+    const pin = patientObj?.philhealth?.pin || "";
+
     const matchesSearch =
-      item.patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.chiefComplaint.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.roomOrBooth.toLowerCase().includes(searchTerm.toLowerCase());
+      !activeSearch ||
+      item.patientName.toLowerCase().includes(activeSearch) ||
+      item.patientId.toLowerCase().includes(activeSearch) ||
+      pin.toLowerCase().includes(activeSearch) ||
+      item.chiefComplaint.toLowerCase().includes(activeSearch) ||
+      (item.roomOrBooth && item.roomOrBooth.toLowerCase().includes(activeSearch));
 
     const matchesStatus = statusFilter === "All" || item.status === statusFilter;
     const matchesTriage = triageFilter === "All" || item.triageTier === triageFilter;
@@ -45,25 +76,36 @@ export default function OpdQueueView({
   });
 
   const handleStatusChange = (id: string, newStatus: QueueStatus) => {
-    const updated = queue.map(q => (q.id === id ? { ...q, status: newStatus } : q));
-    onUpdateQueue(updated);
+    if (propsUpdateQueue) {
+      const updated = queue.map(q => (q.id === id ? { ...q, status: newStatus } : q));
+      propsUpdateQueue(updated);
+    } else {
+      updateQueueStatus(id, newStatus);
+    }
   };
 
   const handleCallNext = () => {
-    const nextIdx = queue.findIndex(q => q.status === "Waiting");
-    if (nextIdx !== -1) {
-      const updated = [...queue];
-      updated[nextIdx] = {
-        ...updated[nextIdx],
-        status: "In-Consultation",
-        roomOrBooth: "Consultation Room 1",
-      };
-      onUpdateQueue(updated);
+    if (propsUpdateQueue && propsNavigateToWorkbench) {
+      const nextIdx = queue.findIndex(q => q.status === "Waiting");
+      if (nextIdx !== -1) {
+        const updated = [...queue];
+        updated[nextIdx] = {
+          ...updated[nextIdx],
+          status: "In-Consultation",
+          roomOrBooth: "Consultation Room 1",
+        };
+        propsUpdateQueue(updated);
 
-      const patient = patients.find(p => p.id === updated[nextIdx].patientId);
-      if (patient) {
-        onSelectPatient(patient);
-        onNavigateToWorkbench();
+        const patient = patients.find(p => p.id === updated[nextIdx].patientId);
+        if (patient && propsSelectPatient) {
+          propsSelectPatient(patient);
+        }
+        propsNavigateToWorkbench();
+      }
+    } else {
+      const called = callNextPatient();
+      if (called) {
+        navigate("/workbench");
       }
     }
   };
@@ -72,8 +114,16 @@ export default function OpdQueueView({
     handleStatusChange(item.id, "In-Consultation");
     const patient = patients.find(p => p.id === item.patientId);
     if (patient) {
-      onSelectPatient(patient);
-      onNavigateToWorkbench();
+      if (propsSelectPatient) {
+        propsSelectPatient(patient);
+      } else {
+        contextSetSelectedPatient(patient);
+      }
+    }
+    if (propsNavigateToWorkbench) {
+      propsNavigateToWorkbench();
+    } else {
+      navigate("/workbench");
     }
   };
 
@@ -120,7 +170,7 @@ export default function OpdQueueView({
             />
             <input
               type="text"
-              placeholder="Search queue by patient, complaint, room..."
+              placeholder="Search queue by patient, MRN, complaint, room..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-teal-500"
@@ -134,7 +184,7 @@ export default function OpdQueueView({
               <select
                 value={triageFilter}
                 onChange={e => setTriageFilter(e.target.value)}
-                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-700 focus:outline-hidden focus:border-teal-500"
+                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-700 focus:outline-hidden focus:border-teal-500 cursor-pointer"
               >
                 <option value="All">All Tiers</option>
                 <option value="critical">Critical (Red)</option>
@@ -149,13 +199,14 @@ export default function OpdQueueView({
               <select
                 value={statusFilter}
                 onChange={e => setStatusFilter(e.target.value)}
-                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-700 focus:outline-hidden focus:border-teal-500"
+                className="bg-white border border-slate-300 rounded-lg px-2.5 py-1 text-xs text-slate-700 focus:outline-hidden focus:border-teal-500 cursor-pointer"
               >
                 <option value="All">All Statuses</option>
                 <option value="Waiting">Waiting</option>
                 <option value="In-Consultation">In-Consultation</option>
                 <option value="Completed">Completed</option>
                 <option value="Referred">Referred</option>
+                <option value="No-Show">No-Show</option>
               </select>
             </div>
           </div>
@@ -183,107 +234,104 @@ export default function OpdQueueView({
                   </td>
                 </tr>
               ) : (
-                filteredQueue.map(item => {
-                  const pat = patients.find(p => p.id === item.patientId);
-                  return (
-                    <tr
-                      key={item.id}
-                      className={`hover:bg-teal-50/30 transition-colors ${
-                        item.status === "In-Consultation" ? "bg-teal-50/20" : ""
-                      }`}
-                    >
-                      {/* Queue Number */}
-                      <td className="py-3.5 px-3 text-center font-bold text-slate-800">
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-slate-800 text-xs font-mono font-bold">
-                          {item.queueNumber}
-                        </span>
-                      </td>
+                filteredQueue.map(item => (
+                  <tr
+                    key={item.id}
+                    className={`hover:bg-teal-50/30 transition-colors ${
+                      item.status === "In-Consultation" ? "bg-teal-50/20" : ""
+                    }`}
+                  >
+                    {/* Queue Number */}
+                    <td className="py-3.5 px-3 text-center font-bold text-slate-800">
+                      <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-slate-100 text-slate-800 text-xs font-mono font-bold">
+                        {item.queueNumber}
+                      </span>
+                    </td>
 
-                      {/* Patient Details */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-semibold text-slate-900 text-xs">
-                          {item.patientName}
-                        </div>
-                        <div className="text-[10px] text-slate-500">
-                          {item.age} y/o • {item.gender} • Checked in: {item.checkInTime}
-                        </div>
-                      </td>
+                    {/* Patient Details */}
+                    <td className="py-3.5 px-4">
+                      <div className="font-semibold text-slate-900 text-xs">
+                        {item.patientName}
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        MRN: {item.patientId} • {item.age} y/o • {item.gender} • In: {item.checkInTime}
+                      </div>
+                    </td>
 
-                      {/* Triage Tier */}
-                      <td className="py-3.5 px-3 whitespace-nowrap">
+                    {/* Triage Tier */}
+                    <td className="py-3.5 px-3 whitespace-nowrap">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          item.triageTier === "critical"
+                            ? "bg-rose-100 text-rose-700 border border-rose-300"
+                            : item.triageTier === "observation"
+                            ? "bg-amber-100 text-amber-800 border border-amber-300"
+                            : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                        }`}
+                      >
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          className={`w-1.5 h-1.5 rounded-full ${
                             item.triageTier === "critical"
-                              ? "bg-rose-100 text-rose-700 border border-rose-300"
+                              ? "bg-rose-600"
                               : item.triageTier === "observation"
-                              ? "bg-amber-100 text-amber-800 border border-amber-300"
-                              : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                              ? "bg-amber-600"
+                              : "bg-emerald-600"
                           }`}
+                        ></span>
+                        {item.triageTier}
+                      </span>
+                    </td>
+
+                    {/* Chief Complaint */}
+                    <td className="py-3.5 px-4 text-slate-800 max-w-xs font-medium">
+                      {item.chiefComplaint}
+                    </td>
+
+                    {/* Location / Room */}
+                    <td className="py-3.5 px-3 text-slate-600 whitespace-nowrap">
+                      <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-[11px]">
+                        {item.roomOrBooth}
+                      </span>
+                    </td>
+
+                    {/* Queue Status with quick dropdown */}
+                    <td className="py-3.5 px-3 whitespace-nowrap">
+                      <select
+                        value={item.status}
+                        onChange={e => handleStatusChange(item.id, e.target.value as QueueStatus)}
+                        className={`text-xs font-semibold rounded-lg px-2.5 py-1 border focus:outline-hidden cursor-pointer ${
+                          item.status === "In-Consultation"
+                            ? "bg-teal-50 text-teal-800 border-teal-300"
+                            : item.status === "Waiting"
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            : item.status === "Completed"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-slate-50 text-slate-700 border-slate-300"
+                        }`}
+                      >
+                        <option value="Waiting">Waiting</option>
+                        <option value="In-Consultation">In-Consultation</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Referred">Referred</option>
+                        <option value="No-Show">No-Show</option>
+                      </select>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => handleStartConsult(item)}
+                          className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs transition-colors inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                          title="Open in Physician Workbench"
                         >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              item.triageTier === "critical"
-                                ? "bg-rose-600"
-                                : item.triageTier === "observation"
-                                ? "bg-amber-600"
-                                : "bg-emerald-600"
-                            }`}
-                          ></span>
-                          {item.triageTier}
-                        </span>
-                      </td>
-
-                      {/* Chief Complaint */}
-                      <td className="py-3.5 px-4 text-slate-800 max-w-xs font-medium">
-                        {item.chiefComplaint}
-                      </td>
-
-                      {/* Location / Room */}
-                      <td className="py-3.5 px-3 text-slate-600 whitespace-nowrap">
-                        <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-[11px]">
-                          {item.roomOrBooth}
-                        </span>
-                      </td>
-
-                      {/* Queue Status with quick dropdown */}
-                      <td className="py-3.5 px-3 whitespace-nowrap">
-                        <select
-                          value={item.status}
-                          onChange={e => handleStatusChange(item.id, e.target.value as QueueStatus)}
-                          className={`text-xs font-semibold rounded-lg px-2.5 py-1 border focus:outline-hidden ${
-                            item.status === "In-Consultation"
-                              ? "bg-teal-50 text-teal-800 border-teal-300"
-                              : item.status === "Waiting"
-                              ? "bg-blue-50 text-blue-700 border-blue-200"
-                              : item.status === "Completed"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : "bg-slate-50 text-slate-700 border-slate-300"
-                          }`}
-                        >
-                          <option value="Waiting">Waiting</option>
-                          <option value="In-Consultation">In-Consultation</option>
-                          <option value="Completed">Completed</option>
-                          <option value="Referred">Referred</option>
-                          <option value="No-Show">No-Show</option>
-                        </select>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleStartConsult(item)}
-                            className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs transition-colors inline-flex items-center gap-1.5 shadow-2xs"
-                            title="Open in Physician Workbench"
-                          >
-                            <Stethoscope size={13} strokeWidth={2} />
-                            <span>Consult</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                          <Stethoscope size={13} strokeWidth={2} />
+                          <span>Consult</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>

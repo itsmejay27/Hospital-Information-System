@@ -1,5 +1,8 @@
 import React from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { OpdTab, User } from "../types";
+import { useAuth } from "../context/AuthContext";
+import { useOpdData } from "../context/OpdDataContext";
 import {
   LayoutDashboard,
   Users,
@@ -17,16 +20,17 @@ import {
 } from "./Icons";
 
 interface OpdSidebarProps {
-  currentTab: OpdTab;
-  onSelectTab: (tab: OpdTab) => void;
+  currentTab?: OpdTab;
+  onSelectTab?: (tab: OpdTab) => void;
   collapsed: boolean;
   onToggleCollapse: () => void;
-  currentUser: User | null;
+  currentUser?: User | null;
   queueCount?: number;
 }
 
 interface NavItem {
   id: OpdTab;
+  path: string;
   label: string;
   shortLabel: string;
   icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
@@ -40,12 +44,21 @@ export default function OpdSidebar({
   onSelectTab,
   collapsed,
   onToggleCollapse,
-  currentUser,
-  queueCount = 4,
+  currentUser: propsUser,
+  queueCount: propsQueueCount,
 }: OpdSidebarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user: authUser } = useAuth();
+  const { waitingCount } = useOpdData();
+
+  const user = propsUser || authUser;
+  const liveWaiting = propsQueueCount !== undefined ? propsQueueCount : waitingCount;
+
   const navItems: NavItem[] = [
     {
       id: "dashboard",
+      path: "/dashboard",
       label: "OPD Dashboard",
       shortLabel: "Dashboard",
       icon: LayoutDashboard,
@@ -53,14 +66,16 @@ export default function OpdSidebar({
     },
     {
       id: "queue",
+      path: "/queue",
       label: "Patient Live Queue",
       shortLabel: "Queue",
       icon: Users,
-      badge: queueCount > 0 ? queueCount : undefined,
+      badge: liveWaiting > 0 ? liveWaiting : undefined,
       group: "clinical",
     },
     {
       id: "registration",
+      path: "/registration",
       label: "Patient Registration",
       shortLabel: "Register",
       icon: UserPlus,
@@ -68,6 +83,7 @@ export default function OpdSidebar({
     },
     {
       id: "workbench",
+      path: "/workbench",
       label: "Doctor Workbench",
       shortLabel: "Workbench",
       icon: Stethoscope,
@@ -75,6 +91,7 @@ export default function OpdSidebar({
     },
     {
       id: "vitals",
+      path: "/vitals",
       label: "Vitals & BMI Assessment",
       shortLabel: "Vitals",
       icon: Activity,
@@ -82,6 +99,7 @@ export default function OpdSidebar({
     },
     {
       id: "prescriptions",
+      path: "/prescriptions",
       label: "e-Prescriptions & Rx",
       shortLabel: "Prescriptions",
       icon: Pill,
@@ -89,6 +107,7 @@ export default function OpdSidebar({
     },
     {
       id: "diagnostics",
+      path: "/diagnostics",
       label: "Labs & Diagnostic Results",
       shortLabel: "Diagnostics",
       icon: FlaskConical,
@@ -96,6 +115,7 @@ export default function OpdSidebar({
     },
     {
       id: "philhealth",
+      path: "/philhealth",
       label: "PhilHealth & eClaims",
       shortLabel: "PhilHealth",
       icon: CreditCard,
@@ -104,6 +124,7 @@ export default function OpdSidebar({
     },
     {
       id: "referrals",
+      path: "/referrals",
       label: "Referrals & Discharge",
       shortLabel: "Referrals",
       icon: Send,
@@ -111,6 +132,7 @@ export default function OpdSidebar({
     },
     {
       id: "reports",
+      path: "/reports",
       label: "Census & OPD Reports",
       shortLabel: "Reports",
       icon: PieChart,
@@ -118,12 +140,27 @@ export default function OpdSidebar({
     },
     {
       id: "admin",
+      path: "/admin",
       label: "Admin & Security Audit",
       shortLabel: "Admin",
       icon: ShieldCheck,
       group: "management",
     },
   ];
+
+  const isItemActive = (item: NavItem) => {
+    if (location.pathname === item.path) return true;
+    if (location.pathname === "/" && item.path === "/dashboard") return true;
+    if (currentTab && currentTab === item.id) return true;
+    return false;
+  };
+
+  const handleNavClick = (item: NavItem) => {
+    navigate(item.path);
+    if (onSelectTab) {
+      onSelectTab(item.id);
+    }
+  };
 
   return (
     <aside
@@ -133,13 +170,16 @@ export default function OpdSidebar({
     >
       {/* Brand Header */}
       <div className="h-16 flex items-center justify-between px-3.5 border-b border-slate-800/80 bg-slate-950/40">
-        <div className="flex items-center gap-3 overflow-hidden">
-          <div className="w-9 h-9 rounded-lg bg-teal-600/20 border border-teal-500/40 flex items-center justify-center shrink-0 text-teal-400 font-bold text-base shadow-inner">
+        <div
+          onClick={() => navigate("/dashboard")}
+          className="flex items-center gap-3 overflow-hidden cursor-pointer group"
+        >
+          <div className="w-9 h-9 rounded-lg bg-teal-600/20 border border-teal-500/40 flex items-center justify-center shrink-0 text-teal-400 font-bold text-base shadow-inner group-hover:scale-105 transition-transform">
             CC
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <h1 className="text-sm font-bold text-white tracking-tight truncate leading-tight">
+              <h1 className="text-sm font-bold text-white tracking-tight truncate leading-tight group-hover:text-teal-300 transition-colors">
                 CityCare General
               </h1>
               <p className="text-[10px] text-teal-400 font-medium tracking-wide uppercase truncate">
@@ -152,7 +192,7 @@ export default function OpdSidebar({
         {/* Collapse toggle button */}
         <button
           onClick={onToggleCollapse}
-          className="w-7 h-7 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 flex items-center justify-center transition-colors shrink-0"
+          className="w-7 h-7 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <ChevronRight size={16} strokeWidth={2} /> : <ChevronLeft size={16} strokeWidth={2} />}
@@ -171,13 +211,13 @@ export default function OpdSidebar({
           .filter(i => i.group === "clinical")
           .map(item => {
             const Icon = item.icon;
-            const isActive = currentTab === item.id;
+            const isActive = isItemActive(item);
             return (
               <button
                 key={item.id}
-                onClick={() => onSelectTab(item.id)}
+                onClick={() => handleNavClick(item)}
                 title={collapsed ? item.label : undefined}
-                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                   isActive
                     ? "bg-teal-600 text-white shadow-xs font-semibold"
                     : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
@@ -216,13 +256,13 @@ export default function OpdSidebar({
             .filter(i => i.group === "billing")
             .map(item => {
               const Icon = item.icon;
-              const isActive = currentTab === item.id;
+              const isActive = isItemActive(item);
               return (
                 <button
                   key={item.id}
-                  onClick={() => onSelectTab(item.id)}
+                  onClick={() => handleNavClick(item)}
                   title={collapsed ? item.label : undefined}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                     isActive
                       ? "bg-teal-600 text-white shadow-xs font-semibold"
                       : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
@@ -262,13 +302,13 @@ export default function OpdSidebar({
             .filter(i => i.group === "management")
             .map(item => {
               const Icon = item.icon;
-              const isActive = currentTab === item.id;
+              const isActive = isItemActive(item);
               return (
                 <button
                   key={item.id}
-                  onClick={() => onSelectTab(item.id)}
+                  onClick={() => handleNavClick(item)}
                   title={collapsed ? item.label : undefined}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
                     isActive
                       ? "bg-teal-600 text-white shadow-xs font-semibold"
                       : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
@@ -293,19 +333,19 @@ export default function OpdSidebar({
         {!collapsed ? (
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center shrink-0">
-              {currentUser?.avatarInitials || "CC"}
+              {user?.avatarInitials || "ST"}
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold text-slate-200 truncate leading-tight">
-                {currentUser?.name || "Staff Clinician"}
+                {user?.name || "Clinician Session"}
               </p>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] text-teal-400 uppercase font-medium">
-                  {currentUser?.role || "Staff"}
+                  {user?.role || "Staff"}
                 </span>
-                {currentUser?.licenseNumber && (
+                {user?.licenseNumber && (
                   <span className="text-[9px] text-slate-400 font-mono truncate">
-                    • {currentUser.licenseNumber}
+                    • {user.licenseNumber}
                   </span>
                 )}
               </div>
@@ -314,9 +354,9 @@ export default function OpdSidebar({
         ) : (
           <div
             className="w-8 h-8 mx-auto rounded-full bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center cursor-default"
-            title={`${currentUser?.name || "Clinician"} (${currentUser?.role})`}
+            title={`${user?.name || "Clinician"} (${user?.role || "Staff"})`}
           >
-            {currentUser?.avatarInitials || "CC"}
+            {user?.avatarInitials || "ST"}
           </div>
         )}
       </div>

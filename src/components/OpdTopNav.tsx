@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { User, Patient, Role } from "../types";
 import { DEMO_USERS } from "../mockData";
+import { useAuth } from "../context/AuthContext";
+import { useOpdData } from "../context/OpdDataContext";
 import {
   Search,
   PhoneCall,
@@ -16,24 +19,37 @@ import {
 } from "./Icons";
 
 interface OpdTopNavProps {
-  currentUser: User | null;
-  onSwitchUser: (user: User) => void;
-  onSignOut: () => void;
-  patients: Patient[];
-  onSelectPatient: (patient: Patient) => void;
-  selectedPatient: Patient | null;
+  currentUser?: User | null;
+  onSwitchUser?: (user: User) => void;
+  onSignOut?: () => void;
+  patients?: Patient[];
+  onSelectPatient?: (patient: Patient) => void;
+  selectedPatient?: Patient | null;
   emergencyHotline?: string;
 }
 
 export default function OpdTopNav({
-  currentUser,
-  onSwitchUser,
-  onSignOut,
-  patients,
-  onSelectPatient,
-  selectedPatient,
+  currentUser: propsUser,
+  onSwitchUser: propsSwitchUser,
+  onSignOut: propsSignOut,
+  patients: propsPatients,
+  onSelectPatient: propsSelectPatient,
+  selectedPatient: propsSelectedPatient,
   emergencyHotline = "911",
 }: OpdTopNavProps) {
+  const navigate = useNavigate();
+  const { user: authUser, switchUser: authSwitchUser, logout: authLogout } = useAuth();
+  const {
+    patients: contextPatients,
+    selectedPatient: contextSelectedPatient,
+    setSelectedPatient: contextSetSelectedPatient,
+    setGlobalSearchQuery,
+  } = useOpdData();
+
+  const user = propsUser !== undefined ? propsUser : authUser;
+  const patients = propsPatients || contextPatients;
+  const activePatient = propsSelectedPatient !== undefined ? propsSelectedPatient : contextSelectedPatient;
+
   const [timeString, setTimeString] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -72,6 +88,41 @@ export default function OpdTopNav({
       )
     : [];
 
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setGlobalSearchQuery(val);
+    setIsSearchOpen(true);
+  };
+
+  const handlePatientSelect = (p: Patient) => {
+    if (propsSelectPatient) {
+      propsSelectPatient(p);
+    } else {
+      contextSetSelectedPatient(p);
+    }
+    setIsSearchOpen(false);
+    setSearchQuery("");
+    navigate("/workbench");
+  };
+
+  const handleSwitchSession = (targetUser: User) => {
+    if (propsSwitchUser) {
+      propsSwitchUser(targetUser);
+    } else {
+      authSwitchUser(targetUser);
+    }
+    setIsRoleMenuOpen(false);
+  };
+
+  const handleLogoutSession = () => {
+    if (propsSignOut) {
+      propsSignOut();
+    } else {
+      authLogout();
+    }
+    setIsRoleMenuOpen(false);
+  };
+
   const accounts = Object.values(DEMO_USERS).map(u => u.user);
 
   const getRoleIcon = (role: Role, size = 15) => {
@@ -96,7 +147,7 @@ export default function OpdTopNav({
         {/* Emergency Hotline Pill */}
         <a
           href={`tel:${emergencyHotline}`}
-          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold hover:bg-rose-100 transition-colors shadow-2xs group"
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold hover:bg-rose-100 transition-colors shadow-2xs group cursor-pointer"
           title="Emergency Medical Hotline"
         >
           <span className="relative flex h-2 w-2">
@@ -108,23 +159,27 @@ export default function OpdTopNav({
         </a>
 
         {/* Currently Active Patient Context Pill */}
-        {selectedPatient ? (
-          <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-md bg-teal-50 border border-teal-200 text-xs">
+        {activePatient ? (
+          <div
+            onClick={() => navigate("/workbench")}
+            className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-md bg-teal-50 border border-teal-200 text-xs cursor-pointer hover:bg-teal-100/70 transition-colors"
+            title="Click to view Active Patient in Doctor Workbench"
+          >
             <span className="text-teal-700 font-medium">Active Patient:</span>
-            <span className="font-semibold text-slate-800">{selectedPatient.name}</span>
+            <span className="font-semibold text-slate-800">{activePatient.name}</span>
             <span className="text-[10px] font-mono text-teal-700 bg-teal-100 px-1 rounded font-semibold">
-              {selectedPatient.id}
+              {activePatient.id}
             </span>
             <span
               className={`px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${
-                selectedPatient.triageTier === "critical"
+                activePatient.triageTier === "critical"
                   ? "bg-rose-100 text-rose-700 border border-rose-300"
-                  : selectedPatient.triageTier === "observation"
+                  : activePatient.triageTier === "observation"
                   ? "bg-amber-100 text-amber-800 border border-amber-300"
                   : "bg-emerald-100 text-emerald-800 border border-emerald-300"
               }`}
             >
-              {selectedPatient.triageTier}
+              {activePatient.triageTier}
             </span>
           </div>
         ) : null}
@@ -142,10 +197,7 @@ export default function OpdTopNav({
             type="text"
             placeholder="Search patient by name, MRN (P-2024-xxx), or PhilHealth PIN..."
             value={searchQuery}
-            onChange={e => {
-              setSearchQuery(e.target.value);
-              setIsSearchOpen(true);
-            }}
+            onChange={e => handleSearchChange(e.target.value)}
             onFocus={() => setIsSearchOpen(true)}
             className="w-full pl-9 pr-8 py-1.5 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs text-slate-800 placeholder:text-slate-400 rounded-lg border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-hidden"
           />
@@ -153,9 +205,10 @@ export default function OpdTopNav({
             <button
               onClick={() => {
                 setSearchQuery("");
+                setGlobalSearchQuery("");
                 setIsSearchOpen(false);
               }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
             >
               <X size={14} strokeWidth={2} />
             </button>
@@ -176,12 +229,8 @@ export default function OpdTopNav({
               searchResults.map(p => (
                 <button
                   key={p.id}
-                  onClick={() => {
-                    onSelectPatient(p);
-                    setIsSearchOpen(false);
-                    setSearchQuery("");
-                  }}
-                  className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between border-b border-slate-100 last:border-b-0 transition-colors"
+                  onClick={() => handlePatientSelect(p)}
+                  className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between border-b border-slate-100 last:border-b-0 transition-colors cursor-pointer"
                 >
                   <div>
                     <div className="flex items-center gap-2">
@@ -212,7 +261,7 @@ export default function OpdTopNav({
         )}
       </div>
 
-      {/* Right Area: Real-Time Clock & Role Switcher */}
+      {/* Right Area: Real-Time Clock & Dynamic Role Switcher */}
       <div className="flex items-center gap-3">
         {/* Live Clock */}
         <div className="hidden xl:flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200 font-mono">
@@ -224,15 +273,15 @@ export default function OpdTopNav({
         <div className="relative">
           <button
             onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 text-xs transition-all shadow-2xs"
+            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 text-xs transition-all shadow-2xs cursor-pointer"
           >
-            {currentUser && getRoleIcon(currentUser.role, 16)}
+            {user && getRoleIcon(user.role, 16)}
             <div className="text-left leading-tight hidden sm:block">
               <div className="font-semibold text-slate-800 truncate max-w-[140px]">
-                {currentUser?.name || "Clinician"}
+                {user?.name || "Active Session"}
               </div>
               <div className="text-[10px] text-teal-700 font-bold uppercase">
-                {currentUser?.role} {currentUser?.licenseNumber && `• ${currentUser.licenseNumber}`}
+                {user?.role} {user?.licenseNumber && `• ${user.licenseNumber}`}
               </div>
             </div>
             <ChevronDown size={14} strokeWidth={2} className="text-slate-400 ml-0.5" />
@@ -252,15 +301,12 @@ export default function OpdTopNav({
 
               <div className="py-1">
                 {accounts.map(acc => {
-                  const isSelected = currentUser?.id === acc.id;
+                  const isSelected = user?.id === acc.id;
                   return (
                     <button
                       key={acc.id}
-                      onClick={() => {
-                        onSwitchUser(acc);
-                        setIsRoleMenuOpen(false);
-                      }}
-                      className={`w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors ${
+                      onClick={() => handleSwitchSession(acc)}
+                      className={`w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors cursor-pointer ${
                         isSelected ? "bg-teal-50/70 border-l-4 border-teal-600" : ""
                       }`}
                     >
@@ -287,11 +333,8 @@ export default function OpdTopNav({
 
               <div className="px-2 py-1.5">
                 <button
-                  onClick={() => {
-                    onSignOut();
-                    setIsRoleMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 rounded-lg transition-colors font-medium"
+                  onClick={handleLogoutSession}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 rounded-lg transition-colors font-medium cursor-pointer"
                 >
                   <LogOut size={14} strokeWidth={2} />
                   <span>Sign Out Session</span>

@@ -43,11 +43,13 @@ interface Props {
   onAddMedication: (med: MedicationOrder) => void;
   onSignOut?: () => void;
   initialPatientId?: string;
+  initialTab?: WorkbenchTab;
   referrals?: OpdReferral[];
   onAddReferral?: (ref: OpdReferral) => void;
   discharges?: OpdDischarge[];
   onAddDischarge?: (dis: OpdDischarge) => void;
 }
+
 
 export type WorkbenchTab =
   | "profile"
@@ -67,15 +69,17 @@ export default function DoctorWorkbench({
   medications,
   onAddMedication,
   initialPatientId,
+  initialTab = "profile",
   referrals = INITIAL_OPD_REFERRALS,
   onAddReferral,
   discharges = INITIAL_OPD_DISCHARGES,
   onAddDischarge,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<WorkbenchTab>("profile");
+  const [activeTab, setActiveTab] = useState<WorkbenchTab>(initialTab);
   const [selectedPatientId, setSelectedPatientId] = useState(
     initialPatientId || patients[0]?.id || "P-2024-001"
   );
+
   const [patientSearch, setPatientSearch] = useState("");
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -185,7 +189,7 @@ export default function DoctorWorkbench({
       date: new Date().toISOString().split("T")[0],
       type: visitType,
       doctor: user.name,
-      doctorLicense: user.licenseNumber || "PRC Lic. #0084721",
+      doctorLicense: user.licenseNumber || "PRC Lic. Verified",
       diagnosis: `${diagnosis} (${icd10Code})`,
       icd10Code: icd10Code,
       differentialDiagnosis: differentialDiagnosis.split(",").map(s => s.trim()),
@@ -233,7 +237,7 @@ export default function DoctorWorkbench({
       status: "Active",
       refillable: true,
       prescribedBy: user.name,
-      prescribedByLicense: user.licenseNumber || "PRC Lic. #0084721",
+      prescribedByLicense: user.licenseNumber || "PRC Lic. Verified",
       notes: rxNotes,
     };
 
@@ -256,7 +260,7 @@ export default function DoctorWorkbench({
       category: labCategory,
       date: new Date().toISOString().split("T")[0],
       orderingPhysician: user.name,
-      orderingPhysicianLicense: user.licenseNumber || "PRC Lic. #0084721",
+      orderingPhysicianLicense: user.licenseNumber || "PRC Lic. Verified",
       releasedBy: "Clinical Pathology Laboratory",
       specimenType: labSpecimen,
       summary: labIndication,
@@ -835,7 +839,7 @@ export default function DoctorWorkbench({
 
             <div className="flex items-center justify-between pt-2 border-t border-slate-100">
               <div className="text-xs text-slate-500">
-                Attending: <span className="font-semibold text-slate-800">{user.name}</span> ({user.licenseNumber || "PRC #0084721"})
+                Attending: <span className="font-semibold text-slate-800">{user.name}</span> ({user.licenseNumber || user.title || "PRC Physician"})
               </div>
               <button
                 type="submit"

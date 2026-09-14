@@ -1,5 +1,8 @@
-import React from "react";
-import { Patient, OpdQueueItem, OpdTab, User, TriageTier } from "../types";
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Patient, OpdQueueItem, OpdTab, User, TriageTier, PhilHealthClaim, OpdReferral } from "../types";
+import { useAuth } from "../context/AuthContext";
+import { useOpdData } from "../context/OpdDataContext";
 import {
   Users,
   Activity,
@@ -12,48 +15,248 @@ import {
   Send,
   ChevronRight,
   TrendingUp,
+  X,
+  Plus,
+  Check,
 } from "../components/Icons";
 
 interface OpdDashboardViewProps {
-  queue: OpdQueueItem[];
-  patients: Patient[];
-  onSelectPatient: (patient: Patient) => void;
-  onNavigateTab: (tab: OpdTab) => void;
-  onCallNextPatient: () => void;
-  currentUser: User | null;
+  queue?: OpdQueueItem[];
+  patients?: Patient[];
+  onSelectPatient?: (patient: Patient) => void;
+  onNavigateTab?: (tab: OpdTab) => void;
+  onCallNextPatient?: () => void;
+  currentUser?: User | null;
 }
 
 export default function OpdDashboardView({
-  queue,
-  patients,
-  onSelectPatient,
+  queue: propsQueue,
+  patients: propsPatients,
+  onSelectPatient: propsSelectPatient,
   onNavigateTab,
-  onCallNextPatient,
-  currentUser,
+  onCallNextPatient: propsCallNext,
+  currentUser: propsUser,
 }: OpdDashboardViewProps) {
-  // Statistics calculations
-  const totalInQueue = queue.length;
-  const waitingCount = queue.filter(q => q.status === "Waiting").length;
-  const inConsultCount = queue.filter(q => q.status === "In-Consultation").length;
-  const completedTodayCount = 18; // Census metric
-  const criticalCount = queue.filter(q => q.triageTier === "critical").length;
-  const observationCount = queue.filter(q => q.triageTier === "observation").length;
-  const stableCount = queue.filter(q => q.triageTier === "stable").length;
+  const navigate = useNavigate();
+  const { user: authUser } = useAuth();
+  const {
+    queue: contextQueue,
+    patients: contextPatients,
+    waitingCount,
+    criticalCount,
+    observationCount,
+    stableCount,
+    completedCount,
+    inConsultCount,
+    totalQueueCount,
+    callNextPatient,
+    consultPatient,
+    addPatient,
+    addClaim,
+    addReferral,
+    selectedPatient,
+    setSelectedPatient,
+    globalSearchQuery,
+  } = useOpdData();
 
+  const user = propsUser || authUser;
+  const queue = propsQueue || contextQueue;
+  const patients = propsPatients || contextPatients;
+
+  // Dynamically filter patient queue when search query is entered in header
+  const displayedQueue = React.useMemo(() => {
+    if (!globalSearchQuery.trim()) return queue;
+    const qLower = globalSearchQuery.toLowerCase().trim();
+    return queue.filter(item => {
+      const pat = patients.find(p => p.id === item.patientId);
+      const pin = pat?.philhealth?.pin || "";
+      return (
+        item.patientName.toLowerCase().includes(qLower) ||
+        item.patientId.toLowerCase().includes(qLower) ||
+        pin.toLowerCase().includes(qLower) ||
+        item.chiefComplaint.toLowerCase().includes(qLower)
+      );
+    });
+  }, [queue, globalSearchQuery, patients]);
+
+  // Next waiting patient dynamically found
   const nextWaiting = queue.find(q => q.status === "Waiting");
+
+  // Modal toggle states for Frequent OPD Actions
+  const [isNewPatientModalOpen, setIsNewPatientModalOpen] = useState(false);
+  const [isEClaimsModalOpen, setIsEClaimsModalOpen] = useState(false);
+  const [isVitalsModalOpen, setIsVitalsModalOpen] = useState(false);
+  const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
+  const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
+
+  // Quick New Patient Form State
+  const [newPatName, setNewPatName] = useState("");
+  const [newPatAge, setNewPatAge] = useState<number>(35);
+  const [newPatGender, setNewPatGender] = useState<"Female" | "Male" | "Other">("Female");
+  const [newPatComplaint, setNewPatComplaint] = useState("");
+  const [newPatTriage, setNewPatTriage] = useState<TriageTier>("observation");
+  const [newPatContact, setNewPatContact] = useState("0917-555-0192");
+
+  // Quick eClaims Form State
+  const [claimPin, setClaimPin] = useState("12-849201948-3");
+  const [claimMemberName, setClaimMemberName] = useState(selectedPatient?.name || "Dela Cruz, Juan");
+  const [claimType, setClaimType] = useState("Formal Economy / Private");
+  const [claimDiag, setClaimDiag] = useState("Essential Hypertension - ICD-10: I10");
+  const [claimPackage, setClaimPackage] = useState("Php 6,000 - Medical Case");
+
+  // Quick Vitals Form State
+  const [quickHeight, setQuickHeight] = useState(165);
+  const [quickWeight, setQuickWeight] = useState(65);
+  const [quickBpSys, setQuickBpSys] = useState(120);
+  const [quickBpDia, setQuickBpDia] = useState(80);
+  const [quickHr, setQuickHr] = useState(75);
+  const [quickTemp, setQuickTemp] = useState(36.7);
+  const [quickSpo2, setQuickSpo2] = useState(99);
+
+  // Quick Referral Form State
+  const [refDept, setRefDept] = useState("Cardiology Subspecialty Clinic");
+  const [refReason, setRefReason] = useState("Urgent 2D Echocardiogram and specialist review.");
+  const [refPriority, setRefPriority] = useState<"Routine" | "Urgent" | "Stat Emergency">("Urgent");
+
+  const notify = (msg: string) => {
+    setActionSuccessMsg(msg);
+    setTimeout(() => setActionSuccessMsg(null), 4000);
+  };
+
+  const handleCallNext = () => {
+    if (propsCallNext) {
+      propsCallNext();
+    } else {
+      const called = callNextPatient();
+      if (called) {
+        notify(`Called next patient: #${called.queueNumber} ${called.patientName}`);
+        navigate("/workbench");
+      }
+    }
+  };
+
+  const handleConsult = (patientId: string) => {
+    const pat = consultPatient(patientId);
+    if (propsSelectPatient && pat) {
+      propsSelectPatient(pat);
+    }
+    navigate("/workbench");
+  };
+
+  // Submit Quick New Patient
+  const handleSaveNewPatient = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPatName.trim() || !newPatComplaint.trim()) return;
+
+    const newId = `P-2026-${Date.now().toString().slice(-4)}`;
+    const newPat: Patient = {
+      id: newId,
+      name: newPatName,
+      dob: "1991-05-14",
+      age: newPatAge,
+      gender: newPatGender,
+      civilStatus: "Married",
+      contact: newPatContact,
+      address: "Pasig City, Metro Manila",
+      emergencyContact: {
+        name: "Family Guardian",
+        relationship: "Spouse",
+        phone: newPatContact,
+      },
+      bloodType: "O+",
+      allergies: ["None known"],
+      chiefComplaint: newPatComplaint,
+      triageTier: newPatTriage,
+      admissionStatus: "Outpatient",
+      registeredAt: new Date().toISOString().split("T")[0],
+      attendingPhysician: user?.name || "Attending Physician",
+    };
+
+    addPatient(newPat);
+    setIsNewPatientModalOpen(false);
+    setNewPatName("");
+    setNewPatComplaint("");
+    notify(`New patient ${newPat.name} registered and added to live queue!`);
+  };
+
+  // Submit Quick eClaim
+  const handleSaveClaim = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newClaim: PhilHealthClaim = {
+      id: `CLM-2026-${Date.now().toString().slice(-3)}`,
+      patientId: selectedPatient?.id || "P-2024-001",
+      pin: claimPin,
+      memberName: claimMemberName,
+      membershipType: claimType,
+      diagnosisWithIcd: claimDiag,
+      caseRateAmount: claimPackage,
+      claimStatus: "Ready for Submission",
+      submissionDate: new Date().toISOString().split("T")[0],
+      hospitalCharges: 12000,
+      philhealthBenefit: 6000,
+      patientPayable: 6000,
+    };
+
+    addClaim(newClaim);
+    setIsEClaimsModalOpen(false);
+    notify(`PhilHealth eClaim created for ${claimMemberName}.`);
+  };
+
+  // Submit Quick Vitals & BMI
+  const handleSaveVitals = (e: React.FormEvent) => {
+    e.preventDefault();
+    const hM = quickHeight / 100;
+    const bmiVal = Number((quickWeight / (hM * hM)).toFixed(1));
+    notify(`Vitals logged for ${selectedPatient?.name || "Active Patient"}: BP ${quickBpSys}/${quickBpDia}, BMI ${bmiVal} kg/m²`);
+    setIsVitalsModalOpen(false);
+  };
+
+  // Submit Quick Referral
+  const handleSaveReferral = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newRef: OpdReferral = {
+      id: `REF-2026-${Date.now().toString().slice(-3)}`,
+      patientId: selectedPatient?.id || "P-2024-001",
+      patientName: selectedPatient?.name || "Active Patient",
+      referredFrom: "Outpatient General Medicine",
+      referredTo: refDept,
+      reason: refReason,
+      priority: refPriority,
+      timestamp: new Date().toISOString().replace("T", " ").slice(0, 16),
+      referringDoctor: user?.name || "Attending Physician",
+      status: "Pending",
+    };
+
+    addReferral(newRef);
+    setIsReferralModalOpen(false);
+    notify(`Specialist referral to ${refDept} created.`);
+  };
 
   return (
     <div className="space-y-5">
+      {/* Toast Notification */}
+      {actionSuccessMsg && (
+        <div className="bg-teal-900 text-teal-100 px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between border border-teal-700 shadow-md">
+          <div className="flex items-center gap-2">
+            <Check size={16} strokeWidth={2.5} className="text-teal-300" />
+            <span>{actionSuccessMsg}</span>
+          </div>
+          <button onClick={() => setActionSuccessMsg(null)} className="text-teal-300 hover:text-white cursor-pointer">
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Welcome & Call Next Patient Hero Header */}
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-teal-950 rounded-2xl p-6 text-white shadow-md border border-slate-700/60 relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
           <div className="space-y-1.5 max-w-xl">
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-teal-500/20 text-teal-300 border border-teal-500/30 text-xs font-semibold">
               <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse"></span>
-              Live OPD Operations • Session Active
+              Live OPD Operations • Session Active: {user?.role?.toUpperCase() || "STAFF"}
             </div>
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
-              Good day, {currentUser?.name || "Doctor"}!
+              Good day, {user?.name || "Doctor"}!
             </h2>
             <p className="text-xs text-slate-300 leading-relaxed">
               Outpatient Department clinic queue is active. You have{" "}
@@ -83,7 +286,7 @@ export default function OpdDashboardView({
             )}
 
             <button
-              onClick={onCallNextPatient}
+              onClick={handleCallNext}
               disabled={!nextWaiting}
               className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 shadow-md transition-all shrink-0 ${
                 nextWaiting
@@ -98,10 +301,13 @@ export default function OpdDashboardView({
         </div>
       </div>
 
-      {/* 4 Core Vital OPD Statistics */}
+      {/* 4 Core Vital OPD Statistics - DYNAMIC DATA BINDING */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Active Queue */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+        <div
+          onClick={() => navigate("/queue")}
+          className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:border-blue-300 hover:shadow-xs cursor-pointer transition-all"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
               Queue Waiting
@@ -113,11 +319,15 @@ export default function OpdDashboardView({
           <div className="text-2xl font-bold text-slate-900 mt-2">{waitingCount}</div>
           <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
             <span className="text-blue-600 font-semibold">{inConsultCount} In-Consultation</span>
+            <span className="text-slate-400">• {totalQueueCount} Total</span>
           </div>
         </div>
 
         {/* Critical Red Alerts */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+        <div
+          onClick={() => navigate("/queue")}
+          className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:border-rose-300 hover:shadow-xs cursor-pointer transition-all"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-rose-600 uppercase tracking-wide">
               Critical Triage
@@ -133,7 +343,10 @@ export default function OpdDashboardView({
         </div>
 
         {/* Observation Yellow */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+        <div
+          onClick={() => navigate("/queue")}
+          className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:border-amber-300 hover:shadow-xs cursor-pointer transition-all"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-amber-600 uppercase tracking-wide">
               Watch / Observation
@@ -148,8 +361,11 @@ export default function OpdDashboardView({
           </div>
         </div>
 
-        {/* Completed Consultations */}
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+        {/* Completed Consultations / Daily OPD Census */}
+        <div
+          onClick={() => navigate("/reports")}
+          className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:border-emerald-300 hover:shadow-xs cursor-pointer transition-all"
+        >
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-emerald-600 uppercase tracking-wide">
               Daily OPD Census
@@ -158,10 +374,12 @@ export default function OpdDashboardView({
               <CheckCircle size={16} strokeWidth={2} />
             </div>
           </div>
-          <div className="text-2xl font-bold text-slate-900 mt-2">{completedTodayCount}</div>
+          <div className="text-2xl font-bold text-slate-900 mt-2">
+            {totalQueueCount + completedCount}
+          </div>
           <div className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1">
             <TrendingUp size={12} strokeWidth={2} />
-            <span>94% Target clearance rate</span>
+            <span>{completedCount} Cleared • {stableCount} Stable</span>
           </div>
         </div>
       </div>
@@ -177,13 +395,20 @@ export default function OpdDashboardView({
               </h3>
               <p className="text-xs text-slate-500">Real-time outpatient consultation order</p>
             </div>
-            <button
-              onClick={() => onNavigateTab("queue")}
-              className="text-xs text-teal-700 hover:text-teal-800 font-semibold inline-flex items-center gap-1 hover:underline"
-            >
-              <span>Open Full Queue</span>
-              <ChevronRight size={14} strokeWidth={2} />
-            </button>
+            <div className="flex items-center gap-2">
+              {globalSearchQuery.trim() && (
+                <span className="text-[11px] bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-md font-semibold">
+                  Filtered: "{globalSearchQuery}" ({displayedQueue.length})
+                </span>
+              )}
+              <button
+                onClick={() => navigate("/queue")}
+                className="text-xs text-teal-700 hover:text-teal-800 font-semibold inline-flex items-center gap-1 hover:underline cursor-pointer"
+              >
+                <span>Open Full Queue</span>
+                <ChevronRight size={14} strokeWidth={2} />
+              </button>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
@@ -199,61 +424,64 @@ export default function OpdDashboardView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {queue.map(item => {
-                  const pat = patients.find(p => p.id === item.patientId);
-                  return (
-                    <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                      <td className="py-3 px-3 font-bold text-slate-700">
-                        #{item.queueNumber}
-                      </td>
-                      <td className="py-3 px-3">
-                        <div className="font-semibold text-slate-900">{item.patientName}</div>
-                        <div className="text-[10px] text-slate-500">
-                          {item.age}y/o • {item.gender} • In: {item.checkInTime}
-                        </div>
-                      </td>
-                      <td className="py-3 px-3">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            item.triageTier === "critical"
-                              ? "bg-rose-100 text-rose-700 border border-rose-300"
-                              : item.triageTier === "observation"
-                              ? "bg-amber-100 text-amber-800 border border-amber-300"
-                              : "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                          }`}
-                        >
-                          {item.triageTier}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-slate-700 max-w-[180px] truncate">
-                        {item.chiefComplaint}
-                      </td>
-                      <td className="py-3 px-3">
-                        <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                            item.status === "In-Consultation"
-                              ? "bg-teal-100 text-teal-800"
-                              : "bg-slate-100 text-slate-600"
-                          }`}
-                        >
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-right">
-                        <button
-                          onClick={() => {
-                            if (pat) onSelectPatient(pat);
-                            onNavigateTab("workbench");
-                          }}
-                          className="px-2.5 py-1 rounded-md bg-teal-50 hover:bg-teal-600 text-teal-700 hover:text-white border border-teal-200 text-[11px] font-semibold transition-all inline-flex items-center gap-1"
-                        >
-                          <Stethoscope size={12} strokeWidth={2} />
-                          <span>Consult</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {displayedQueue.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400">
+                      No patients in queue match "{globalSearchQuery}"
+                    </td>
+                  </tr>
+                ) : (
+                  displayedQueue.map(item => (
+                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3 px-3 font-bold text-slate-700">
+                      #{item.queueNumber}
+                    </td>
+                    <td className="py-3 px-3">
+                      <div className="font-semibold text-slate-900">{item.patientName}</div>
+                      <div className="text-[10px] text-slate-500">
+                        {item.age}y/o • {item.gender} • In: {item.checkInTime}
+                      </div>
+                    </td>
+                    <td className="py-3 px-3">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          item.triageTier === "critical"
+                            ? "bg-rose-100 text-rose-700 border border-rose-300"
+                            : item.triageTier === "observation"
+                            ? "bg-amber-100 text-amber-800 border border-amber-300"
+                            : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                        }`}
+                      >
+                        {item.triageTier}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-slate-700 max-w-[180px] truncate">
+                      {item.chiefComplaint}
+                    </td>
+                    <td className="py-3 px-3">
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                          item.status === "In-Consultation"
+                            ? "bg-teal-100 text-teal-800"
+                            : item.status === "Completed"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-slate-100 text-slate-600"
+                        }`}
+                      >
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <button
+                        onClick={() => handleConsult(item.patientId)}
+                        className="px-2.5 py-1 rounded-md bg-teal-50 hover:bg-teal-600 text-teal-700 hover:text-white border border-teal-200 text-[11px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        <Stethoscope size={12} strokeWidth={2} />
+                        <span>Consult</span>
+                      </button>
+                    </td>
+                  </tr>
+                )))}
               </tbody>
             </table>
           </div>
@@ -274,7 +502,10 @@ export default function OpdDashboardView({
 
             <div className="space-y-2 text-xs">
               {/* Critical Tier */}
-              <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 flex items-start gap-2.5">
+              <div
+                onClick={() => navigate("/queue")}
+                className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 flex items-start gap-2.5 cursor-pointer hover:bg-rose-100/70 transition-colors"
+              >
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-600 mt-1 shrink-0"></span>
                 <div className="flex-1">
                   <div className="flex justify-between items-center">
@@ -288,7 +519,10 @@ export default function OpdDashboardView({
               </div>
 
               {/* Watch / Observation Tier */}
-              <div className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2.5">
+              <div
+                onClick={() => navigate("/queue")}
+                className="p-2.5 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-2.5 cursor-pointer hover:bg-amber-100/70 transition-colors"
+              >
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 mt-1 shrink-0"></span>
                 <div className="flex-1">
                   <div className="flex justify-between items-center">
@@ -302,7 +536,10 @@ export default function OpdDashboardView({
               </div>
 
               {/* Stable Tier */}
-              <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 flex items-start gap-2.5">
+              <div
+                onClick={() => navigate("/queue")}
+                className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 flex items-start gap-2.5 cursor-pointer hover:bg-emerald-100/70 transition-colors"
+              >
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 shrink-0"></span>
                 <div className="flex-1">
                   <div className="flex justify-between items-center">
@@ -317,47 +554,507 @@ export default function OpdDashboardView({
             </div>
           </div>
 
-          {/* Quick OPD Modules Shortcuts */}
+          {/* Quick OPD Modules Shortcuts with Modal Toggles */}
           <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs space-y-2">
             <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
               Frequent OPD Actions
             </h4>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <button
-                onClick={() => onNavigateTab("registration")}
-                className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all"
+                onClick={() => setIsNewPatientModalOpen(true)}
+                className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
               >
-                <UserPlus size={16} strokeWidth={2} className="text-teal-700 mb-1" />
+                <UserPlus size={16} strokeWidth={2} className="text-teal-700 mb-1 group-hover:scale-110 transition-transform" />
                 <span className="font-semibold text-[11px]">New Patient</span>
               </button>
 
               <button
-                onClick={() => onNavigateTab("philhealth")}
-                className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all"
+                onClick={() => setIsEClaimsModalOpen(true)}
+                className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
               >
-                <CreditCard size={16} strokeWidth={2} className="text-teal-700 mb-1" />
+                <CreditCard size={16} strokeWidth={2} className="text-teal-700 mb-1 group-hover:scale-110 transition-transform" />
                 <span className="font-semibold text-[11px]">eClaims & Bill</span>
               </button>
 
               <button
-                onClick={() => onNavigateTab("vitals")}
-                className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all"
+                onClick={() => setIsVitalsModalOpen(true)}
+                className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
               >
-                <Activity size={16} strokeWidth={2} className="text-teal-700 mb-1" />
+                <Activity size={16} strokeWidth={2} className="text-teal-700 mb-1 group-hover:scale-110 transition-transform" />
                 <span className="font-semibold text-[11px]">Vitals & BMI</span>
               </button>
 
               <button
-                onClick={() => onNavigateTab("referrals")}
-                className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all"
+                onClick={() => setIsReferralModalOpen(true)}
+                className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
               >
-                <Send size={16} strokeWidth={2} className="text-teal-700 mb-1" />
+                <Send size={16} strokeWidth={2} className="text-teal-700 mb-1 group-hover:scale-110 transition-transform" />
                 <span className="font-semibold text-[11px]">Refer & Clear</span>
               </button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal 1: Quick New Patient Registration */}
+      {isNewPatientModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-teal-50 rounded-lg text-teal-700">
+                  <UserPlus size={18} strokeWidth={2} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Quick Patient Registration</h3>
+                  <p className="text-[11px] text-slate-500">Enroll new outpatient directly into queue</p>
+                </div>
+              </div>
+              <button onClick={() => setIsNewPatientModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X size={18} strokeWidth={2} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveNewPatient} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Full Legal Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Santos, Juanito Cruz"
+                  value={newPatName}
+                  onChange={e => setNewPatName(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-teal-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Age (Years)</label>
+                  <input
+                    type="number"
+                    value={newPatAge}
+                    onChange={e => setNewPatAge(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-teal-500 focus:outline-hidden"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Gender</label>
+                  <select
+                    value={newPatGender}
+                    onChange={e => setNewPatGender(e.target.value as any)}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-teal-500 focus:outline-hidden"
+                  >
+                    <option value="Female">Female</option>
+                    <option value="Male">Male</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Chief Complaint *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Acute fever, productive cough x 3 days"
+                  value={newPatComplaint}
+                  onChange={e => setNewPatComplaint(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-teal-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Triage Priority</label>
+                  <select
+                    value={newPatTriage}
+                    onChange={e => setNewPatTriage(e.target.value as TriageTier)}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-teal-500 focus:outline-hidden"
+                  >
+                    <option value="stable">Green - Stable</option>
+                    <option value="observation">Yellow - Observation</option>
+                    <option value="critical">Red - Critical</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Contact Number</label>
+                  <input
+                    type="text"
+                    value={newPatContact}
+                    onChange={e => setNewPatContact(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-teal-500 focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNewPatientModalOpen(false);
+                    navigate("/registration");
+                  }}
+                  className="text-teal-700 text-[11px] font-semibold hover:underline cursor-pointer"
+                >
+                  Open Full Admissions Desk →
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsNewPatientModalOpen(false)}
+                    className="px-3 py-1.5 border border-slate-300 rounded-lg text-slate-700 text-xs font-medium cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
+                  >
+                    Save & Enqueue
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 2: Quick PhilHealth eClaim */}
+      {isEClaimsModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-teal-50 rounded-lg text-teal-700">
+                  <CreditCard size={18} strokeWidth={2} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Quick eClaims & Billing Entry</h3>
+                  <p className="text-[11px] text-slate-500">Universal Health Care claim creation</p>
+                </div>
+              </div>
+              <button onClick={() => setIsEClaimsModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X size={18} strokeWidth={2} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveClaim} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">PhilHealth PIN *</label>
+                <input
+                  type="text"
+                  required
+                  value={claimPin}
+                  onChange={e => setClaimPin(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg font-mono focus:border-teal-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Member / Patient Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={claimMemberName}
+                  onChange={e => setClaimMemberName(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-teal-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Membership Type</label>
+                  <select
+                    value={claimType}
+                    onChange={e => setClaimType(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-teal-500 focus:outline-hidden"
+                  >
+                    <option value="Formal Economy / Private">Formal Economy / Private</option>
+                    <option value="Direct Contributor - Government">Direct Contributor - Govt</option>
+                    <option value="Senior Citizen (RA 10645)">Senior Citizen (RA 10645)</option>
+                    <option value="Indirect Contributor - Indigent">Indigent (NHTS-PR)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Case Rate Package</label>
+                  <select
+                    value={claimPackage}
+                    onChange={e => setClaimPackage(e.target.value)}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-teal-500 focus:outline-hidden"
+                  >
+                    <option value="Php 6,000 - Medical Case">Php 6,000 - Medical</option>
+                    <option value="Php 9,000 - Konsulta OPD">Php 9,000 - Konsulta</option>
+                    <option value="Php 15,000 - Moderate">Php 15,000 - Moderate</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Admission Diagnosis & ICD-10</label>
+                <input
+                  type="text"
+                  value={claimDiag}
+                  onChange={e => setClaimDiag(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-teal-500 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEClaimsModalOpen(false);
+                    navigate("/philhealth");
+                  }}
+                  className="text-teal-700 text-[11px] font-semibold hover:underline cursor-pointer"
+                >
+                  Open Full PhilHealth Portal →
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsEClaimsModalOpen(false)}
+                    className="px-3 py-1.5 border border-slate-300 rounded-lg text-slate-700 text-xs font-medium cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
+                  >
+                    Submit Claim
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 3: Quick Vitals & BMI Assessment */}
+      {isVitalsModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-teal-50 rounded-lg text-teal-700">
+                  <Activity size={18} strokeWidth={2} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Quick Vitals & BMI Entry</h3>
+                  <p className="text-[11px] text-slate-500">Patient: {selectedPatient?.name || "Active Patient"}</p>
+                </div>
+              </div>
+              <button onClick={() => setIsVitalsModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X size={18} strokeWidth={2} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveVitals} className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Height (cm)</label>
+                  <input
+                    type="number"
+                    value={quickHeight}
+                    onChange={e => setQuickHeight(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg font-mono focus:border-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Weight (kg)</label>
+                  <input
+                    type="number"
+                    value={quickWeight}
+                    onChange={e => setQuickWeight(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg font-mono focus:border-teal-500"
+                  />
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-teal-50 border border-teal-200 flex justify-between items-center text-xs">
+                <span className="font-semibold text-teal-900">Calculated BMI:</span>
+                <span className="font-bold text-slate-900 font-mono text-sm">
+                  {(quickWeight / ((quickHeight / 100) * (quickHeight / 100))).toFixed(1)} kg/m²
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">BP Systolic (mmHg)</label>
+                  <input
+                    type="number"
+                    value={quickBpSys}
+                    onChange={e => setQuickBpSys(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg font-mono focus:border-teal-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">BP Diastolic (mmHg)</label>
+                  <input
+                    type="number"
+                    value={quickBpDia}
+                    onChange={e => setQuickBpDia(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg font-mono focus:border-teal-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">HR (bpm)</label>
+                  <input
+                    type="number"
+                    value={quickHr}
+                    onChange={e => setQuickHr(Number(e.target.value))}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">Temp (°C)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={quickTemp}
+                    onChange={e => setQuickTemp(Number(e.target.value))}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-700 font-semibold mb-1">SpO2 (%)</label>
+                  <input
+                    type="number"
+                    value={quickSpo2}
+                    onChange={e => setQuickSpo2(Number(e.target.value))}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsVitalsModalOpen(false);
+                    navigate("/vitals");
+                  }}
+                  className="text-teal-700 text-[11px] font-semibold hover:underline cursor-pointer"
+                >
+                  Open Nurse Station →
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsVitalsModalOpen(false)}
+                    className="px-3 py-1.5 border border-slate-300 rounded-lg text-slate-700 text-xs font-medium cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
+                  >
+                    Save Vitals
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 4: Quick Referral & Clear */}
+      {isReferralModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-teal-50 rounded-lg text-teal-700">
+                  <Send size={18} strokeWidth={2} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Quick Specialist Referral</h3>
+                  <p className="text-[11px] text-slate-500">Patient: {selectedPatient?.name || "Active Patient"}</p>
+                </div>
+              </div>
+              <button onClick={() => setIsReferralModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X size={18} strokeWidth={2} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveReferral} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Refer To Department</label>
+                <select
+                  value={refDept}
+                  onChange={e => setRefDept(e.target.value)}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-teal-500"
+                >
+                  <option value="Cardiology Subspecialty Clinic">Cardiology Subspecialty Clinic</option>
+                  <option value="General Surgery Department">General Surgery Department</option>
+                  <option value="Pulmonology & Respiratory">Pulmonology & Respiratory</option>
+                  <option value="Endocrinology & Diabetes Clinic">Endocrinology & Diabetes Clinic</option>
+                  <option value="Tertiary Care Hospital (External)">Tertiary Care Hospital (External)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Clinical Indication / Reason *</label>
+                <textarea
+                  rows={3}
+                  required
+                  value={refReason}
+                  onChange={e => setRefReason(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:border-teal-500 focus:bg-white text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-semibold mb-1">Priority Urgency</label>
+                <select
+                  value={refPriority}
+                  onChange={e => setRefPriority(e.target.value as any)}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-teal-500"
+                >
+                  <option value="Routine">Routine</option>
+                  <option value="Urgent">Urgent</option>
+                  <option value="Stat Emergency">Stat Emergency</option>
+                </select>
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsReferralModalOpen(false);
+                    navigate("/referrals");
+                  }}
+                  className="text-teal-700 text-[11px] font-semibold hover:underline cursor-pointer"
+                >
+                  Open Full Discharge Module →
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsReferralModalOpen(false)}
+                    className="px-3 py-1.5 border border-slate-300 rounded-lg text-slate-700 text-xs font-medium cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
+                  >
+                    Submit Referral
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

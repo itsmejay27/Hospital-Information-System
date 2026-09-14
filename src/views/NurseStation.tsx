@@ -708,8 +708,8 @@ export default function NurseStation({
                         </td>
 
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <div className="font-medium text-slate-900">{p.attendingPhysician || "Dr. Jose Reyes, MD"}</div>
-                          <div className="text-[10px] text-slate-500">Internal Medicine</div>
+                          <div className="font-medium text-slate-900">{p.attendingPhysician || "Attending Physician"}</div>
+                          <div className="text-[10px] text-slate-500">Internal Medicine / OPD</div>
                         </td>
 
                         <td className="px-4 py-3">

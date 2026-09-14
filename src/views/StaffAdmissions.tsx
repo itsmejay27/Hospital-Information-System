@@ -87,7 +87,7 @@ export default function StaffAdmissions({
   const [selectedPatientId, setSelectedPatientId] = useState(patients[0]?.id || "");
   const [admitWard, setAdmitWard] = useState("Medical Ward (4th Floor)");
   const [admitBed, setAdmitBed] = useState("Bed 401-A");
-  const [admitDoctor, setAdmitDoctor] = useState("Dr. Jose Reyes, MD");
+  const [admitDoctor, setAdmitDoctor] = useState("Attending Physician, MD (Internal Medicine)");
   const [admitReason, setAdmitReason] = useState("");
   const [admitTriage, setAdmitTriage] = useState<TriageTier>("observation");
   const [admitStatus, setAdmitStatus] = useState<"Admitted" | "Observation">("Admitted");
