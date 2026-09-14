@@ -37,7 +37,8 @@ function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/dashboard" replace />;
+    const redirectTarget = user.role === "admin" ? "/admin" : "/dashboard";
+    return <Navigate to={redirectTarget} replace />;
   }
 
   return children ? <>{children}</> : <Outlet />;
@@ -62,15 +63,15 @@ function RegistrationRoute() {
     user?.role === "staff"
       ? user
       : {
-          id: user?.id || "USR-STAFF",
-          name: user?.name || "Admissions Staff",
-          role: "staff",
-          title: "Admissions Officer",
-          avatarInitials: "AS",
-          status: "active",
-          department: user?.department || "Outpatient Admissions Desk",
-          licenseNumber: user?.licenseNumber || "EMP-REG-101",
-        };
+        id: user?.id || "USR-STAFF",
+        name: user?.name || "Admissions Staff",
+        role: "staff",
+        title: "Admissions Officer",
+        avatarInitials: "AS",
+        status: "active",
+        department: user?.department || "Outpatient Admissions Desk",
+        licenseNumber: user?.licenseNumber || "EMP-REG-101",
+      };
 
   return (
     <StaffAdmissions
@@ -110,15 +111,15 @@ function WorkbenchRoute({ initialTab = "profile" }: { initialTab?: WorkbenchTab 
     user?.role === "doctor"
       ? user
       : {
-          id: user?.id || "DOC-001",
-          name: user?.name || "Attending Physician, MD",
-          role: "doctor",
-          title: "Attending Physician",
-          avatarInitials: "AP",
-          department: user?.department || "Outpatient Department",
-          licenseNumber: user?.licenseNumber || "PRC Lic. Verified",
-          status: "active",
-        };
+        id: user?.id || "DOC-001",
+        name: user?.name || "Attending Physician, MD",
+        role: "doctor",
+        title: "Attending Physician",
+        avatarInitials: "AP",
+        department: user?.department || "Outpatient Department",
+        licenseNumber: user?.licenseNumber || "PRC Lic. Verified",
+        status: "active",
+      };
 
   return (
     <DoctorWorkbench
@@ -162,15 +163,15 @@ function VitalsRoute() {
     user?.role === "nurse"
       ? user
       : {
-          id: user?.id || "NURSE-001",
-          name: user?.name || "Triage & OPD Nurse",
-          role: "nurse",
-          title: "Staff Nurse, RN",
-          avatarInitials: "RN",
-          department: user?.department || "Outpatient Nursing Station",
-          licenseNumber: user?.licenseNumber || "PRC Lic. Registered Nurse",
-          status: "active",
-        };
+        id: user?.id || "NURSE-001",
+        name: user?.name || "Triage & OPD Nurse",
+        role: "nurse",
+        title: "Staff Nurse, RN",
+        avatarInitials: "RN",
+        department: user?.department || "Outpatient Nursing Station",
+        licenseNumber: user?.licenseNumber || "PRC Lic. Registered Nurse",
+        status: "active",
+      };
 
   return (
     <NurseStation
@@ -230,15 +231,15 @@ function AdminRoute() {
     user?.role === "admin"
       ? user
       : {
-          id: user?.id || "ADM-001",
-          name: user?.name || "System Administrator",
-          role: "admin",
-          title: "Hospital Administrator",
-          avatarInitials: "SA",
-          department: "Hospital Administration & Security",
-          status: "active",
-          licenseNumber: user?.licenseNumber || "SYS-ADMIN-AUTH",
-        };
+        id: user?.id || "ADM-001",
+        name: user?.name || "System Administrator",
+        role: "admin",
+        title: "Hospital Administrator",
+        avatarInitials: "SA",
+        department: "Hospital Administration & Security",
+        status: "active",
+        licenseNumber: user?.licenseNumber || "SYS-ADMIN-AUTH",
+      };
 
   return (
     <AdminCompliance
@@ -311,11 +312,18 @@ export default function App() {
               }
             >
               <Route path="/dashboard" element={<OpdDashboardView />} />
-              <Route path="/queue" element={<OpdQueueView />} />
+              <Route
+                path="/queue"
+                element={
+                  <ProtectedRoute allowedRoles={["doctor", "nurse", "staff"]}>
+                    <OpdQueueView />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/registration"
                 element={
-                  <ProtectedRoute allowedRoles={["staff", "admin"]}>
+                  <ProtectedRoute allowedRoles={["staff"]}>
                     <RegistrationRoute />
                   </ProtectedRoute>
                 }
@@ -323,7 +331,7 @@ export default function App() {
               <Route
                 path="/workbench"
                 element={
-                  <ProtectedRoute allowedRoles={["doctor", "admin"]}>
+                  <ProtectedRoute allowedRoles={["doctor"]}>
                     <WorkbenchRoute initialTab="profile" />
                   </ProtectedRoute>
                 }
@@ -331,7 +339,7 @@ export default function App() {
               <Route
                 path="/vitals"
                 element={
-                  <ProtectedRoute allowedRoles={["nurse", "admin"]}>
+                  <ProtectedRoute allowedRoles={["nurse"]}>
                     <VitalsRoute />
                   </ProtectedRoute>
                 }
@@ -339,7 +347,7 @@ export default function App() {
               <Route
                 path="/prescriptions"
                 element={
-                  <ProtectedRoute allowedRoles={["doctor", "admin"]}>
+                  <ProtectedRoute allowedRoles={["doctor"]}>
                     <WorkbenchRoute initialTab="prescriptions" />
                   </ProtectedRoute>
                 }
@@ -347,7 +355,7 @@ export default function App() {
               <Route
                 path="/diagnostics"
                 element={
-                  <ProtectedRoute allowedRoles={["doctor", "nurse", "admin"]}>
+                  <ProtectedRoute allowedRoles={["doctor", "nurse"]}>
                     <WorkbenchRoute initialTab="diagnostics" />
                   </ProtectedRoute>
                 }
@@ -355,7 +363,7 @@ export default function App() {
               <Route
                 path="/philhealth"
                 element={
-                  <ProtectedRoute allowedRoles={["doctor", "staff", "admin"]}>
+                  <ProtectedRoute allowedRoles={["doctor", "staff"]}>
                     <PhilHealthRoute />
                   </ProtectedRoute>
                 }
@@ -363,7 +371,7 @@ export default function App() {
               <Route
                 path="/referrals"
                 element={
-                  <ProtectedRoute allowedRoles={["doctor", "admin"]}>
+                  <ProtectedRoute allowedRoles={["doctor"]}>
                     <WorkbenchRoute initialTab="referral" />
                   </ProtectedRoute>
                 }
@@ -371,7 +379,7 @@ export default function App() {
               <Route
                 path="/reports"
                 element={
-                  <ProtectedRoute allowedRoles={["doctor", "nurse", "staff", "admin"]}>
+                  <ProtectedRoute allowedRoles={["doctor", "nurse", "staff"]}>
                     <ReportsRoute />
                   </ProtectedRoute>
                 }

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   User,
   Patient,
@@ -47,7 +48,15 @@ export default function StaffAdmissions({
   onAddVisitorLog,
   onCheckOutVisitor,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<StaffTab>("register");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const subTabParam = searchParams.get("subTab") as StaffTab | null;
+
+  const activeTab: StaffTab = subTabParam && ["register", "admit", "roster", "visitors"].includes(subTabParam) ? subTabParam : "register";
+
+  const setActiveTab = (tab: StaffTab) => {
+    setSearchParams({ subTab: tab });
+  };
+
   const [notification, setNotification] = useState<string | null>(null);
 
   // Form State for Registration
@@ -279,25 +288,11 @@ export default function StaffAdmissions({
 
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setActiveTab("register")}
-              className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-2.5 rounded-lg shadow-sm transition-colors inline-flex items-center gap-1.5"
-            >
-              <UserPlus size={16} strokeWidth={2} />
-              <span>Register Patient</span>
-            </button>
-            <button
-              onClick={() => setActiveTab("admit")}
-              className="bg-white/15 hover:bg-white/25 text-white font-medium text-xs px-4 py-2.5 rounded-lg border border-white/20 transition-colors inline-flex items-center gap-1.5"
-            >
-              <Bed size={16} strokeWidth={2} />
-              <span>Admit to Bed</span>
-            </button>
-            <button
               onClick={() => setShowVisitorModal(true)}
-              className="bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs px-4 py-2.5 rounded-lg transition-colors inline-flex items-center gap-1.5"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs px-4 py-2 rounded-lg transition-colors inline-flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
               <Users size={16} strokeWidth={2} />
-              <span>Log Visitor</span>
+              <span>Log Visitor Entry</span>
             </button>
           </div>
         </div>
@@ -306,44 +301,40 @@ export default function StaffAdmissions({
         <div className="flex flex-wrap gap-2 mt-6 pt-6 border-t border-white/15">
           <button
             onClick={() => setActiveTab("register")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${
-              activeTab === "register"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${activeTab === "register"
                 ? "bg-emerald-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <UserPlus size={16} strokeWidth={2} />
             <span>New Patient Intake & PhilHealth Enrollment</span>
           </button>
           <button
             onClick={() => setActiveTab("admit")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${
-              activeTab === "admit"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${activeTab === "admit"
                 ? "bg-emerald-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <Bed size={16} strokeWidth={2} />
             <span>Inpatient Bed Allocation</span>
           </button>
           <button
             onClick={() => setActiveTab("roster")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${
-              activeTab === "roster"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${activeTab === "roster"
                 ? "bg-emerald-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <Users size={16} strokeWidth={2} />
             <span>Master Patient Directory Table ({patients.length})</span>
           </button>
           <button
             onClick={() => setActiveTab("visitors")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${
-              activeTab === "visitors"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${activeTab === "visitors"
                 ? "bg-emerald-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <Users size={16} strokeWidth={2} />
             <span>Front Desk Visitor Log ({visitorLogs.length})</span>
@@ -491,11 +482,10 @@ export default function StaffAdmissions({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
-                  <label className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                    regTriageTier === "stable"
+                  <label className={`p-3 rounded-xl border cursor-pointer transition-all ${regTriageTier === "stable"
                       ? "bg-emerald-50 border-emerald-500 ring-2 ring-emerald-400"
                       : "bg-white border-slate-200 hover:bg-slate-50"
-                  }`}>
+                    }`}>
                     <input
                       type="radio"
                       name="regTriageTier"
@@ -513,11 +503,10 @@ export default function StaffAdmissions({
                     </div>
                   </label>
 
-                  <label className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                    regTriageTier === "observation"
+                  <label className={`p-3 rounded-xl border cursor-pointer transition-all ${regTriageTier === "observation"
                       ? "bg-amber-50 border-amber-500 ring-2 ring-amber-400"
                       : "bg-white border-slate-200 hover:bg-slate-50"
-                  }`}>
+                    }`}>
                     <input
                       type="radio"
                       name="regTriageTier"
@@ -535,11 +524,10 @@ export default function StaffAdmissions({
                     </div>
                   </label>
 
-                  <label className={`p-3 rounded-xl border cursor-pointer transition-all ${
-                    regTriageTier === "critical"
+                  <label className={`p-3 rounded-xl border cursor-pointer transition-all ${regTriageTier === "critical"
                       ? "bg-rose-50 border-rose-500 ring-2 ring-rose-400"
                       : "bg-white border-slate-200 hover:bg-slate-50"
-                  }`}>
+                    }`}>
                     <input
                       type="radio"
                       name="regTriageTier"
@@ -941,13 +929,12 @@ export default function StaffAdmissions({
                       </td>
 
                       <td className="px-4 py-3.5 whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          p.admissionStatus === "Admitted"
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${p.admissionStatus === "Admitted"
                             ? "bg-blue-100 text-blue-800"
                             : p.admissionStatus === "Observation"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-slate-100 text-slate-700"
-                        }`}>
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-slate-100 text-slate-700"
+                          }`}>
                           {p.admissionStatus}
                         </span>
                         <div className="text-[11px] text-slate-600 mt-0.5">
@@ -1021,11 +1008,10 @@ export default function StaffAdmissions({
                     <tr key={v.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3.5 whitespace-nowrap">
                         <div className="font-mono font-bold text-slate-900">{v.badgeNumber}</div>
-                        <span className={`inline-block mt-0.5 text-[10px] font-bold px-2 py-0.5 rounded ${
-                          v.status === "Currently Visiting"
+                        <span className={`inline-block mt-0.5 text-[10px] font-bold px-2 py-0.5 rounded ${v.status === "Currently Visiting"
                             ? "bg-emerald-100 text-emerald-800"
                             : "bg-slate-100 text-slate-600"
-                        }`}>
+                          }`}>
                           {v.status}
                         </span>
                       </td>

@@ -258,11 +258,11 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
       prev.map(p =>
         p.id === patientId
           ? {
-              ...p,
-              admissionStatus: status,
-              ward: ward !== undefined ? ward : p.ward,
-              bed: bed !== undefined ? bed : p.bed,
-            }
+            ...p,
+            admissionStatus: status,
+            ward: ward !== undefined ? ward : p.ward,
+            bed: bed !== undefined ? bed : p.bed,
+          }
           : p
       )
     );
@@ -286,11 +286,11 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
       prev.map(m =>
         m.id === medId
           ? {
-              ...m,
-              lastAdministered: `Today, ${timeNow}`,
-              administeredBy: nurseName,
-              administeredByLicense: nurseLicense || "PRC Lic. Registered Nurse",
-            }
+            ...m,
+            lastAdministered: `Today, ${timeNow}`,
+            administeredBy: nurseName,
+            administeredByLicense: nurseLicense || "PRC Lic. Registered Nurse",
+          }
           : m
       )
     );

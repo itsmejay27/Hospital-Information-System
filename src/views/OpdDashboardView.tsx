@@ -18,6 +18,10 @@ import {
   X,
   Plus,
   Check,
+  ShieldCheck,
+  Lock,
+  FileText,
+  Settings,
 } from "../components/Icons";
 
 interface OpdDashboardViewProps {
@@ -57,6 +61,8 @@ export default function OpdDashboardView({
     selectedPatient,
     setSelectedPatient,
     globalSearchQuery,
+    auditLogs = [],
+    usersList = [],
   } = useOpdData();
 
   const user = propsUser || authUser;
@@ -231,6 +237,230 @@ export default function OpdDashboardView({
     setIsReferralModalOpen(false);
     notify(`Specialist referral to ${refDept} created.`);
   };
+
+  if (user?.role === "admin") {
+    return (
+      <div className="space-y-6">
+        {/* Admin Welcome Hero Banner */}
+        <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 rounded-2xl p-6 text-white shadow-md border border-amber-900/40 relative overflow-hidden">
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+            <div className="space-y-1.5 max-w-xl">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold">
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                System & Security Operations • Admin Session Active
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+                Welcome, {user.name}!
+              </h2>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Hospital System Infrastructure & Role-Based Access Security are fully active. You are viewing high-level system health metrics, account management controls, and immutable audit ledgers.
+              </p>
+            </div>
+
+            <button
+              onClick={() => navigate("/admin")}
+              className="px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-2 shadow-md transition-all shrink-0 cursor-pointer"
+            >
+              <ShieldCheck size={16} strokeWidth={2} />
+              <span>Open Admin & Security Console</span>
+            </button>
+          </div>
+        </div>
+
+        {/* 4 High-Level System Metrics */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div
+            onClick={() => navigate("/admin?tab=security")}
+            className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:border-amber-300 cursor-pointer transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+                System Status
+              </span>
+              <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                <Activity size={16} strokeWidth={2} />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-slate-900 mt-2">99.98%</div>
+            <div className="text-[11px] text-emerald-600 font-semibold mt-1">
+              Operational • DB Connected
+            </div>
+          </div>
+
+          <div
+            onClick={() => navigate("/admin?tab=users")}
+            className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:border-amber-300 cursor-pointer transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-amber-700 uppercase tracking-wide">
+                Staff Accounts
+              </span>
+              <div className="p-2 bg-amber-50 text-amber-600 rounded-lg">
+                <Users size={16} strokeWidth={2} />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-slate-900 mt-2">{usersList.length || 4}</div>
+            <div className="text-[11px] text-slate-500 mt-1">
+              Doctors, Nurses & Staff Users
+            </div>
+          </div>
+
+          <div
+            onClick={() => navigate("/admin?tab=audit")}
+            className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:border-amber-300 cursor-pointer transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">
+                Cryptographic Logs
+              </span>
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                <FileText size={16} strokeWidth={2} />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-slate-900 mt-2">{auditLogs.length || 8}</div>
+            <div className="text-[11px] text-blue-600 font-medium mt-1">
+              0 Security Violations Flagged
+            </div>
+          </div>
+
+          <div
+            onClick={() => navigate("/admin?tab=security")}
+            className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs hover:border-amber-300 cursor-pointer transition-all"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-purple-700 uppercase tracking-wide">
+                Data Privacy
+              </span>
+              <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+                <Lock size={16} strokeWidth={2} />
+              </div>
+            </div>
+            <div className="text-2xl font-bold text-purple-900 mt-2">RA 10173</div>
+            <div className="text-[11px] text-purple-600 font-semibold mt-1">
+              Zero PHI Exposure Enforced
+            </div>
+          </div>
+        </div>
+
+        {/* System Administration Shortcuts & Recent Security Audit Logs */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  Recent Cryptographic Audit Trail
+                </h3>
+                <p className="text-xs text-slate-500">System event logging & security status</p>
+              </div>
+              <button
+                onClick={() => navigate("/admin?tab=audit")}
+                className="text-xs text-amber-700 hover:text-amber-800 font-semibold inline-flex items-center gap-1 cursor-pointer"
+              >
+                <span>View All Logs</span>
+                <ChevronRight size={14} strokeWidth={2} />
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-600 font-semibold border-b border-slate-200 uppercase text-[10px]">
+                  <tr>
+                    <th className="py-2.5 px-3">Timestamp</th>
+                    <th className="py-2.5 px-3">User & License</th>
+                    <th className="py-2.5 px-3">System Action</th>
+                    <th className="py-2.5 px-3">Department</th>
+                    <th className="py-2.5 px-3 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {auditLogs.slice(0, 5).map(log => (
+                    <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-3 font-mono text-slate-600 text-[11px]">
+                        {log.timestamp}
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="font-semibold text-slate-900">{log.userName}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          {log.userLicense || log.userRole.toUpperCase()}
+                        </div>
+                      </td>
+                      <td className="py-3 px-3 text-slate-800 font-medium">
+                        {log.action}
+                      </td>
+                      <td className="py-3 px-3 text-slate-600">
+                        {log.department}
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold px-2 py-0.5 rounded text-[10px] inline-flex items-center gap-1">
+                          <CheckCircle size={12} className="text-emerald-600" />
+                          <span>{log.status}</span>
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-2xs space-y-3">
+            <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2">
+              System Admin Controls
+            </h4>
+            <div className="space-y-2 text-xs">
+              <button
+                onClick={() => navigate("/admin?tab=users")}
+                className="w-full p-3 rounded-lg bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 flex items-center justify-between text-left transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-amber-100 text-amber-800 rounded-lg group-hover:scale-105 transition-transform">
+                    <Users size={16} strokeWidth={2} />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-900">User Account Directory</div>
+                    <div className="text-[10px] text-slate-500">Create, edit roles, suspend accounts</div>
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-slate-400 group-hover:text-amber-700" />
+              </button>
+
+              <button
+                onClick={() => navigate("/admin?tab=branding")}
+                className="w-full p-3 rounded-lg bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 flex items-center justify-between text-left transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-amber-100 text-amber-800 rounded-lg group-hover:scale-105 transition-transform">
+                    <Settings size={16} strokeWidth={2} />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-900">Dynamic Branding & Config</div>
+                    <div className="text-[10px] text-slate-500">Configure name, emergency hotline</div>
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-slate-400 group-hover:text-amber-700" />
+              </button>
+
+              <button
+                onClick={() => navigate("/admin?tab=rbac")}
+                className="w-full p-3 rounded-lg bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 flex items-center justify-between text-left transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-amber-100 text-amber-800 rounded-lg group-hover:scale-105 transition-transform">
+                    <ShieldCheck size={16} strokeWidth={2} />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-900">RBAC Permissions Matrix</div>
+                    <div className="text-[10px] text-slate-500">Inspect strict role boundaries</div>
+                  </div>
+                </div>
+                <ChevronRight size={14} className="text-slate-400 group-hover:text-amber-700" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-5">

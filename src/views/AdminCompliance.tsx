@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { User, AuditLog, HospitalConfig, Role } from "../types";
 import {
   FileText,
@@ -85,7 +86,14 @@ export default function AdminCompliance({
   onAddUser,
   onToggleUserStatus,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<AdminTab>("users");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab") as AdminTab | null;
+  const activeTab: AdminTab = tabParam && ["audit", "rbac", "users", "branding", "security"].includes(tabParam) ? tabParam : "users";
+
+  const setActiveTab = (tab: AdminTab) => {
+    setSearchParams({ tab });
+  };
+
   const [logFilter, setLogFilter] = useState("all");
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -99,8 +107,9 @@ export default function AdminCompliance({
   const [brandingAddress, setBrandingAddress] = useState(hospitalConfig.address);
   const [brandingAccreditation, setBrandingAccreditation] = useState(hospitalConfig.accreditation);
 
-  // Create User Modal State
+  // Create & Edit User Modal State
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newFullName, setNewFullName] = useState("");
   const [newRole, setNewRole] = useState<Role>("nurse");
   const [newTitle, setNewTitle] = useState("Staff Registered Nurse");
@@ -285,55 +294,50 @@ export default function AdminCompliance({
         <div className="flex flex-wrap gap-2 mt-6 pt-6 border-t border-white/15">
           <button
             onClick={() => setActiveTab("users")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
-              activeTab === "users"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === "users"
                 ? "bg-amber-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <Users size={16} className="flex-shrink-0" />
             <span>Admin-Only Account Management ({usersList.length})</span>
           </button>
           <button
             onClick={() => setActiveTab("branding")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
-              activeTab === "branding"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === "branding"
                 ? "bg-amber-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <Settings size={16} className="flex-shrink-0" />
             <span>Dynamic Hospital Branding & Contacts</span>
           </button>
           <button
             onClick={() => setActiveTab("audit")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
-              activeTab === "audit"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === "audit"
                 ? "bg-amber-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <FileText size={16} className="flex-shrink-0" />
             <span>Cryptographic Audit Ledger ({auditLogs.length})</span>
           </button>
           <button
             onClick={() => setActiveTab("rbac")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
-              activeTab === "rbac"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === "rbac"
                 ? "bg-amber-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <KeyRound size={16} className="flex-shrink-0" />
             <span>RBAC Permissions Matrix</span>
           </button>
           <button
             onClick={() => setActiveTab("security")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${
-              activeTab === "security"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 ${activeTab === "security"
                 ? "bg-amber-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <ShieldCheck size={16} className="flex-shrink-0" />
             <span>Security Status & NPC Guidelines</span>
@@ -401,15 +405,14 @@ export default function AdminCompliance({
                       </td>
 
                       <td className="px-4 py-3.5 whitespace-nowrap">
-                        <span className={`inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded ${
-                          u.role === "doctor"
+                        <span className={`inline-block text-[10px] font-bold uppercase px-2 py-0.5 rounded ${u.role === "doctor"
                             ? "bg-blue-100 text-blue-800"
                             : u.role === "nurse"
-                            ? "bg-purple-100 text-purple-800"
-                            : u.role === "staff"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-amber-100 text-amber-800"
-                        }`}>
+                              ? "bg-purple-100 text-purple-800"
+                              : u.role === "staff"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-amber-100 text-amber-800"
+                          }`}>
                           {u.role}
                         </span>
                         <div className="text-[11px] text-slate-600 mt-0.5 font-medium">{u.title}</div>
@@ -430,11 +433,10 @@ export default function AdminCompliance({
                       </td>
 
                       <td className="px-4 py-3.5 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded ${
-                          u.status === "suspended"
+                        <span className={`inline-flex items-center gap-1 font-bold text-[10px] px-2 py-0.5 rounded ${u.status === "suspended"
                             ? "bg-rose-100 text-rose-800"
                             : "bg-emerald-100 text-emerald-800"
-                        }`}>
+                          }`}>
                           {u.status === "suspended" ? (
                             <>
                               <UserX size={12} strokeWidth={2} />
@@ -452,11 +454,10 @@ export default function AdminCompliance({
                       <td className="px-4 py-3.5 text-right whitespace-nowrap">
                         <button
                           onClick={() => onToggleUserStatus(u.id)}
-                          className={`text-xs font-semibold px-3 py-1.5 rounded transition-colors ${
-                            u.status === "suspended"
+                          className={`text-xs font-semibold px-3 py-1.5 rounded transition-colors ${u.status === "suspended"
                               ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                               : "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                          }`}
+                            }`}
                         >
                           {u.status === "suspended" ? "Re-activate" : "Suspend"}
                         </button>

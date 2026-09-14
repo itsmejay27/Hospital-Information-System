@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { OpdTab, User, Role } from "../types";
 import { useAuth } from "../context/AuthContext";
@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Building2,
 } from "./Icons";
 
@@ -29,6 +30,12 @@ interface OpdSidebarProps {
   queueCount?: number;
 }
 
+interface SubNavItem {
+  id: string;
+  label: string;
+  path: string;
+}
+
 interface NavItem {
   id: OpdTab;
   path: string;
@@ -38,6 +45,7 @@ interface NavItem {
   badge?: number | string;
   roles?: Role[];
   group: "clinical" | "billing" | "management";
+  subItems?: SubNavItem[];
 }
 
 export default function OpdSidebar({
@@ -56,6 +64,13 @@ export default function OpdSidebar({
   const user = propsUser || authUser;
   const liveWaiting = propsQueueCount !== undefined ? propsQueueCount : waitingCount;
 
+  // Track expanded parent menus
+  const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
+    registration: true,
+    workbench: true,
+    admin: true,
+  });
+
   const navItems: NavItem[] = [
     {
       id: "dashboard",
@@ -73,7 +88,7 @@ export default function OpdSidebar({
       shortLabel: "Queue",
       icon: Users,
       badge: liveWaiting > 0 ? liveWaiting : undefined,
-      roles: ["doctor", "nurse", "staff", "admin"],
+      roles: ["doctor", "nurse", "staff"],
       group: "clinical",
     },
     {
@@ -82,8 +97,14 @@ export default function OpdSidebar({
       label: "Patient Registration",
       shortLabel: "Register",
       icon: UserPlus,
-      roles: ["staff", "admin"],
+      roles: ["staff"],
       group: "clinical",
+      subItems: [
+        { id: "register", label: "Add New Patient", path: "/registration?subTab=register" },
+        { id: "roster", label: "Edit Profile & Directory", path: "/registration?subTab=roster" },
+        { id: "admit", label: "Search & Bed Allocation", path: "/registration?subTab=admit" },
+        { id: "visitors", label: "Front Desk Visitor Log", path: "/registration?subTab=visitors" },
+      ],
     },
     {
       id: "workbench",
@@ -91,8 +112,14 @@ export default function OpdSidebar({
       label: "Doctor Workbench",
       shortLabel: "Workbench",
       icon: Stethoscope,
-      roles: ["doctor", "admin"],
+      roles: ["doctor"],
       group: "clinical",
+      subItems: [
+        { id: "profile", label: "Patient Profile & EHR", path: "/workbench" },
+        { id: "prescriptions", label: "e-Prescriptions & Rx", path: "/prescriptions" },
+        { id: "diagnostics", label: "Labs & Diagnostics", path: "/diagnostics" },
+        { id: "referrals", label: "Referrals & Discharge", path: "/referrals" },
+      ],
     },
     {
       id: "vitals",
@@ -100,8 +127,13 @@ export default function OpdSidebar({
       label: "Vitals & BMI Assessment",
       shortLabel: "Vitals",
       icon: Activity,
-      roles: ["nurse", "admin"],
+      roles: ["nurse"],
       group: "clinical",
+      subItems: [
+        { id: "vitals", label: "Bedside Vitals & Assessment", path: "/vitals" },
+        { id: "mar", label: "Medication Admin (MAR)", path: "/vitals" },
+        { id: "shift", label: "Shift Endorsements", path: "/vitals" },
+      ],
     },
     {
       id: "prescriptions",
@@ -109,7 +141,7 @@ export default function OpdSidebar({
       label: "e-Prescriptions & Rx",
       shortLabel: "Prescriptions",
       icon: Pill,
-      roles: ["doctor", "admin"],
+      roles: ["doctor"],
       group: "clinical",
     },
     {
@@ -118,7 +150,7 @@ export default function OpdSidebar({
       label: "Labs & Diagnostic Results",
       shortLabel: "Diagnostics",
       icon: FlaskConical,
-      roles: ["doctor", "nurse", "admin"],
+      roles: ["doctor", "nurse"],
       group: "clinical",
     },
     {
@@ -128,7 +160,7 @@ export default function OpdSidebar({
       shortLabel: "PhilHealth",
       icon: CreditCard,
       badge: "eClaims",
-      roles: ["doctor", "staff", "admin"],
+      roles: ["doctor", "staff"],
       group: "billing",
     },
     {
@@ -137,7 +169,7 @@ export default function OpdSidebar({
       label: "Referrals & Discharge",
       shortLabel: "Referrals",
       icon: Send,
-      roles: ["doctor", "admin"],
+      roles: ["doctor"],
       group: "billing",
     },
     {
@@ -146,7 +178,7 @@ export default function OpdSidebar({
       label: "Census & OPD Reports",
       shortLabel: "Reports",
       icon: PieChart,
-      roles: ["doctor", "nurse", "staff", "admin"],
+      roles: ["doctor", "nurse", "staff"],
       group: "management",
     },
     {
@@ -157,6 +189,13 @@ export default function OpdSidebar({
       icon: ShieldCheck,
       roles: ["admin"],
       group: "management",
+      subItems: [
+        { id: "users", label: "Account Directory & Roles", path: "/admin?tab=users" },
+        { id: "branding", label: "Dynamic Branding & Contacts", path: "/admin?tab=branding" },
+        { id: "audit", label: "System Activity & Audit Logs", path: "/admin?tab=audit" },
+        { id: "rbac", label: "RBAC Permissions Matrix", path: "/admin?tab=rbac" },
+        { id: "security", label: "Security & NPC Guidelines", path: "/admin?tab=security" },
+      ],
     },
   ];
 
@@ -170,11 +209,33 @@ export default function OpdSidebar({
   const billingItems = navItems.filter(i => i.group === "billing" && isItemVisible(i));
   const managementItems = navItems.filter(i => i.group === "management" && isItemVisible(i));
 
+  // Auto-expand menu if location matches sub-item
+  useEffect(() => {
+    navItems.forEach(item => {
+      if (item.subItems) {
+        const hasMatchingSubItem = item.subItems.some(sub => location.pathname + location.search === sub.path || location.pathname === sub.path.split("?")[0]);
+        if (hasMatchingSubItem || location.pathname === item.path) {
+          setExpandedMenus(prev => ({ ...prev, [item.id]: true }));
+        }
+      }
+    });
+  }, [location.pathname, location.search]);
+
   const isItemActive = (item: NavItem) => {
     if (location.pathname === item.path) return true;
     if (location.pathname === "/" && item.path === "/dashboard") return true;
     if (currentTab && currentTab === item.id) return true;
+    if (item.subItems?.some(s => location.pathname + location.search === s.path)) return true;
     return false;
+  };
+
+  const isSubItemActive = (sub: SubNavItem) => {
+    return location.pathname + location.search === sub.path;
+  };
+
+  const toggleExpand = (itemId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedMenus(prev => ({ ...prev, [itemId]: !prev[itemId] }));
   };
 
   const handleNavClick = (item: NavItem) => {
@@ -182,6 +243,85 @@ export default function OpdSidebar({
     if (onSelectTab) {
       onSelectTab(item.id);
     }
+    if (item.subItems) {
+      setExpandedMenus(prev => ({ ...prev, [item.id]: true }));
+    }
+  };
+
+  const handleSubItemClick = (sub: SubNavItem) => {
+    navigate(sub.path);
+  };
+
+  const renderNavItem = (item: NavItem) => {
+    const Icon = item.icon;
+    const isActive = isItemActive(item);
+    const isExpanded = expandedMenus[item.id];
+    const hasSubItems = item.subItems && item.subItems.length > 0;
+
+    return (
+      <div key={item.id} className="space-y-1">
+        <div
+          onClick={() => handleNavClick(item)}
+          title={collapsed ? item.label : undefined}
+          className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer select-none ${
+            isActive
+              ? "bg-teal-600 text-white shadow-xs font-semibold"
+              : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
+          } ${collapsed ? "justify-center px-0" : ""}`}
+        >
+          <Icon
+            size={18}
+            strokeWidth={2}
+            className={isActive ? "text-white shrink-0" : "text-slate-400 shrink-0"}
+          />
+          {!collapsed && (
+            <span className="truncate flex-1 text-left">{item.label}</span>
+          )}
+          {!collapsed && item.badge && (
+            <span
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                isActive
+                  ? "bg-white/20 text-white"
+                  : "bg-teal-500/20 text-teal-300 border border-teal-500/30"
+              }`}
+            >
+              {item.badge}
+            </span>
+          )}
+          {!collapsed && hasSubItems && (
+            <button
+              onClick={(e) => toggleExpand(item.id, e)}
+              className="p-1 text-slate-400 hover:text-white transition-colors"
+            >
+              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
+          )}
+        </div>
+
+        {/* Embedded Sub-menu Items */}
+        {!collapsed && hasSubItems && isExpanded && (
+          <div className="ml-4 pl-3 border-l border-slate-800 space-y-1 py-1">
+            {item.subItems!.map(sub => {
+              const subActive = isSubItemActive(sub);
+              return (
+                <button
+                  key={sub.id}
+                  onClick={() => handleSubItemClick(sub)}
+                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all cursor-pointer ${
+                    subActive
+                      ? "bg-teal-500/20 text-teal-300 font-bold border-l-2 border-teal-400 pl-2"
+                      : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${subActive ? "bg-teal-400" : "bg-slate-600"}`} />
+                  <span className="truncate text-left">{sub.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -231,42 +371,7 @@ export default function OpdSidebar({
               </div>
             )}
             <div className="space-y-1">
-              {clinicalItems.map(item => {
-                const Icon = item.icon;
-                const isActive = isItemActive(item);
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavClick(item)}
-                    title={collapsed ? item.label : undefined}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                      isActive
-                        ? "bg-teal-600 text-white shadow-xs font-semibold"
-                        : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
-                    } ${collapsed ? "justify-center px-0" : ""}`}
-                  >
-                    <Icon
-                      size={18}
-                      strokeWidth={2}
-                      className={isActive ? "text-white shrink-0" : "text-slate-400 shrink-0"}
-                    />
-                    {!collapsed && (
-                      <span className="truncate flex-1 text-left">{item.label}</span>
-                    )}
-                    {!collapsed && item.badge && (
-                      <span
-                        className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
-                          isActive
-                            ? "bg-white/20 text-white"
-                            : "bg-teal-500/20 text-teal-300 border border-teal-500/30"
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+              {clinicalItems.map(item => renderNavItem(item))}
             </div>
           </div>
         )}
@@ -279,42 +384,7 @@ export default function OpdSidebar({
               </div>
             )}
             <div className="space-y-1">
-              {billingItems.map(item => {
-                const Icon = item.icon;
-                const isActive = isItemActive(item);
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavClick(item)}
-                    title={collapsed ? item.label : undefined}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                      isActive
-                        ? "bg-teal-600 text-white shadow-xs font-semibold"
-                        : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
-                    } ${collapsed ? "justify-center px-0" : ""}`}
-                  >
-                    <Icon
-                      size={18}
-                      strokeWidth={2}
-                      className={isActive ? "text-white shrink-0" : "text-slate-400 shrink-0"}
-                    />
-                    {!collapsed && (
-                      <span className="truncate flex-1 text-left">{item.label}</span>
-                    )}
-                    {!collapsed && item.badge && (
-                      <span
-                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${
-                          isActive
-                            ? "bg-white/20 text-white"
-                            : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+              {billingItems.map(item => renderNavItem(item))}
             </div>
           </div>
         )}
@@ -327,31 +397,7 @@ export default function OpdSidebar({
               </div>
             )}
             <div className="space-y-1">
-              {managementItems.map(item => {
-                const Icon = item.icon;
-                const isActive = isItemActive(item);
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => handleNavClick(item)}
-                    title={collapsed ? item.label : undefined}
-                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                      isActive
-                        ? "bg-teal-600 text-white shadow-xs font-semibold"
-                        : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
-                    } ${collapsed ? "justify-center px-0" : ""}`}
-                  >
-                    <Icon
-                      size={18}
-                      strokeWidth={2}
-                      className={isActive ? "text-white shrink-0" : "text-slate-400 shrink-0"}
-                    />
-                    {!collapsed && (
-                      <span className="truncate flex-1 text-left">{item.label}</span>
-                    )}
-                  </button>
-                );
-              })}
+              {managementItems.map(item => renderNavItem(item))}
             </div>
           </div>
         )}

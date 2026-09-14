@@ -70,7 +70,7 @@ export default function NurseStation({
   const [selectedPatientId, setSelectedPatientId] = useState(patients[0]?.id || "P-2024-001");
   const [procedureName, setProcedureName] = useState("Bedside Routine Vitals & Fluid Balance Check");
   const [category, setCategory] = useState<TreatmentLog["category"]>("Bedside Nursing");
-  
+
   // Separate Numeric Vitals State
   const [systolicBp, setSystolicBp] = useState<number>(120);
   const [diastolicBp, setDiastolicBp] = useState<number>(80);
@@ -304,11 +304,10 @@ export default function NurseStation({
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <button
               onClick={() => setTriageFilter("all")}
-              className={`p-3 rounded-xl border text-left transition-all ${
-                triageFilter === "all"
+              className={`p-3 rounded-xl border text-left transition-all ${triageFilter === "all"
                   ? "bg-white/20 border-white text-white shadow-sm ring-1 ring-white"
                   : "bg-white/5 border-white/10 text-slate-300 hover:bg-white/10"
-              }`}
+                }`}
             >
               <div className="text-xs font-semibold uppercase tracking-wider text-slate-300">All Patients</div>
               <div className="text-xl font-bold text-white mt-0.5">{patients.length} Registered</div>
@@ -317,11 +316,10 @@ export default function NurseStation({
 
             <button
               onClick={() => setTriageFilter("critical")}
-              className={`p-3 rounded-xl border text-left transition-all ${
-                triageFilter === "critical"
+              className={`p-3 rounded-xl border text-left transition-all ${triageFilter === "critical"
                   ? "bg-rose-950/80 border-rose-400 text-white shadow-sm ring-2 ring-rose-500"
                   : "bg-rose-950/40 border-rose-800/60 text-rose-200 hover:bg-rose-950/60"
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
@@ -338,11 +336,10 @@ export default function NurseStation({
 
             <button
               onClick={() => setTriageFilter("observation")}
-              className={`p-3 rounded-xl border text-left transition-all ${
-                triageFilter === "observation"
+              className={`p-3 rounded-xl border text-left transition-all ${triageFilter === "observation"
                   ? "bg-amber-950/80 border-amber-400 text-white shadow-sm ring-2 ring-amber-500"
                   : "bg-amber-950/40 border-amber-800/60 text-amber-200 hover:bg-amber-950/60"
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
@@ -359,11 +356,10 @@ export default function NurseStation({
 
             <button
               onClick={() => setTriageFilter("stable")}
-              className={`p-3 rounded-xl border text-left transition-all ${
-                triageFilter === "stable"
+              className={`p-3 rounded-xl border text-left transition-all ${triageFilter === "stable"
                   ? "bg-emerald-950/80 border-emerald-400 text-white shadow-sm ring-2 ring-emerald-500"
                   : "bg-emerald-950/40 border-emerald-800/60 text-emerald-200 hover:bg-emerald-950/60"
-              }`}
+                }`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
@@ -384,66 +380,60 @@ export default function NurseStation({
         <div className="flex flex-wrap gap-2 mt-6 pt-6 border-t border-white/15">
           <button
             onClick={() => setActiveTab("mar")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${
-              activeTab === "mar"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${activeTab === "mar"
                 ? "bg-purple-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <Pill size={16} strokeWidth={2} />
             <span>Medication Administration Record (MAR Table)</span>
           </button>
           <button
             onClick={() => setActiveTab("beds")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${
-              activeTab === "beds"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${activeTab === "beds"
                 ? "bg-purple-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <Bed size={16} strokeWidth={2} />
             <span>Ward Bed Allocation Table ({admissions.filter(a => a.status === "Admitted").length} Beds)</span>
           </button>
           <button
             onClick={() => setActiveTab("treatments")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${
-              activeTab === "treatments"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${activeTab === "treatments"
                 ? "bg-purple-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <ClipboardList size={16} strokeWidth={2} />
             <span>Bedside Treatment Logs ({treatments.length})</span>
           </button>
           <button
             onClick={() => setActiveTab("vitals")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${
-              activeTab === "vitals"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${activeTab === "vitals"
                 ? "bg-purple-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <Droplets size={16} strokeWidth={2} />
             <span>Expanded Vitals & Fluid Management Form</span>
           </button>
           <button
             onClick={() => setActiveTab("endorsements")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${
-              activeTab === "endorsements"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${activeTab === "endorsements"
                 ? "bg-purple-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <FileCheck size={16} strokeWidth={2} />
             <span>Shift Handoff Endorsements (SBAR)</span>
           </button>
           <button
             onClick={() => setActiveTab("visitors")}
-            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${
-              activeTab === "visitors"
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all inline-flex items-center gap-2 ${activeTab === "visitors"
                 ? "bg-purple-600 text-white shadow"
                 : "bg-white/10 text-white hover:bg-white/20"
-            }`}
+              }`}
           >
             <Users size={16} strokeWidth={2} />
             <span>Ward Visitor Log ({visitorLogs.filter(v => v.status === "Currently Visiting").length} Active)</span>
@@ -526,9 +516,8 @@ export default function NurseStation({
                       return (
                         <tr
                           key={m.id}
-                          className={`hover:bg-purple-50/40 transition-colors ${
-                            isCritical ? "bg-rose-50/20" : ""
-                          }`}
+                          className={`hover:bg-purple-50/40 transition-colors ${isCritical ? "bg-rose-50/20" : ""
+                            }`}
                         >
                           {/* Patient & Bed */}
                           <td className="px-4 py-3.5 whitespace-nowrap">
@@ -1076,9 +1065,8 @@ export default function NurseStation({
                 {/* Real-time Fluid Net Balance */}
                 <div className="bg-white border border-purple-200 rounded-lg p-3 flex flex-col justify-center">
                   <div className="text-[11px] uppercase font-semibold text-slate-500">Calculated Net Fluid Balance</div>
-                  <div className={`text-xl font-bold font-mono mt-1 ${
-                    fluidIntake - urineOutput >= 0 ? "text-purple-800" : "text-amber-800"
-                  }`}>
+                  <div className={`text-xl font-bold font-mono mt-1 ${fluidIntake - urineOutput >= 0 ? "text-purple-800" : "text-amber-800"
+                    }`}>
                     {fluidIntake - urineOutput >= 0 ? "+" : ""}{fluidIntake - urineOutput} mL
                   </div>
                   <div className="text-[10px] text-slate-500 mt-0.5">
@@ -1282,11 +1270,10 @@ export default function NurseStation({
                     <tr key={v.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3.5 whitespace-nowrap">
                         <div className="font-mono font-bold text-slate-900">{v.badgeNumber}</div>
-                        <span className={`inline-block mt-0.5 text-[10px] font-bold px-2 py-0.5 rounded ${
-                          v.status === "Currently Visiting"
+                        <span className={`inline-block mt-0.5 text-[10px] font-bold px-2 py-0.5 rounded ${v.status === "Currently Visiting"
                             ? "bg-emerald-100 text-emerald-800"
                             : "bg-slate-100 text-slate-600"
-                        }`}>
+                          }`}>
                           {v.status}
                         </span>
                       </td>

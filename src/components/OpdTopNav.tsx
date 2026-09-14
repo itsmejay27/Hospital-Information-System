@@ -82,11 +82,11 @@ export default function OpdTopNav({
   // Filtered patients for global search
   const searchResults = searchQuery.trim()
     ? patients.filter(
-        p =>
-          p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (p.philhealth?.pin && p.philhealth.pin.includes(searchQuery))
-      )
+      p =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.philhealth?.pin && p.philhealth.pin.includes(searchQuery))
+    )
     : [];
 
   const handleSearchChange = (val: string) => {
@@ -170,8 +170,8 @@ export default function OpdTopNav({
           <span className="text-[11px] font-medium">Public Site</span>
         </button>
 
-        {/* Currently Active Patient Context Pill */}
-        {activePatient ? (
+        {/* Currently Active Patient Context Pill (Clinical Roles Only) */}
+        {activePatient && user?.role !== "admin" ? (
           <div
             onClick={() => navigate("/workbench")}
             className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-md bg-teal-50 border border-teal-200 text-xs cursor-pointer hover:bg-teal-100/70 transition-colors"
@@ -183,13 +183,12 @@ export default function OpdTopNav({
               {activePatient.id}
             </span>
             <span
-              className={`px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${
-                activePatient.triageTier === "critical"
+              className={`px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${activePatient.triageTier === "critical"
                   ? "bg-rose-100 text-rose-700 border border-rose-300"
                   : activePatient.triageTier === "observation"
-                  ? "bg-amber-100 text-amber-800 border border-amber-300"
-                  : "bg-emerald-100 text-emerald-800 border border-emerald-300"
-              }`}
+                    ? "bg-amber-100 text-amber-800 border border-amber-300"
+                    : "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                }`}
             >
               {activePatient.triageTier}
             </span>
@@ -197,79 +196,87 @@ export default function OpdTopNav({
         ) : null}
       </div>
 
-      {/* Middle Area: Global Patient Search */}
+      {/* Middle Area: Global Search (Restricted for Admin) */}
       <div className="relative flex-1 max-w-md hidden md:block">
-        <div className="relative">
-          <Search
-            size={16}
-            strokeWidth={2}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-          />
-          <input
-            type="text"
-            placeholder="Search patient by name, MRN (P-2024-xxx), or PhilHealth PIN..."
-            value={searchQuery}
-            onChange={e => handleSearchChange(e.target.value)}
-            onFocus={() => setIsSearchOpen(true)}
-            className="w-full pl-9 pr-8 py-1.5 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs text-slate-800 placeholder:text-slate-400 rounded-lg border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-hidden"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => {
-                setSearchQuery("");
-                setGlobalSearchQuery("");
-                setIsSearchOpen(false);
-              }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-            >
-              <X size={14} strokeWidth={2} />
-            </button>
-          )}
-        </div>
-
-        {/* Search Results Dropdown */}
-        {isSearchOpen && searchQuery.trim() && (
-          <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-lg shadow-xl py-1 z-50 max-h-72 overflow-y-auto">
-            <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-              Found {searchResults.length} Patient{searchResults.length !== 1 ? "s" : ""}
-            </div>
-            {searchResults.length === 0 ? (
-              <div className="px-4 py-3 text-xs text-slate-500 text-center italic">
-                No matching patient record found for "{searchQuery}"
-              </div>
-            ) : (
-              searchResults.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => handlePatientSelect(p)}
-                  className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between border-b border-slate-100 last:border-b-0 transition-colors cursor-pointer"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-xs text-slate-900">{p.name}</span>
-                      <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">
-                        {p.id}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-slate-500">
-                      {p.age}y/o • {p.gender} • Chief Complaint: {p.chiefComplaint}
-                    </div>
-                  </div>
-                  <span
-                    className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                      p.triageTier === "critical"
-                        ? "bg-rose-50 text-rose-700 border border-rose-200"
-                        : p.triageTier === "observation"
-                        ? "bg-amber-50 text-amber-800 border border-amber-200"
-                        : "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                    }`}
-                  >
-                    {p.triageTier}
-                  </span>
-                </button>
-              ))
-            )}
+        {user?.role === "admin" ? (
+          <div className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 text-xs flex items-center justify-between font-mono">
+            <span>System Console Mode (Zero PHI Access)</span>
+            <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold uppercase">ADMIN</span>
           </div>
+        ) : (
+          <>
+            <div className="relative">
+              <Search
+                size={16}
+                strokeWidth={2}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              />
+              <input
+                type="text"
+                placeholder="Search patient by name, MRN (P-2024-xxx), or PhilHealth PIN..."
+                value={searchQuery}
+                onChange={e => handleSearchChange(e.target.value)}
+                onFocus={() => setIsSearchOpen(true)}
+                className="w-full pl-9 pr-8 py-1.5 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs text-slate-800 placeholder:text-slate-400 rounded-lg border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-hidden"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setGlobalSearchQuery("");
+                    setIsSearchOpen(false);
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X size={14} strokeWidth={2} />
+                </button>
+              )}
+            </div>
+
+            {/* Search Results Dropdown */}
+            {isSearchOpen && searchQuery.trim() && (
+              <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-lg shadow-xl py-1 z-50 max-h-72 overflow-y-auto">
+                <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                  Found {searchResults.length} Patient{searchResults.length !== 1 ? "s" : ""}
+                </div>
+                {searchResults.length === 0 ? (
+                  <div className="px-4 py-3 text-xs text-slate-500 text-center italic">
+                    No matching patient record found for "{searchQuery}"
+                  </div>
+                ) : (
+                  searchResults.map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => handlePatientSelect(p)}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between border-b border-slate-100 last:border-b-0 transition-colors cursor-pointer"
+                    >
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-xs text-slate-900">{p.name}</span>
+                          <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded">
+                            {p.id}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          {p.age}y/o • {p.gender} • Chief Complaint: {p.chiefComplaint}
+                        </div>
+                      </div>
+                      <span
+                        className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${p.triageTier === "critical"
+                            ? "bg-rose-50 text-rose-700 border border-rose-200"
+                            : p.triageTier === "observation"
+                              ? "bg-amber-50 text-amber-800 border border-amber-200"
+                              : "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                          }`}
+                      >
+                        {p.triageTier}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -318,9 +325,8 @@ export default function OpdTopNav({
                     <button
                       key={acc.id}
                       onClick={() => handleSwitchSession(acc)}
-                      className={`w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors cursor-pointer ${
-                        isSelected ? "bg-teal-50/70 border-l-4 border-teal-600" : ""
-                      }`}
+                      className={`w-full text-left px-3.5 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors cursor-pointer ${isSelected ? "bg-teal-50/70 border-l-4 border-teal-600" : ""
+                        }`}
                     >
                       <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0">
                         {getRoleIcon(acc.role, 16)}
