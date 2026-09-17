@@ -1,14 +1,15 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, Patient, TriageTier, PhilHealthCategory } from "../types";
+import { User, Patient, TriageTier } from "../types";
 import {
   UserPlus,
   Check,
   ShieldCheck,
   FileCheck,
-  CreditCard,
   Phone,
   AlertCircle,
+  Clock,
+  HeartPulse,
 } from "../components/Icons";
 
 interface Props {
@@ -22,113 +23,98 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
   const navigate = useNavigate();
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Form State
+  // Column 1: Patient Demographics Form State
   const [regName, setRegName] = useState("");
-  const [regDob, setRegDob] = useState("");
+  const [regDob, setRegDob] = useState("1995-06-15");
   const [regGender, setRegGender] = useState<"Female" | "Male" | "Other">("Female");
   const [regCivilStatus, setRegCivilStatus] = useState("Single");
-  const [regContact, setRegContact] = useState("");
-  const [regAddress, setRegAddress] = useState("");
+  const [regContact, setRegContact] = useState("0917-555-0192");
+  const [regAddress, setRegAddress] = useState("CarePoint Community, Pasig City");
   const [regBloodType, setRegBloodType] = useState("O+");
-  const [regAllergies, setRegAllergies] = useState("");
-  const [regComplaint, setRegComplaint] = useState("");
-  const [regTriageTier, setRegTriageTier] = useState<TriageTier>("stable");
-  const [regTriageReason, setRegTriageReason] = useState("");
+  const [regAllergies, setRegAllergies] = useState("None reported");
 
-  // PhilHealth Fields
-  const [regPhilHealthPin, setRegPhilHealthPin] = useState("");
-  const [regPhilHealthCategory, setRegPhilHealthCategory] = useState<PhilHealthCategory>("Direct Contributor - Private");
-  const [regPhilHealthCoverage, setRegPhilHealthCoverage] = useState("Standard Inpatient Case Rate & PhilHealth Konsulta OPD");
-
-  // Digital Consents
-  const [regConsentTreatment, setRegConsentTreatment] = useState(true);
-  const [regConsentSharing, setRegConsentSharing] = useState(true);
-  const [regConsentContact, setRegConsentContact] = useState(true);
-
-  // Medical History
-  const [regPastMedical, setRegPastMedical] = useState("");
-  const [regPastSurgical, setRegPastSurgical] = useState("");
-  const [regFamilyHistory, setRegFamilyHistory] = useState("");
-
-  // Emergency Contact
+  // Column 2: Emergency Contact & Initial Visit Reason
   const [regEmergName, setRegEmergName] = useState("");
   const [regEmergRel, setRegEmergRel] = useState("Spouse");
   const [regEmergPhone, setRegEmergPhone] = useState("");
+  const [regComplaint, setRegComplaint] = useState("");
+  const [regDepartmentTriage, setRegDepartmentTriage] = useState("Outpatient Department (OPD)");
+  const [regTriageTier, setRegTriageTier] = useState<TriageTier>("stable");
+  const [regTriageReason, setRegTriageReason] = useState("");
+
+  // Digital Consents
+  const [regConsentTreatment, setRegConsentTreatment] = useState(true);
+  const [regConsentPrivacy, setRegConsentPrivacy] = useState(true);
+
+  // Dynamic Age calculation
+  const calculatedAge = regDob
+    ? Math.max(0, new Date().getFullYear() - new Date(regDob).getFullYear())
+    : 30;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!regName.trim()) return;
 
     const newId = `P-2026-${String(patients.length + 1).padStart(3, "0")}`;
-    const ageCalc = regDob ? new Date().getFullYear() - new Date(regDob).getFullYear() : 30;
 
     const newPatient: Patient = {
       id: newId,
-      name: regName,
+      name: regName.trim(),
       dob: regDob || "1995-01-01",
-      age: Math.max(1, ageCalc),
+      age: calculatedAge,
       gender: regGender,
       civilStatus: regCivilStatus,
       contact: regContact || "09XX-XXX-XXXX",
       address: regAddress || "Metro Manila, Philippines",
       bloodType: regBloodType,
       allergies: regAllergies ? regAllergies.split(",").map(a => a.trim()) : ["None reported"],
-      chiefComplaint: regComplaint || "Routine outpatient consultation / clinical intake",
+      chiefComplaint: regComplaint || "Routine clinical consultation / Outpatient intake",
       triageTier: regTriageTier,
-      triageReason: regTriageReason || "Standard intake triage assessment.",
+      triageReason: regTriageReason || `Triage to ${regDepartmentTriage}`,
       emergencyContact: {
-        name: regEmergName || "Guardian",
+        name: regEmergName.trim() || "Designated Relative",
         relationship: regEmergRel,
-        phone: regEmergPhone || regContact || "N/A",
+        phone: regEmergPhone.trim() || regContact || "N/A",
       },
       admissionStatus: "Outpatient",
+      ward: regDepartmentTriage,
+      bed: "Waiting Area",
       registeredAt: new Date().toISOString().split("T")[0],
-      philhealth: {
-        pin: regPhilHealthPin || "Not Enrolled",
-        category: regPhilHealthCategory,
-        eligibilityStatus: regPhilHealthPin ? "Active / Eligible" : "Under Verification",
-        coverageDetails: regPhilHealthCoverage,
-      },
       consents: {
         treatmentCareConsent: regConsentTreatment,
-        healthInfoSharingConsent: regConsentSharing,
-        contactNoticeConsent: regConsentContact,
+        healthInfoSharingConsent: regConsentPrivacy,
+        contactNoticeConsent: true,
         signedDate: new Date().toISOString().split("T")[0],
         witnessStaff: `${user.name} (${user.licenseNumber || user.id})`,
       },
       medicalHistory: {
-        pastMedical: regPastMedical ? regPastMedical.split(",").map(m => m.trim()) : ["None reported"],
-        pastSurgical: regPastSurgical ? regPastSurgical.split(",").map(s => s.trim()) : ["None"],
-        familyHistory: regFamilyHistory ? regFamilyHistory.split(",").map(f => f.trim()) : ["Non-contributory"],
+        pastMedical: ["None reported"],
+        pastSurgical: ["None"],
+        familyHistory: ["Non-contributory"],
         chronicConditions: [],
       },
     };
 
     onAddPatient(newPatient);
     setNotification(
-      `Patient ${newPatient.name} enrolled successfully! Assigned Hospital MRN: ${newId}.`
+      `Patient ${newPatient.name} successfully admitted to active queue! Assigned Hospital MRN: ${newId}.`
     );
 
-    // Clear form
+    // Reset Form
     setRegName("");
-    setRegDob("");
-    setRegContact("");
-    setRegAddress("");
-    setRegAllergies("");
-    setRegComplaint("");
-    setRegPhilHealthPin("");
-    setRegTriageReason("");
     setRegEmergName("");
     setRegEmergPhone("");
+    setRegComplaint("");
+    setRegTriageReason("");
 
     setTimeout(() => {
       setNotification(null);
       navigate("/registration/directory");
-    }, 2000);
+    }, 1800);
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto">
       {/* Toast Notification */}
       {notification && (
         <div className="bg-emerald-900 text-emerald-100 px-4 py-3 rounded-xl text-xs font-semibold flex items-center justify-between border border-emerald-700 shadow-md">
@@ -136,7 +122,10 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
             <Check size={16} strokeWidth={2.5} className="text-emerald-300" />
             <span>{notification}</span>
           </div>
-          <button onClick={() => setNotification(null)} className="text-emerald-300 hover:text-white cursor-pointer">
+          <button
+            onClick={() => setNotification(null)}
+            className="text-emerald-300 hover:text-white cursor-pointer"
+          >
             ✕
           </button>
         </div>
@@ -146,286 +135,343 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-              Registration & Intake • Isolated Route
+            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+              Admissions Desk • Registration Workflow
             </span>
             <span className="text-xs text-slate-400 font-mono">/registration/new-patient</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <UserPlus size={24} className="text-emerald-600" />
-            <span>New Patient Intake & PhilHealth Enrollment</span>
+            <UserPlus size={24} className="text-teal-600" />
+            <span>Patient Registration & Intake</span>
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            Admissions Officer: <span className="font-semibold text-slate-800">{user.name}</span> ({user.department})
+            Intake Officer: <span className="font-semibold text-slate-800">{user.name}</span> ({user.department || user.title})
           </p>
         </div>
       </div>
 
-      {/* Registration Form */}
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-6">
-        {/* Section 1: Demographics */}
-        <div>
-          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide border-b border-slate-100 pb-2 mb-4 flex items-center gap-2">
-            <UserPlus size={16} className="text-emerald-600" />
-            <span>1. Patient Personal & Contact Demographics</span>
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2">
-              <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                Full Legal Name <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={regName}
-                onChange={e => setRegName(e.target.value)}
-                placeholder="e.g. Maria Clara Santos"
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:border-emerald-500 focus:outline-hidden"
-                required
-              />
+      {/* 2-Column Responsive Card Form */}
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* COLUMN 1: PATIENT DEMOGRAPHICS */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+              <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center font-bold text-xs">
+                1
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">Patient Demographics</h2>
+                <p className="text-[11px] text-slate-500">Essential identity and contact data</p>
+              </div>
             </div>
 
-            <div>
-              <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                Date of Birth
-              </label>
-              <input
-                type="date"
-                value={regDob}
-                onChange={e => setRegDob(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-hidden"
-              />
+            <div className="space-y-3.5 text-xs">
+              <div>
+                <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
+                  Full Legal Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={regName}
+                  onChange={e => setRegName(e.target.value)}
+                  placeholder="e.g. Maria Clara Santos"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 font-semibold text-slate-900 focus:bg-white focus:border-teal-500 outline-hidden transition-colors"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
+                    Date of Birth
+                  </label>
+                  <input
+                    type="date"
+                    value={regDob}
+                    onChange={e => setRegDob(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:border-teal-500 outline-hidden font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
+                    Calculated Age
+                  </label>
+                  <div className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 font-bold">
+                    {calculatedAge} years old
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
+                    Sex / Gender
+                  </label>
+                  <select
+                    value={regGender}
+                    onChange={e => setRegGender(e.target.value as any)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 focus:bg-white focus:border-teal-500 outline-hidden"
+                  >
+                    <option value="Female">Female</option>
+                    <option value="Male">Male</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
+                    Civil Status
+                  </label>
+                  <select
+                    value={regCivilStatus}
+                    onChange={e => setRegCivilStatus(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 focus:bg-white focus:border-teal-500 outline-hidden"
+                  >
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                    <option value="Widowed">Widowed</option>
+                    <option value="Separated">Separated</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
+                    Contact Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    value={regContact}
+                    onChange={e => setRegContact(e.target.value)}
+                    placeholder="0917-123-4567"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:border-teal-500 outline-hidden font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
+                    Blood Type
+                  </label>
+                  <select
+                    value={regBloodType}
+                    onChange={e => setRegBloodType(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white focus:border-teal-500 outline-hidden"
+                  >
+                    <option value="O+">O Positive (O+)</option>
+                    <option value="O-">O Negative (O-)</option>
+                    <option value="A+">A Positive (A+)</option>
+                    <option value="A-">A Negative (A-)</option>
+                    <option value="B+">B Positive (B+)</option>
+                    <option value="B-">B Negative (B-)</option>
+                    <option value="AB+">AB Positive (AB+)</option>
+                    <option value="AB-">AB Negative (AB-)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
+                  Residential Address
+                </label>
+                <input
+                  type="text"
+                  value={regAddress}
+                  onChange={e => setRegAddress(e.target.value)}
+                  placeholder="Unit, Street, Barangay, City, Province"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 focus:bg-white focus:border-teal-500 outline-hidden"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
+                  Known Drug & Food Allergies
+                </label>
+                <input
+                  type="text"
+                  value={regAllergies}
+                  onChange={e => setRegAllergies(e.target.value)}
+                  placeholder="e.g. Penicillin, NSAIDs, Shellfish (or 'None reported')"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 focus:bg-white focus:border-teal-500 outline-hidden"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* COLUMN 2: EMERGENCY CONTACT & INITIAL VISIT REASON */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
+              <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center font-bold text-xs">
+                2
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">Emergency Contact & Visit Reason</h2>
+                <p className="text-[11px] text-slate-500">Next-of-kin, chief complaint, and triage</p>
+              </div>
             </div>
 
-            <div>
-              <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                Gender
-              </label>
-              <select
-                value={regGender}
-                onChange={e => setRegGender(e.target.value as "Female" | "Male" | "Other")}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-hidden"
-              >
-                <option value="Female">Female</option>
-                <option value="Male">Male</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
+            <div className="space-y-3.5 text-xs">
+              {/* Emergency Contact Sub-group */}
+              <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-3">
+                <div className="text-[11px] font-bold uppercase text-teal-800 flex items-center gap-1.5">
+                  <Phone size={14} className="text-teal-700" />
+                  <span>Emergency Contact Person</span>
+                </div>
 
-            <div>
-              <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                Civil Status
-              </label>
-              <select
-                value={regCivilStatus}
-                onChange={e => setRegCivilStatus(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-hidden"
-              >
-                <option value="Single">Single</option>
-                <option value="Married">Married</option>
-                <option value="Widowed">Widowed</option>
-                <option value="Separated">Separated</option>
-              </select>
-            </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                    Contact Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={regEmergName}
+                    onChange={e => setRegEmergName(e.target.value)}
+                    placeholder="e.g. Juan Santos"
+                    className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 focus:border-teal-500 outline-hidden"
+                  />
+                </div>
 
-            <div>
-              <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                Blood Type
-              </label>
-              <select
-                value={regBloodType}
-                onChange={e => setRegBloodType(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-hidden"
-              >
-                <option value="O+">O Positive (O+)</option>
-                <option value="O-">O Negative (O-)</option>
-                <option value="A+">A Positive (A+)</option>
-                <option value="A-">A Negative (A-)</option>
-                <option value="B+">B Positive (B+)</option>
-                <option value="B-">B Negative (B-)</option>
-                <option value="AB+">AB Positive (AB+)</option>
-                <option value="AB-">AB Negative (AB-)</option>
-              </select>
-            </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                      Relationship
+                    </label>
+                    <select
+                      value={regEmergRel}
+                      onChange={e => setRegEmergRel(e.target.value)}
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-800 focus:border-teal-500 outline-hidden"
+                    >
+                      <option value="Spouse">Spouse</option>
+                      <option value="Parent">Parent</option>
+                      <option value="Child">Child</option>
+                      <option value="Sibling">Sibling</option>
+                      <option value="Guardian">Legal Guardian</option>
+                      <option value="Other">Other Relative</option>
+                    </select>
+                  </div>
 
-            <div className="sm:col-span-2">
-              <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                Current Residential Address
-              </label>
-              <input
-                type="text"
-                value={regAddress}
-                onChange={e => setRegAddress(e.target.value)}
-                placeholder="Unit, Street, Barangay, City/Municipality, Province"
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-hidden"
-              />
-            </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                      Contact Phone *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={regEmergPhone}
+                      onChange={e => setRegEmergPhone(e.target.value)}
+                      placeholder="0918-444-9876"
+                      className="w-full bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-slate-900 focus:border-teal-500 outline-hidden font-medium"
+                    />
+                  </div>
+                </div>
+              </div>
 
-            <div>
-              <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                Contact Number
-              </label>
-              <input
-                type="text"
-                value={regContact}
-                onChange={e => setRegContact(e.target.value)}
-                placeholder="e.g. 0917-123-4567"
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-hidden"
-              />
+              {/* Visit Reason & Triage */}
+              <div>
+                <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
+                  Initial Chief Complaint / Presenting Reason <span className="text-rose-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={regComplaint}
+                  onChange={e => setRegComplaint(e.target.value)}
+                  placeholder="Describe main symptoms, onset, and chief complaint (e.g. Persistent fever and non-productive cough x 3 days with fatigue)"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-slate-900 focus:bg-white focus:border-teal-500 outline-hidden"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
+                    Department Triage
+                  </label>
+                  <select
+                    value={regDepartmentTriage}
+                    onChange={e => setRegDepartmentTriage(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-800 focus:bg-white focus:border-teal-500 outline-hidden font-medium"
+                  >
+                    <option value="Outpatient Department (OPD)">Outpatient Dept (OPD)</option>
+                    <option value="Internal Medicine Specialty">Internal Medicine</option>
+                    <option value="General & Minor Surgery">General Surgery</option>
+                    <option value="Pediatrics Clinic">Pediatrics</option>
+                    <option value="Emergency & Trauma Unit">Emergency Unit</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
+                    Initial Acuity Priority
+                  </label>
+                  <select
+                    value={regTriageTier}
+                    onChange={e => setRegTriageTier(e.target.value as TriageTier)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white focus:border-teal-500 outline-hidden"
+                  >
+                    <option value="stable">Green: Tier 3 Stable</option>
+                    <option value="observation">Yellow: Tier 2 Observation</option>
+                    <option value="critical">Red: Tier 1 Critical</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
+                  Triage Assessment Notes
+                </label>
+                <input
+                  type="text"
+                  value={regTriageReason}
+                  onChange={e => setRegTriageReason(e.target.value)}
+                  placeholder="e.g. Vitals stable upon arrival; ambulatory without assistance"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2 text-slate-900 focus:bg-white focus:border-teal-500 outline-hidden"
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Section 2: Clinical Intake & Acuity */}
-        <div>
-          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide border-b border-slate-100 pb-2 mb-4 flex items-center gap-2">
-            <FileCheck size={16} className="text-emerald-600" />
-            <span>2. Intake Chief Complaint & Triage Acuity</span>
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="sm:col-span-2">
-              <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                Chief Complaint / Presenting Symptom <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={regComplaint}
-                onChange={e => setRegComplaint(e.target.value)}
-                placeholder="Reason for consultation (e.g. Persistent fever and dry cough for 3 days)"
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:bg-white focus:border-emerald-500 focus:outline-hidden"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                Initial Triage Acuity Tier
-              </label>
-              <select
-                value={regTriageTier}
-                onChange={e => setRegTriageTier(e.target.value as TriageTier)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-bold text-slate-900 focus:bg-white focus:outline-hidden"
-              >
-                <option value="stable">Green: Tier 3 Stable</option>
-                <option value="observation">Yellow: Tier 2 Observation</option>
-                <option value="critical">Red: Tier 1 Critical</option>
-              </select>
-            </div>
-
-            <div className="sm:col-span-3">
-              <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                Known Drug / Food Allergies
-              </label>
-              <input
-                type="text"
-                value={regAllergies}
-                onChange={e => setRegAllergies(e.target.value)}
-                placeholder="e.g. Penicillin, NSAIDs, Shellfish (or leave blank if NKDA)"
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 focus:bg-white focus:outline-hidden"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Section 3: PhilHealth Information */}
-        <div>
-          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide border-b border-slate-100 pb-2 mb-4 flex items-center gap-2">
-            <CreditCard size={16} className="text-emerald-600" />
-            <span>3. PhilHealth & Universal Health Care Coverage</span>
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                PhilHealth PIN Number
-              </label>
-              <input
-                type="text"
-                value={regPhilHealthPin}
-                onChange={e => setRegPhilHealthPin(e.target.value)}
-                placeholder="e.g. 12-345678901-2"
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-mono font-semibold text-slate-900 focus:bg-white focus:outline-hidden"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                Membership Category
-              </label>
-              <select
-                value={regPhilHealthCategory}
-                onChange={e => setRegPhilHealthCategory(e.target.value as PhilHealthCategory)}
-                className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-800 focus:bg-white focus:outline-hidden"
-              >
-                <option value="Direct Contributor - Private">Direct Contributor - Private Employee</option>
-                <option value="Direct Contributor - Government">Direct Contributor - Government Employee</option>
-                <option value="Direct Contributor - Self-Employed">Direct Contributor - Self-Employed / Professional</option>
-                <option value="Indirect Contributor - Indigent">Indirect Contributor - Indigent / 4Ps</option>
-                <option value="Senior Citizen (RA 10645)">Senior Citizen (RA 10645)</option>
-                <option value="PWD (RA 11228)">PWD (RA 11228)</option>
-                <option value="Lifetime Member">Lifetime Member</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 4: DPA Consents */}
-        <div>
-          <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide border-b border-slate-100 pb-2 mb-3 flex items-center gap-2">
-            <ShieldCheck size={16} className="text-emerald-600" />
-            <span>4. Data Privacy Act (RA 10173) & Clinical Care Consents</span>
-          </h3>
-
-          <div className="space-y-2 text-xs bg-slate-50 p-4 rounded-xl border border-slate-200/70">
-            <label className="flex items-center gap-2.5 cursor-pointer">
+        {/* Digital Consents & Submit Bar */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="space-y-1.5 text-xs text-slate-600">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={regConsentTreatment}
                 onChange={e => setRegConsentTreatment(e.target.checked)}
-                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                className="w-4 h-4 text-teal-600 rounded-sm focus:ring-teal-500 border-slate-300"
               />
-              <span className="font-semibold text-slate-800">
-                General Consent to Outpatient / Inpatient Medical Treatment and Diagnostic Procedures
-              </span>
+              <span>Patient authorizes clinical evaluation, nursing care, and emergency procedures.</span>
             </label>
-            <label className="flex items-center gap-2.5 cursor-pointer">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
-                checked={regConsentSharing}
-                onChange={e => setRegConsentSharing(e.target.checked)}
-                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                checked={regConsentPrivacy}
+                onChange={e => setRegConsentPrivacy(e.target.checked)}
+                className="w-4 h-4 text-teal-600 rounded-sm focus:ring-teal-500 border-slate-300"
               />
-              <span className="font-semibold text-slate-800">
-                Authorized Health Information Sharing with PhilHealth & Consulting Medical Specialists
-              </span>
-            </label>
-            <label className="flex items-center gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={regConsentContact}
-                onChange={e => setRegConsentContact(e.target.checked)}
-                className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-              />
-              <span className="font-semibold text-slate-800">
-                SMS / Voice Contact Authorization for Lab Result Release & Appointment Reminders
-              </span>
+              <span>DPA 2012 Consent for electronic health record processing at CarePoint Medical Center.</span>
             </label>
           </div>
-        </div>
 
-        {/* Submit Action */}
-        <div className="flex items-center justify-between pt-4 border-t border-slate-100">
-          <span className="text-[11px] text-slate-400">
-            Witnessing Staff: {user.name} ({user.licenseNumber || user.id})
-          </span>
-          <button
-            type="submit"
-            className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
-          >
-            <UserPlus size={16} />
-            <span>Enroll & Register Patient</span>
-          </button>
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => navigate("/registration/directory")}
+              className="px-4 py-2.5 border border-slate-300 hover:bg-slate-50 rounded-xl text-slate-700 text-xs font-semibold cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+            >
+              <UserPlus size={16} strokeWidth={2} />
+              <span>Enroll Patient & Enqueue</span>
+            </button>
+          </div>
         </div>
       </form>
     </div>

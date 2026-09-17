@@ -363,9 +363,20 @@ export interface OpdDischarge {
   patientId: string;
   patientName: string;
   dischargeDate: string;
-  disposition: "Treated & Sent Home" | "Admitted to Inpatient Ward" | "Transferred to Tertiary Center" | "Follow-up Scheduled";
+  disposition:
+    | "Treated & Sent Home"
+    | "Admitted to Inpatient Ward"
+    | "Transferred to Inpatient Ward"
+    | "Transferred to Tertiary Center"
+    | "Follow-up Scheduled"
+    | "Routine Discharge / Recovered"
+    | "Discharged Against Medical Advice (DAMA/AMA)"
+    | "Referred to Tertiary Care";
   followUpDate?: string;
   instructions: string;
   clearedByDoctor: string;
+  dischargeSummary?: string;
+  dischargeMeds?: string[];
+  attendingDoctor?: string;
 }
 

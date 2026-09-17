@@ -1,8 +1,10 @@
 import React, { useState } from "react";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate, useOutletContext } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
+import { HEALTHCARE_TEAM_DIRECTORY } from "../mockData";
 import BackButton from "../components/BackButton";
+import AuthModal from "../components/AuthModal";
 import {
   Activity,
   Siren,
@@ -49,7 +51,15 @@ export default function PublicLayout() {
   const { user, isAuthenticated, logout } = useAuth();
   const { hospitalConfig } = useOpdData();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    (window as any).__openAuthModal = () => setIsAuthModalOpen(true);
+    return () => {
+      delete (window as any).__openAuthModal;
+    };
+  }, []);
 
   const publicLinks = [
     { label: "Home", to: "/" },
@@ -62,7 +72,7 @@ export default function PublicLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate("/login");
+    navigate("/");
   };
 
   return (
@@ -88,12 +98,17 @@ export default function PublicLayout() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3 group text-left">
-              <div className="w-10 h-10 rounded-xl bg-teal-600 text-white flex items-center justify-center shrink-0 shadow-xs group-hover:bg-teal-700 transition-colors">
-                <Activity size={20} strokeWidth={2} className="text-white" />
-              </div>
+              <img
+                src="/carepoint-logo.png"
+                alt="CarePoint Medical Center"
+                className="w-10 h-10 rounded-xl object-contain bg-white p-1 shadow-xs group-hover:scale-105 transition-transform shrink-0"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = "none";
+                }}
+              />
               <div>
                 <div className="font-serif text-lg font-bold text-slate-900 leading-tight">
-                  {hospitalConfig.name}
+                  CarePoint Medical Center
                 </div>
                 <div className="text-[10px] text-teal-600 tracking-wider uppercase font-semibold">
                   Hospital Information System (HIS)
@@ -167,13 +182,13 @@ export default function PublicLayout() {
                   </button>
                 </div>
               ) : (
-                <Link
-                  to="/login"
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
                   className="bg-teal-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors shadow-xs flex items-center gap-2 cursor-pointer"
                 >
                   <LogIn size={15} strokeWidth={2} className="text-white" />
                   <span>Staff Portal Sign In</span>
-                </Link>
+                </button>
               )}
 
               {/* Mobile menu hamburger toggle */}
@@ -235,8 +250,14 @@ export default function PublicLayout() {
 
       {/* Main Outlet View for Public Routes */}
       <main className="flex-1">
-        <Outlet />
+        <Outlet context={{ openAuthModal: () => setIsAuthModalOpen(true) }} />
       </main>
+
+      {/* Staff Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
 
       {/* Public Footer */}
       <footer className="bg-slate-900 text-white mt-16 border-t border-slate-800">
@@ -286,12 +307,15 @@ export default function PublicLayout() {
                     {p.label}
                   </Link>
                 ))}
-                <Link
-                  to="/login"
-                  className="block text-xs text-teal-400 hover:text-teal-300 font-semibold transition-colors pt-1"
+                <button
+                  onClick={() => {
+                    const opener = (window as any).__openAuthModal;
+                    if (opener) opener();
+                  }}
+                  className="block text-left text-xs text-teal-400 hover:text-teal-300 font-semibold transition-colors pt-1 cursor-pointer"
                 >
                   Medical Staff Portal Login →
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -340,15 +364,14 @@ export function PublicHomePage() {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/80 to-transparent" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-16 text-white">
-          <div className="max-w-xl">
             <div className="inline-flex items-center gap-2 bg-teal-500/20 text-teal-300 border border-teal-400/30 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-4">
-              {hospitalConfig.name} Information System
+              CarePoint Medical Center
             </div>
             <h1 className="font-serif text-3xl sm:text-5xl leading-tight mb-5 text-white font-bold">
-              Compassionate Care,<br />Seamless Digital Precision.
+              Compassionate Care.<br />Trusted Service.<br />Better Health.
             </h1>
             <p className="text-slate-200 text-sm sm:text-base leading-relaxed mb-8">
-              A hospital information system integrating electronic health records, structured MAR tables, 3-tier Priority Watch triage, bedside fluid charting, PhilHealth eClaims, and strict DPA 2012 compliance.
+              A modern hospital information system integrating physician consultation workbenches, structured MAR tables, 3-tier Priority Watch triage, bedside fluid charting, and immutable cryptographic audit ledgers.
             </p>
             <div className="flex flex-wrap gap-3">
               {isAuthenticated && user ? (
@@ -361,7 +384,11 @@ export function PublicHomePage() {
                 </button>
               ) : (
                 <button
-                  onClick={() => navigate("/login")}
+                  onClick={() => {
+                    const ctx = (window as any).__openAuthModal;
+                    if (ctx) ctx();
+                    else navigate("/dashboard");
+                  }}
                   className="bg-teal-600 text-white text-sm font-bold px-6 py-3 rounded-xl hover:bg-teal-500 transition-colors shadow-lg flex items-center gap-2 cursor-pointer"
                 >
                   <span>Staff Portal Sign In</span>
@@ -376,7 +403,6 @@ export function PublicHomePage() {
               </Link>
             </div>
           </div>
-        </div>
       </section>
 
       {/* Hospital Operational Pillars */}
@@ -450,12 +476,45 @@ export function PublicHomePage() {
               </p>
             </div>
             <button
-              onClick={() => navigate(isAuthenticated ? "/dashboard" : "/login")}
+              onClick={() => {
+                if (isAuthenticated) {
+                  navigate("/dashboard");
+                } else {
+                  const ctx = (window as any).__openAuthModal;
+                  if (ctx) ctx();
+                  else navigate("/dashboard");
+                }
+              }}
               className="shrink-0 px-6 py-3 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer"
             >
               <span>{isAuthenticated ? "Go to Dashboard" : "Access Clinical Login"}</span>
               <ArrowRight size={16} strokeWidth={2} />
             </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Founder & Medical Director Spotlight */}
+      <section className="py-14 bg-gradient-to-b from-white to-slate-50 border-b border-slate-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="bg-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-xl border border-slate-800 flex flex-col lg:flex-row items-center gap-8">
+            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-teal-600 text-white flex items-center justify-center font-serif text-3xl sm:text-4xl font-bold shadow-lg shrink-0 border-2 border-teal-400/40">
+              MJ
+            </div>
+            <div className="space-y-3 flex-1 text-left">
+              <div className="inline-flex items-center gap-2 bg-teal-500/20 text-teal-300 border border-teal-400/30 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider">
+                Founder & Medical Director
+              </div>
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
+                Dr. Mark Arkiel Jacobe, MD, FACP
+              </h2>
+              <div className="text-xs font-mono text-teal-300">
+                PRC Lic. #0089201 • Fellow, American College of Physicians (Internal Medicine)
+              </div>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-3xl">
+                "Our guiding philosophy at CarePoint Medical Center is simple yet resolute: modern clinical technology must always amplify compassion, never replace it. Every module of our digital Hospital Information System is engineered to protect patient safety, preserve clinical dignity, and elevate healthcare delivery across our community."
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -481,22 +540,61 @@ export function PublicAboutPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-4 text-xs text-slate-700 leading-relaxed bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs">
-          <h2 className="font-serif text-xl font-bold text-slate-900">Healthcare Excellence Since 1998</h2>
-          <p>
-            {hospitalConfig.name} is a leading healthcare facility committed to delivering patient-centered, high-precision clinical services. Operating under the stringent standards of the Department of Health (DOH) and the Philippine Health Insurance Corporation (PhilHealth), our medical center blends compassionate care with cutting-edge medical technologies.
-          </p>
-          <p>
-            Our Hospital Information System (HIS) implements strict role-based access control, cryptographic audit logging per Republic Act No. 10173 (Data Privacy Act of 2012), and structured clinical workflows designed to minimize administrative friction for clinicians and maximize patient safety.
-          </p>
-          <p>
-            We maintain fully accredited training programs in Internal Medicine, General Surgery, Emergency Medicine, and Critical Care Nursing, fostering the next generation of healthcare leaders in the Philippines.
-          </p>
+        <div className="lg:col-span-2 space-y-6 text-xs text-slate-700 leading-relaxed">
+          {/* Founder Section */}
+          <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-teal-600 text-white flex items-center justify-center font-serif text-2xl font-bold shrink-0 shadow-xs">
+                MJ
+              </div>
+              <div>
+                <div className="text-[10px] uppercase font-bold text-teal-600 tracking-wider">
+                  Founder & Medical Director
+                </div>
+                <h2 className="font-serif text-xl font-bold text-slate-900">
+                  Dr. Mark Arkiel Jacobe, MD, FACP
+                </h2>
+                <div className="text-[11px] font-mono text-slate-500">
+                  PRC Lic. #0089201 • Internal Medicine
+                </div>
+              </div>
+            </div>
+            <p className="text-slate-600">
+              Founded under the clinical leadership of Dr. Mark Arkiel Jacobe, CarePoint Medical Center was established with a singular, unwavering focus: to provide accessible, patient-first outpatient and specialized medical care backed by state-of-the-art information governance.
+            </p>
+          </div>
+
+          {/* Mission & Vision Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-2">
+              <div className="text-xs font-bold uppercase tracking-wider text-teal-700 flex items-center gap-1.5">
+                <HeartPulse size={16} className="text-teal-600" />
+                <span>Our Mission</span>
+              </div>
+              <p className="text-slate-600 text-xs leading-relaxed">
+                To deliver compassionate, evidence-based, and patient-centered outpatient and tertiary healthcare solutions through cutting-edge medical technologies, transparent clinical workflows, and uncompromising dedication to Philippine community wellness.
+              </p>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-2">
+              <div className="text-xs font-bold uppercase tracking-wider text-teal-700 flex items-center gap-1.5">
+                <Building2 size={16} className="text-teal-600" />
+                <span>Our Vision</span>
+              </div>
+              <p className="text-slate-600 text-xs leading-relaxed">
+                To be the foremost regional benchmark in outpatient healthcare excellence and modern digital hospital information governance across the Philippines by 2030.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 space-y-3 text-xs">
           <h3 className="font-bold text-slate-800 text-sm">Key Hospital Statistics</h3>
           <div className="space-y-2.5">
+            <div className="flex justify-between py-1.5 border-b border-slate-200">
+              <span className="text-slate-500">Facility Status:</span>
+              <strong className="text-teal-700">DOH Licensed Level 3</strong>
+            </div>
             <div className="flex justify-between py-1.5 border-b border-slate-200">
               <span className="text-slate-500">Authorized Bed Capacity:</span>
               <strong className="text-slate-800">250 Beds</strong>
@@ -607,12 +705,13 @@ export function PublicAnnouncementsPage() {
 // — Public Staff Page —
 export function PublicStaffPage() {
   const navigate = useNavigate();
-  const staff = [
-    { name: "Dr. Jose Reyes, MD", position: "Attending Cardiologist & Physician", dept: "Internal Medicine / OPD", license: "PRC Lic. #0084721", credentials: "MD, FPCP, FPCC", color: "bg-blue-600" },
-    { name: "Angel Mae, RN", position: "Senior Charge Nurse", dept: "Medical Surgical Ward / ER", license: "PRC Lic. #0093820", credentials: "RN, MAN, CCRN", color: "bg-purple-600" },
-    { name: "Jendy Perez", position: "Admissions & Records Officer", dept: "Patient Admissions & Front Desk", license: "EMP-ADM-101", credentials: "BSIT, CHIO", color: "bg-emerald-600" },
-    { name: "Atty. Roberto Ramos", position: "Data Privacy Officer & Hospital Admin", dept: "Compliance, Privacy & Legal", license: "IBP Roll #54219", credentials: "JD, CIPP/A", color: "bg-amber-600" },
-  ];
+  const [deptFilter, setDeptFilter] = useState<string>("All");
+
+  const departments = ["All", ...Array.from(new Set(HEALTHCARE_TEAM_DIRECTORY.map(s => s.department)))];
+
+  const filteredTeam = deptFilter === "All"
+    ? HEALTHCARE_TEAM_DIRECTORY
+    : HEALTHCARE_TEAM_DIRECTORY.filter(s => s.department === deptFilter);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
@@ -620,24 +719,63 @@ export function PublicStaffPage() {
       <div className="mb-8">
         <div className="text-teal-600 text-xs font-bold tracking-widest uppercase mb-1 flex items-center gap-1.5">
           <Users size={18} strokeWidth={2} className="text-teal-600" />
-          <span>Worker Transparency</span>
+          <span>Professional Directory</span>
         </div>
-        <h1 className="font-serif text-3xl sm:text-4xl text-slate-900 font-bold">Healthcare Personnel Directory</h1>
-        <p className="text-xs text-slate-500 mt-1">Verified practitioners with active professional regulatory credentials.</p>
+        <h1 className="font-serif text-3xl sm:text-4xl text-slate-900 font-bold">
+          CarePoint Healthcare Team Directory
+        </h1>
+        <p className="text-xs text-slate-500 mt-1">
+          12 verified clinical leaders, attending physicians, registered nurses, and executive administrators.
+        </p>
+
+        {/* Filter Pills */}
+        <div className="flex flex-wrap gap-1.5 mt-4">
+          {departments.map(dept => (
+            <button
+              key={dept}
+              onClick={() => setDeptFilter(dept)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                deptFilter === dept
+                  ? "bg-teal-600 text-white shadow-xs"
+                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              {dept}
+            </button>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-        {staff.map(s => (
-          <div key={s.name} className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4 shadow-xs">
-            <div className={`w-14 h-14 rounded-2xl ${s.color} text-white flex items-center justify-center font-bold text-lg shrink-0 shadow-xs`}>
-              {s.name.split(" ").map(w => w[0]).slice(0, 2).join("")}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {filteredTeam.map(s => (
+          <div
+            key={s.name}
+            className="bg-white border border-slate-200 rounded-2xl p-5 flex items-start gap-4 shadow-xs hover:border-teal-400 hover:shadow-sm transition-all"
+          >
+            <div
+              className={`w-12 h-12 rounded-2xl ${s.color} text-white flex items-center justify-center font-bold text-base shrink-0 shadow-xs`}
+            >
+              {s.name
+                .replace("Dr. ", "")
+                .replace("Nurse ", "")
+                .split(" ")
+                .map(w => w[0])
+                .slice(0, 2)
+                .join("")}
             </div>
-            <div>
-              <div className="font-bold text-sm text-slate-900">{s.name}</div>
-              <div className="text-xs text-teal-600 font-semibold">{s.position}</div>
-              <div className="text-[11px] text-slate-500">{s.dept}</div>
-              <div className="text-[11px] font-mono text-slate-700 mt-1">
-                <strong>{s.license}</strong> • <span className="text-slate-500">{s.credentials}</span>
+            <div className="min-w-0 flex-1">
+              <div className="font-bold text-sm text-slate-900 leading-tight">
+                {s.name}
+              </div>
+              <div className="text-xs text-teal-700 font-semibold mt-0.5">
+                {s.position}
+              </div>
+              <div className="text-[11px] text-slate-500 mt-0.5 truncate">
+                {s.department}
+              </div>
+              <div className="text-[11px] font-mono text-slate-700 mt-2 pt-2 border-t border-slate-100">
+                <span className="font-bold text-slate-800">{s.license}</span>
+                <div className="text-[10px] text-slate-500 font-sans mt-0.5">{s.credentials}</div>
               </div>
             </div>
           </div>

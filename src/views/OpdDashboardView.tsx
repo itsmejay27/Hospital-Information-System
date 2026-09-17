@@ -23,6 +23,8 @@ import {
   FileText,
   Settings,
 } from "../components/Icons";
+import ReferralModal from "../components/ReferralModal";
+import DischargeModal from "../components/DischargeModal";
 
 interface OpdDashboardViewProps {
   queue?: OpdQueueItem[];
@@ -93,6 +95,8 @@ export default function OpdDashboardView({
   const [isEClaimsModalOpen, setIsEClaimsModalOpen] = useState(false);
   const [isVitalsModalOpen, setIsVitalsModalOpen] = useState(false);
   const [isReferralModalOpen, setIsReferralModalOpen] = useState(false);
+  const [isDischargeModalOpen, setIsDischargeModalOpen] = useState(false);
+  const [activeModalPatientId, setActiveModalPatientId] = useState<string | undefined>(undefined);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
 
   // Quick New Patient Form State
@@ -425,16 +429,16 @@ export default function OpdDashboardView({
               </button>
 
               <button
-                onClick={() => navigate("/admin/branding")}
+                onClick={() => navigate("/admin/compliance")}
                 className="w-full p-3 rounded-lg bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 flex items-center justify-between text-left transition-all cursor-pointer group"
               >
                 <div className="flex items-center gap-2.5">
                   <div className="p-2 bg-amber-100 text-amber-800 rounded-lg group-hover:scale-105 transition-transform">
-                    <Settings size={16} strokeWidth={2} />
+                    <ShieldCheck size={16} strokeWidth={2} />
                   </div>
                   <div>
-                    <div className="font-semibold text-slate-900">Dynamic Branding & Config</div>
-                    <div className="text-[10px] text-slate-500">Configure name, emergency hotline</div>
+                    <div className="font-semibold text-slate-900">DPA & Privacy Compliance</div>
+                    <div className="text-[10px] text-slate-500">NPC Circular 16-01, consent audit logs</div>
                   </div>
                 </div>
                 <ChevronRight size={14} className="text-slate-400 group-hover:text-amber-700" />
@@ -702,13 +706,74 @@ export default function OpdDashboardView({
                       </span>
                     </td>
                     <td className="py-3 px-3 text-right">
-                      <button
-                        onClick={() => handleConsult(item.patientId)}
-                        className="px-2.5 py-1 rounded-md bg-teal-50 hover:bg-teal-600 text-teal-700 hover:text-white border border-teal-200 text-[11px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
-                      >
-                        <Stethoscope size={12} strokeWidth={2} />
-                        <span>Consult</span>
-                      </button>
+                      {user?.role === "doctor" ? (
+                        <div className="inline-flex items-center justify-end gap-1.5 flex-wrap">
+                          <button
+                            onClick={() => handleConsult(item.patientId)}
+                            className="px-2 py-1 rounded-md bg-teal-50 hover:bg-teal-600 text-teal-700 hover:text-white border border-teal-200 text-[11px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+                            title="Open in Doctor Workbench"
+                          >
+                            <Stethoscope size={12} strokeWidth={2} />
+                            <span>Consult</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setActiveModalPatientId(item.patientId);
+                              setIsReferralModalOpen(true);
+                            }}
+                            className="px-2 py-1 rounded-md bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white border border-blue-200 text-[11px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+                            title="Issue Specialist Referral"
+                          >
+                            <Send size={12} strokeWidth={2} />
+                            <span>Refer</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setActiveModalPatientId(item.patientId);
+                              setIsDischargeModalOpen(true);
+                            }}
+                            className="px-2 py-1 rounded-md bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 text-[11px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+                            title="Discharge Patient"
+                          >
+                            <CheckCircle size={12} strokeWidth={2} />
+                            <span>Discharge</span>
+                          </button>
+                        </div>
+                      ) : user?.role === "nurse" ? (
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              const pat = patients.find(p => p.id === item.patientId);
+                              if (pat) setSelectedPatient(pat);
+                              setIsVitalsModalOpen(true);
+                            }}
+                            className="px-2.5 py-1 rounded-md bg-purple-50 hover:bg-purple-600 text-purple-700 hover:text-white border border-purple-200 text-[11px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Activity size={12} strokeWidth={2} />
+                            <span>Log Vitals</span>
+                          </button>
+                          <button
+                            onClick={() => navigate("/registration/beds")}
+                            className="px-2.5 py-1 rounded-md bg-slate-50 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[11px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <span>Bed Triage</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              const pat = patients.find(p => p.id === item.patientId);
+                              if (pat) setSelectedPatient(pat);
+                              navigate("/registration/directory");
+                            }}
+                            className="px-2.5 py-1 rounded-md bg-emerald-50 hover:bg-emerald-600 text-emerald-700 hover:text-white border border-emerald-200 text-[11px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+                          >
+                            <Users size={12} strokeWidth={2} />
+                            <span>Admissions</span>
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 )))}
@@ -790,37 +855,115 @@ export default function OpdDashboardView({
               Frequent OPD Actions
             </h4>
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                onClick={() => setIsNewPatientModalOpen(true)}
-                className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
-              >
-                <UserPlus size={16} strokeWidth={2} className="text-teal-700 mb-1 group-hover:scale-110 transition-transform" />
-                <span className="font-semibold text-[11px]">New Patient</span>
-              </button>
+              {user?.role === "doctor" ? (
+                <>
+                  <button
+                    onClick={() => navigate("/clinical/doctor-workbench")}
+                    className="p-2.5 rounded-lg bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
+                  >
+                    <Stethoscope size={16} strokeWidth={2} className="text-blue-700 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="font-semibold text-[11px]">Doctor Workbench</span>
+                  </button>
 
-              <button
-                onClick={() => setIsEClaimsModalOpen(true)}
-                className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
-              >
-                <CreditCard size={16} strokeWidth={2} className="text-teal-700 mb-1 group-hover:scale-110 transition-transform" />
-                <span className="font-semibold text-[11px]">eClaims & Bill</span>
-              </button>
+                  <button
+                    onClick={() => {
+                      setActiveModalPatientId(selectedPatient?.id);
+                      setIsReferralModalOpen(true);
+                    }}
+                    className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
+                  >
+                    <Send size={16} strokeWidth={2} className="text-teal-700 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="font-semibold text-[11px]">Specialist Referral</span>
+                  </button>
 
-              <button
-                onClick={() => setIsVitalsModalOpen(true)}
-                className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
-              >
-                <Activity size={16} strokeWidth={2} className="text-teal-700 mb-1 group-hover:scale-110 transition-transform" />
-                <span className="font-semibold text-[11px]">Vitals & BMI</span>
-              </button>
+                  <button
+                    onClick={() => {
+                      setActiveModalPatientId(selectedPatient?.id);
+                      setIsDischargeModalOpen(true);
+                    }}
+                    className="p-2.5 rounded-lg bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
+                  >
+                    <CheckCircle size={16} strokeWidth={2} className="text-emerald-700 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="font-semibold text-[11px]">Discharge Clearance</span>
+                  </button>
 
-              <button
-                onClick={() => setIsReferralModalOpen(true)}
-                className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
-              >
-                <Send size={16} strokeWidth={2} className="text-teal-700 mb-1 group-hover:scale-110 transition-transform" />
-                <span className="font-semibold text-[11px]">Refer & Clear</span>
-              </button>
+                  <button
+                    onClick={() => navigate("/prescriptions")}
+                    className="p-2.5 rounded-lg bg-slate-50 hover:bg-purple-50 hover:border-purple-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
+                  >
+                    <CreditCard size={16} strokeWidth={2} className="text-purple-700 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="font-semibold text-[11px]">e-Prescriptions</span>
+                  </button>
+                </>
+              ) : user?.role === "nurse" ? (
+                <>
+                  <button
+                    onClick={() => setIsVitalsModalOpen(true)}
+                    className="p-2.5 rounded-lg bg-slate-50 hover:bg-purple-50 hover:border-purple-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
+                  >
+                    <Activity size={16} strokeWidth={2} className="text-purple-700 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="font-semibold text-[11px]">Vitals & BMI</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/registration/beds")}
+                    className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
+                  >
+                    <Users size={16} strokeWidth={2} className="text-teal-700 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="font-semibold text-[11px]">Bed Allocation</span>
+                  </button>
+
+                  <button
+                    onClick={() => setIsNewPatientModalOpen(true)}
+                    className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
+                  >
+                    <UserPlus size={16} strokeWidth={2} className="text-teal-700 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="font-semibold text-[11px]">Quick Intake</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/clinical/vitals-bmi")}
+                    className="p-2.5 rounded-lg bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
+                  >
+                    <TrendingUp size={16} strokeWidth={2} className="text-emerald-700 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="font-semibold text-[11px]">Shift Endorsements</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => navigate("/registration/new-patient")}
+                    className="p-2.5 rounded-lg bg-slate-50 hover:bg-teal-50 hover:border-teal-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
+                  >
+                    <UserPlus size={16} strokeWidth={2} className="text-teal-700 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="font-semibold text-[11px]">Patient Registration</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/registration/directory")}
+                    className="p-2.5 rounded-lg bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
+                  >
+                    <Users size={16} strokeWidth={2} className="text-blue-700 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="font-semibold text-[11px]">Master Directory</span>
+                  </button>
+
+                  <button
+                    onClick={() => navigate("/registration/visitors")}
+                    className="p-2.5 rounded-lg bg-slate-50 hover:bg-amber-50 hover:border-amber-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
+                  >
+                    <Clock size={16} strokeWidth={2} className="text-amber-700 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="font-semibold text-[11px]">Front Desk Visitors</span>
+                  </button>
+
+                  <button
+                    onClick={() => setIsEClaimsModalOpen(true)}
+                    className="p-2.5 rounded-lg bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 text-slate-700 flex flex-col items-center text-center transition-all cursor-pointer group"
+                  >
+                    <CreditCard size={16} strokeWidth={2} className="text-emerald-700 mb-1 group-hover:scale-110 transition-transform" />
+                    <span className="font-semibold text-[11px]">eClaims & Bill</span>
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -1195,96 +1338,19 @@ export default function OpdDashboardView({
         </div>
       )}
 
-      {/* Modal 4: Quick Referral & Clear */}
-      {isReferralModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 bg-teal-50 rounded-lg text-teal-700">
-                  <Send size={18} strokeWidth={2} />
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900">Quick Specialist Referral</h3>
-                  <p className="text-[11px] text-slate-500">Patient: {selectedPatient?.name || "Active Patient"}</p>
-                </div>
-              </div>
-              <button onClick={() => setIsReferralModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
-                <X size={18} strokeWidth={2} />
-              </button>
-            </div>
+      {/* Interactive Multi-step Referral Modal */}
+      <ReferralModal
+        isOpen={isReferralModalOpen}
+        onClose={() => setIsReferralModalOpen(false)}
+        defaultPatientId={activeModalPatientId}
+      />
 
-            <form onSubmit={handleSaveReferral} className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Refer To Department</label>
-                <select
-                  value={refDept}
-                  onChange={e => setRefDept(e.target.value)}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-teal-500"
-                >
-                  <option value="Cardiology Subspecialty Clinic">Cardiology Subspecialty Clinic</option>
-                  <option value="General Surgery Department">General Surgery Department</option>
-                  <option value="Pulmonology & Respiratory">Pulmonology & Respiratory</option>
-                  <option value="Endocrinology & Diabetes Clinic">Endocrinology & Diabetes Clinic</option>
-                  <option value="Tertiary Care Hospital (External)">Tertiary Care Hospital (External)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Clinical Indication / Reason *</label>
-                <textarea
-                  rows={3}
-                  required
-                  value={refReason}
-                  onChange={e => setRefReason(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:border-teal-500 focus:bg-white text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Priority Urgency</label>
-                <select
-                  value={refPriority}
-                  onChange={e => setRefPriority(e.target.value as any)}
-                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-teal-500"
-                >
-                  <option value="Routine">Routine</option>
-                  <option value="Urgent">Urgent</option>
-                  <option value="Stat Emergency">Stat Emergency</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsReferralModalOpen(false);
-                    navigate("/referrals");
-                  }}
-                  className="text-teal-700 text-[11px] font-semibold hover:underline cursor-pointer"
-                >
-                  Open Full Discharge Module →
-                </button>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsReferralModalOpen(false)}
-                    className="px-3 py-1.5 border border-slate-300 rounded-lg text-slate-700 text-xs font-medium cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-semibold cursor-pointer shadow-xs"
-                  >
-                    Submit Referral
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Interactive Multi-step Discharge Modal */}
+      <DischargeModal
+        isOpen={isDischargeModalOpen}
+        onClose={() => setIsDischargeModalOpen(false)}
+        defaultPatientId={activeModalPatientId}
+      />
     </div>
   );
 }

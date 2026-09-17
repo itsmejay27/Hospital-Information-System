@@ -4,7 +4,6 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { OpdDataProvider, useOpdData } from "./context/OpdDataContext";
 import OpdSidebar from "./components/OpdSidebar";
 import OpdTopNav from "./components/OpdTopNav";
-import LoginPage from "./views/LoginPage";
 import PublicLayout, {
   PublicHomePage,
   PublicAboutPage,
@@ -43,7 +42,7 @@ function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
   const { user, isAuthenticated } = useAuth();
 
   if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
@@ -405,8 +404,9 @@ export default function App() {
               <Route path="/contact" element={<PublicContactPage />} />
             </Route>
 
-            {/* Standalone Authentication Login Route */}
-            <Route path="/login" element={<LoginPage />} />
+            {/* Standalone Authentication Route Redirects (Auth is handled via Modal) */}
+            <Route path="/login" element={<Navigate to="/" replace />} />
+            <Route path="/signup" element={<Navigate to="/" replace />} />
 
             {/* Protected OPD Layout and Clinical Workbenches */}
             <Route
@@ -466,14 +466,8 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/referrals"
-                element={
-                  <ProtectedRoute allowedRoles={["doctor"]}>
-                    <DoctorWorkbenchRoute />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Referrals & Discharge Workflow (Now Modal-based, redirect to Workbench) */}
+              <Route path="/referrals" element={<Navigate to="/clinical/doctor-workbench" replace />} />
 
               {/* Legacy Clinical Route Redirects */}
               <Route path="/workbench" element={<Navigate to="/clinical/doctor-workbench" replace />} />
@@ -529,14 +523,8 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/admin/branding"
-                element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
-                    <AdminBrandingRoute />
-                  </ProtectedRoute>
-                }
-              />
+              {/* Decommissioned Dynamic Branding Route Redirect */}
+              <Route path="/admin/branding" element={<Navigate to="/admin/accounts" replace />} />
               <Route
                 path="/admin/audit-ledger"
                 element={

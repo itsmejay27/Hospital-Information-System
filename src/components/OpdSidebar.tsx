@@ -114,7 +114,7 @@ export default function OpdSidebar({
       roles: ["staff", "nurse"],
       group: "registration",
       subItems: [
-        { id: "new-patient", label: "New Patient Intake", path: "/registration/new-patient" },
+        { id: "new-patient", label: "Patient Registration & Intake", path: "/registration/new-patient" },
         { id: "beds", label: "Inpatient Bed Allocation", path: "/registration/beds" },
         { id: "directory", label: "Master Patient Directory", path: "/registration/directory" },
         { id: "visitors", label: "Front Desk Visitor Log", path: "/registration/visitors" },
@@ -129,14 +129,6 @@ export default function OpdSidebar({
       icon: CreditCard,
       badge: "eClaims",
       roles: ["doctor", "staff"],
-      group: "billing",
-    },
-    {
-      id: "referrals",
-      path: "/referrals",
-      label: "Referrals & Discharge",
-      icon: Send,
-      roles: ["doctor"],
       group: "billing",
     },
     {
@@ -158,7 +150,6 @@ export default function OpdSidebar({
       group: "management",
       subItems: [
         { id: "accounts", label: "Account Directory & Roles", path: "/admin/accounts" },
-        { id: "branding", label: "Dynamic Hospital Branding", path: "/admin/branding" },
         { id: "audit-ledger", label: "Cryptographic Audit Ledger", path: "/admin/audit-ledger" },
         { id: "rbac", label: "RBAC Permissions Matrix", path: "/admin/rbac" },
         { id: "compliance", label: "Security & NPC Guidelines", path: "/admin/compliance" },
@@ -302,16 +293,21 @@ export default function OpdSidebar({
           onClick={() => navigate("/dashboard")}
           className="flex items-center gap-3 overflow-hidden cursor-pointer group"
         >
-          <div className="w-9 h-9 rounded-xl bg-teal-600/20 border border-teal-500/40 flex items-center justify-center shrink-0 text-teal-400 font-bold text-base shadow-inner group-hover:scale-105 transition-transform">
-            CC
-          </div>
+          <img
+            src="/carepoint-logo.png"
+            alt="CarePoint Medical Center"
+            className="w-9 h-9 rounded-xl object-contain bg-white p-0.5 shadow-sm shrink-0 group-hover:scale-105 transition-transform"
+            onError={(e) => {
+              (e.target as HTMLElement).style.display = "none";
+            }}
+          />
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <h1 className="text-sm font-bold text-white tracking-tight truncate leading-tight group-hover:text-teal-300 transition-colors">
-                CityCare General
+                CarePoint Medical
               </h1>
               <p className="text-[10px] text-teal-400 font-medium tracking-wide uppercase truncate">
-                Outpatient Dept (OPD)
+                Hospital System (HIS)
               </p>
             </div>
           )}

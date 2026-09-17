@@ -17,7 +17,9 @@ import {
   LogOut,
   X,
   Building2,
+  UserPlus,
 } from "./Icons";
+import AuthModal from "./AuthModal";
 
 interface OpdTopNavProps {
   currentUser?: User | null;
@@ -55,6 +57,7 @@ export default function OpdTopNav({
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Live real-time clock
   useEffect(() => {
@@ -122,7 +125,7 @@ export default function OpdTopNav({
       authLogout();
     }
     setIsRoleMenuOpen(false);
-    navigate("/login");
+    navigate("/");
   };
 
   const accounts = Object.values(DEMO_USERS).map(u => u.user);
@@ -299,8 +302,8 @@ export default function OpdTopNav({
               <div className="font-semibold text-slate-800 truncate max-w-[140px]">
                 {user?.name || "Active Session"}
               </div>
-              <div className="text-[10px] text-teal-700 font-bold uppercase">
-                {user?.role} {user?.licenseNumber && `• ${user.licenseNumber}`}
+              <div className="text-[10px] text-teal-700 font-bold uppercase truncate max-w-[150px]">
+                {user?.role} • {user?.department || user?.title || "Clinical Staff"}
               </div>
             </div>
             <ChevronDown size={14} strokeWidth={2} className="text-slate-400 ml-0.5" />
@@ -349,7 +352,18 @@ export default function OpdTopNav({
                 })}
               </div>
 
-              <div className="px-2 py-1.5">
+              <div className="px-2 py-1.5 border-t border-slate-100 space-y-1">
+                <button
+                  onClick={() => {
+                    setIsRoleMenuOpen(false);
+                    setIsAuthModalOpen(true);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-teal-700 hover:bg-teal-50 rounded-lg transition-colors font-medium cursor-pointer"
+                >
+                  <UserPlus size={14} strokeWidth={2} />
+                  <span>Switch / Register New Account</span>
+                </button>
+
                 <button
                   onClick={handleLogoutSession}
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 rounded-lg transition-colors font-medium cursor-pointer"
@@ -362,6 +376,12 @@ export default function OpdTopNav({
           )}
         </div>
       </div>
+
+      {/* Global Staff Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </header>
   );
 }
