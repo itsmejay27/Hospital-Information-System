@@ -11,6 +11,12 @@ interface Props {
   onSignOut?: () => void;
 }
 
+const getCurrentDateTimeLocal = () => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - offset).toISOString().slice(0, 16);
+};
+
 export default function RegistrationVisitorsView({
   user,
   patients,
@@ -29,6 +35,14 @@ export default function RegistrationVisitorsView({
   const [visPhone, setVisPhone] = useState("");
   const [visIdCard, setVisIdCard] = useState("Driver's License");
   const [visBadge, setVisBadge] = useState(`BADGE-MAIN-${Math.floor(100 + Math.random() * 900)}`);
+  const [visTimeIn, setVisTimeIn] = useState(getCurrentDateTimeLocal());
+  const [visExpectedTimeOut, setVisExpectedTimeOut] = useState("");
+
+  const handleOpenCheckInModal = () => {
+    setVisTimeIn(getCurrentDateTimeLocal());
+    setVisExpectedTimeOut("");
+    setShowCheckInModal(true);
+  };
 
   const handleCheckIn = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +59,8 @@ export default function RegistrationVisitorsView({
       contactNumber: visPhone || "09XX-XXX-XXXX",
       idPresented: visIdCard,
       badgeNumber: visBadge,
-      timeIn: new Date().toISOString().replace("T", " ").substring(0, 16),
+      timeIn: visTimeIn.replace("T", " "),
+      timeOut: visExpectedTimeOut ? visExpectedTimeOut.replace("T", " ") : undefined,
       temperatureCelsius: "36.5°C",
       purpose: "Front desk visitor entry and bedside family visit",
       status: "Currently Visiting",
@@ -56,6 +71,7 @@ export default function RegistrationVisitorsView({
     setShowCheckInModal(false);
     setVisName("");
     setVisPhone("");
+    setVisExpectedTimeOut("");
     setVisBadge(`BADGE-MAIN-${Math.floor(100 + Math.random() * 900)}`);
     setNotification(`Visitor ${visName} checked in successfully! Assigned Badge: ${newVisitor.badgeNumber}`);
     setTimeout(() => setNotification(null), 5000);
@@ -112,7 +128,7 @@ export default function RegistrationVisitorsView({
         </div>
 
         <button
-          onClick={() => setShowCheckInModal(true)}
+          onClick={handleOpenCheckInModal}
           className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer self-start sm:self-auto"
         >
           <Plus size={16} />
@@ -148,7 +164,7 @@ export default function RegistrationVisitorsView({
                   <th className="py-3 px-3">Badge Number</th>
                   <th className="py-3 px-3">Visiting Patient</th>
                   <th className="py-3 px-3">Ward / Bed</th>
-                  <th className="py-3 px-3">Time In</th>
+                  <th className="py-3 px-3">Time In / Expected Out</th>
                   <th className="py-3 px-3">Status</th>
                   <th className="py-3 px-3 text-right">Action</th>
                 </tr>
@@ -171,8 +187,13 @@ export default function RegistrationVisitorsView({
                     <td className="py-3 px-3 text-slate-600">
                       {v.wardBed}
                     </td>
-                    <td className="py-3 px-3 font-mono text-[11px] text-slate-500">
-                      {v.timeIn}
+                    <td className="py-3 px-3">
+                      <div className="font-mono text-[11px] font-semibold text-slate-700">{v.timeIn}</div>
+                      {v.timeOut ? (
+                        <div className="text-[10px] text-emerald-700 font-mono">Exp. Out: {v.timeOut}</div>
+                      ) : (
+                        <div className="text-[10px] text-slate-400 italic">Open Visit</div>
+                      )}
                     </td>
                     <td className="py-3 px-3">
                       <span
@@ -303,6 +324,33 @@ export default function RegistrationVisitorsView({
                     value={visBadge}
                     onChange={e => setVisBadge(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 font-mono font-bold text-slate-900 focus:outline-hidden"
+                  />
+                </div>
+              </div>
+
+              {/* Time In and Expected Time Out DateTime Pickers */}
+              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
+                <div>
+                  <label className="font-bold uppercase text-slate-600 block mb-1 text-[10px]">
+                    Time In <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={visTimeIn}
+                    onChange={e => setVisTimeIn(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-1.5 font-medium text-slate-900 text-xs focus:bg-white focus:outline-hidden focus:border-emerald-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="font-bold uppercase text-slate-600 block mb-1 text-[10px]">
+                    Expected Time Out <span className="text-slate-400 font-normal text-[9px]">(Optional)</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={visExpectedTimeOut}
+                    onChange={e => setVisExpectedTimeOut(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2 py-1.5 font-medium text-slate-900 text-xs focus:bg-white focus:outline-hidden focus:border-emerald-500"
                   />
                 </div>
               </div>

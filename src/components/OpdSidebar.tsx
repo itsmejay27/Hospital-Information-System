@@ -37,6 +37,7 @@ interface SubNavItem {
   id: string;
   label: string;
   path: string;
+  roles?: Role[];
 }
 
 interface NavItem {
@@ -96,16 +97,16 @@ export default function OpdSidebar({
     },
     {
       id: "clinical-group",
-      path: "/clinical/doctor-workbench",
+      path: "/clinical",
       label: "Clinical Care",
       icon: Stethoscope,
       roles: ["doctor", "nurse"],
       group: "clinical",
       subItems: [
-        { id: "doctor-workbench", label: "Doctor Workbench", path: "/clinical/doctor-workbench" },
-        { id: "vitals-bmi", label: "Vitals & BMI Assessment", path: "/clinical/vitals-bmi" },
-        { id: "prescriptions", label: "e-Prescriptions & Rx", path: "/prescriptions" },
-        { id: "diagnostics", label: "Labs & Diagnostics", path: "/diagnostics" },
+        { id: "doctor-workbench", label: "Doctor Workbench", path: "/clinical?tab=workbench", roles: ["doctor"] },
+        { id: "prescriptions", label: "e-Prescriptions & Rx", path: "/clinical?tab=prescriptions", roles: ["doctor"] },
+        { id: "diagnostics", label: "Labs & Diagnostics", path: "/clinical?tab=labs", roles: ["doctor"] },
+        { id: "vitals-bmi", label: "Vitals & BMI Assessment", path: "/clinical?tab=vitals", roles: ["doctor", "nurse"] },
       ],
     },
 
@@ -176,7 +177,10 @@ export default function OpdSidebar({
   useEffect(() => {
     navItems.forEach(item => {
       if (item.subItems) {
-        const matches = item.subItems.some(sub => location.pathname === sub.path);
+        const matches = item.subItems.some(sub => {
+          const basePath = sub.path.split("?")[0];
+          return location.pathname === basePath;
+        });
         if (matches) {
           setExpandedMenus(prev => ({ ...prev, [item.id]: true }));
         }
@@ -185,13 +189,23 @@ export default function OpdSidebar({
   }, [location.pathname]);
 
   const isItemActive = (item: NavItem) => {
-    if (location.pathname === item.path) return true;
-    if (location.pathname === "/" && item.path === "/dashboard") return true;
-    if (item.subItems?.some(s => location.pathname === s.path)) return true;
+    const currentBase = location.pathname;
+    if (currentBase === item.path) return true;
+    if (currentBase === "/" && item.path === "/dashboard") return true;
+    if (item.subItems?.some(s => currentBase === s.path.split("?")[0])) return true;
     return false;
   };
 
   const isSubItemActive = (sub: SubNavItem) => {
+    const currentFull = location.pathname + location.search;
+    if (sub.path.includes("?")) {
+      if (currentFull === sub.path) return true;
+      if (location.pathname === "/clinical" && !location.search) {
+        if (currentRole === "nurse" && sub.id === "vitals-bmi") return true;
+        if (currentRole === "doctor" && sub.id === "doctor-workbench") return true;
+      }
+      return false;
+    }
     return location.pathname === sub.path;
   };
 
@@ -201,7 +215,12 @@ export default function OpdSidebar({
   };
 
   const handleNavClick = (item: NavItem) => {
-    navigate(item.path);
+    if (item.id === "clinical-group") {
+      const defaultTab = currentRole === "nurse" ? "/clinical?tab=vitals" : "/clinical?tab=workbench";
+      navigate(defaultTab);
+    } else {
+      navigate(item.path);
+    }
     if (item.subItems) {
       setExpandedMenus(prev => ({ ...prev, [item.id]: true }));
     }
@@ -215,7 +234,9 @@ export default function OpdSidebar({
     const Icon = item.icon;
     const isActive = isItemActive(item);
     const isExpanded = expandedMenus[item.id];
-    const hasSubItems = item.subItems && item.subItems.length > 0;
+    const visibleSubItems =
+      item.subItems?.filter(s => !s.roles || (currentRole && s.roles.includes(currentRole))) || [];
+    const hasSubItems = visibleSubItems.length > 0;
 
     return (
       <div key={item.id} className="space-y-1">
@@ -236,11 +257,11 @@ export default function OpdSidebar({
             className={isActive ? (hasSubItems ? "text-teal-400 shrink-0" : "text-white shrink-0") : "text-slate-400 shrink-0"}
           />
           {showFullSidebar && (
-            <span className="truncate flex-1 text-left">{item.label}</span>
+            <span className="truncate flex-1 text-left whitespace-nowrap">{item.label}</span>
           )}
           {showFullSidebar && item.badge && (
             <span
-              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
                 isActive
                   ? "bg-white/20 text-white"
                   : "bg-teal-500/20 text-teal-300 border border-teal-500/30"
@@ -252,7 +273,7 @@ export default function OpdSidebar({
           {showFullSidebar && hasSubItems && (
             <button
               onClick={(e) => toggleExpand(item.id, e)}
-              className="p-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              className="p-1 text-slate-400 hover:text-white transition-colors cursor-pointer shrink-0"
             >
               {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             </button>
@@ -262,7 +283,7 @@ export default function OpdSidebar({
         {/* Embedded Sub-menu Dedicated Direct Links */}
         {showFullSidebar && hasSubItems && isExpanded && (
           <div className="ml-3 pl-3 border-l border-slate-800 space-y-1 py-1">
-            {item.subItems!.map(sub => {
+            {visibleSubItems.map(sub => {
               const subActive = isSubItemActive(sub);
               return (
                 <button
@@ -275,7 +296,7 @@ export default function OpdSidebar({
                   }`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${subActive ? "bg-teal-400" : "bg-slate-600"}`} />
-                  <span className="truncate text-left">{sub.label}</span>
+                  <span className="truncate text-left whitespace-nowrap">{sub.label}</span>
                 </button>
               );
             })}
@@ -289,12 +310,12 @@ export default function OpdSidebar({
     <aside
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative flex flex-col bg-slate-900 border-r border-slate-800 text-slate-300 transition-all duration-300 ease-in-out z-30 select-none ${
+      className={`relative flex flex-col bg-slate-900 border-r border-slate-800 text-slate-300 transition-all duration-300 ease-in-out z-30 select-none overflow-hidden ${
         !showFullSidebar ? "w-[68px]" : "w-64 shadow-2xl"
       }`}
     >
       {/* Brand Header */}
-      <div className="h-16 flex items-center justify-between px-3.5 border-b border-slate-800/80 bg-slate-950/40">
+      <div className="h-16 flex items-center justify-between px-3.5 border-b border-slate-800/80 bg-slate-950/40 shrink-0">
         <div
           onClick={() => navigate("/dashboard")}
           className="flex items-center gap-3 overflow-hidden cursor-pointer group"
@@ -308,7 +329,7 @@ export default function OpdSidebar({
             }}
           />
           {showFullSidebar && (
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 whitespace-nowrap">
               <h1 className="text-sm font-bold text-white tracking-tight truncate leading-tight group-hover:text-teal-300 transition-colors">
                 CarePoint Medical
               </h1>
@@ -330,12 +351,12 @@ export default function OpdSidebar({
       </div>
 
       {/* Navigation list */}
-      <div className="flex-1 overflow-y-auto py-3 px-2.5 space-y-3 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2.5 space-y-3 scrollbar-thin">
         {/* Clinical Care Section */}
         {clinicalItems.length > 0 && (
           <div>
             {showFullSidebar && (
-              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">
                 Clinical Care
               </div>
             )}
@@ -349,7 +370,7 @@ export default function OpdSidebar({
         {registrationItems.length > 0 && (
           <div className="pt-2">
             {showFullSidebar && (
-              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">
                 Patient Registration
               </div>
             )}
@@ -363,7 +384,7 @@ export default function OpdSidebar({
         {billingItems.length > 0 && (
           <div className="pt-2">
             {showFullSidebar && (
-              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">
                 Billing & Discharges
               </div>
             )}
@@ -377,7 +398,7 @@ export default function OpdSidebar({
         {managementItems.length > 0 && (
           <div className="pt-2">
             {showFullSidebar && (
-              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">
                 Governance & Admin
               </div>
             )}
@@ -397,19 +418,19 @@ export default function OpdSidebar({
             }`}
           >
             <Building2 size={18} strokeWidth={1.75} className="shrink-0 text-slate-400" />
-            {showFullSidebar && <span className="truncate flex-1 text-left">Public Hospital Site</span>}
+            {showFullSidebar && <span className="truncate flex-1 text-left whitespace-nowrap">Public Hospital Site</span>}
           </button>
         </div>
       </div>
 
       {/* User Session Footer */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950/60">
+      <div className="p-3 border-t border-slate-800 bg-slate-950/60 shrink-0">
         {showFullSidebar ? (
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center shrink-0">
               {user?.avatarInitials || "ST"}
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 whitespace-nowrap">
               <p className="text-xs font-semibold text-slate-200 truncate leading-tight">
                 {user?.name || "Clinician Session"}
               </p>

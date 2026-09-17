@@ -24,10 +24,12 @@ import {
   Activity,
   CreditCard,
   ChevronRight,
+  History,
 } from "../components/Icons";
 import PrescriptionModal from "../components/PrescriptionModal";
 import LabOrderModal from "../components/LabOrderModal";
 import EClaimModal from "../components/EClaimModal";
+import PatientHistoryTimeline from "../components/PatientHistoryTimeline";
 
 interface Props {
   user: User;
@@ -63,6 +65,7 @@ export default function DoctorWorkbenchView({
   const [isRxModalOpen, setIsRxModalOpen] = useState(false);
   const [isLabModalOpen, setIsLabModalOpen] = useState(false);
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
+  const [showHistoryTimeline, setShowHistoryTimeline] = useState(false);
 
   const selectedPatient =
     patients.find(p => p.id === selectedPatientId) || patients[0] || {
@@ -234,6 +237,16 @@ export default function DoctorWorkbenchView({
                 <span className="text-teal-300 font-semibold">{selectedPatient.bloodType}</span> • PhilHealth PIN:{" "}
                 <span className="font-mono text-slate-200">{selectedPatient.philhealth?.pin || "Registered"}</span>
               </p>
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowHistoryTimeline(true)}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-400/40 text-xs font-bold transition-all cursor-pointer shadow-xs hover:scale-102"
+                >
+                  <History size={14} />
+                  <span>📋 View Patient History</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -264,6 +277,14 @@ export default function DoctorWorkbenchView({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setShowHistoryTimeline(true)}
+            className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-teal-300 border border-slate-700 font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-transform hover:scale-102 cursor-pointer"
+          >
+            <History size={15} strokeWidth={2.5} />
+            <span>📋 Full History</span>
+          </button>
           <button
             type="button"
             onClick={() => setIsRxModalOpen(true)}
@@ -733,6 +754,16 @@ export default function DoctorWorkbenchView({
           notify(`PhilHealth eClaim for ${newClaim.memberName} officially transmitted.`);
         }}
       />
+
+      {showHistoryTimeline && (
+        <PatientHistoryTimeline
+          patient={selectedPatient}
+          records={records}
+          medications={medications}
+          labResults={labResults}
+          onClose={() => setShowHistoryTimeline(false)}
+        />
+      )}
     </div>
   );
 }

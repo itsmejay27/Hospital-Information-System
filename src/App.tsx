@@ -18,6 +18,7 @@ import PhilHealthClaimsView from "./views/PhilHealthClaimsView";
 import OpdReportsView from "./views/OpdReportsView";
 
 // Dedicated Isolated Route Components
+import ClinicalCareView from "./views/ClinicalCareView";
 import DoctorWorkbenchView from "./views/DoctorWorkbenchView";
 import VitalsBmiView from "./views/VitalsBmiView";
 import PatientBedAllocationView from "./views/PatientBedAllocationView";
@@ -430,48 +431,25 @@ export default function App() {
               />
 
               {/* ============================================================ */}
-              {/* CLINICAL CARE & DOCTOR WORKBENCH (/clinical/*) */}
+              {/* CLINICAL CARE & DIAGNOSTICS HUB (/clinical) */}
               {/* ============================================================ */}
               <Route
-                path="/clinical/doctor-workbench"
-                element={
-                  <ProtectedRoute allowedRoles={["doctor"]}>
-                    <DoctorWorkbenchRoute />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/clinical/vitals-bmi"
+                path="/clinical"
                 element={
                   <ProtectedRoute allowedRoles={["doctor", "nurse"]}>
-                    <VitalsBmiRoute />
+                    <ClinicalCareView />
                   </ProtectedRoute>
                 }
               />
 
-              {/* Connected Clinical Actions */}
-              <Route
-                path="/prescriptions"
-                element={
-                  <ProtectedRoute allowedRoles={["doctor"]}>
-                    <DoctorWorkbenchRoute />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/diagnostics"
-                element={
-                  <ProtectedRoute allowedRoles={["doctor", "nurse"]}>
-                    <DoctorWorkbenchRoute />
-                  </ProtectedRoute>
-                }
-              />
-              {/* Referrals & Discharge Workflow (Now Modal-based, redirect to Workbench) */}
-              <Route path="/referrals" element={<Navigate to="/clinical/doctor-workbench" replace />} />
-
-              {/* Legacy Clinical Route Redirects */}
-              <Route path="/workbench" element={<Navigate to="/clinical/doctor-workbench" replace />} />
-              <Route path="/vitals" element={<Navigate to="/clinical/vitals-bmi" replace />} />
+              {/* Seamless Tabbed Navigation Redirects */}
+              <Route path="/clinical/doctor-workbench" element={<Navigate to="/clinical?tab=workbench" replace />} />
+              <Route path="/clinical/vitals-bmi" element={<Navigate to="/clinical?tab=vitals" replace />} />
+              <Route path="/prescriptions" element={<Navigate to="/clinical?tab=prescriptions" replace />} />
+              <Route path="/diagnostics" element={<Navigate to="/clinical?tab=labs" replace />} />
+              <Route path="/referrals" element={<Navigate to="/clinical?tab=workbench" replace />} />
+              <Route path="/workbench" element={<Navigate to="/clinical?tab=workbench" replace />} />
+              <Route path="/vitals" element={<Navigate to="/clinical?tab=vitals" replace />} />
 
               {/* ============================================================ */}
               {/* PATIENT REGISTRATION (/registration/*) */}
