@@ -64,6 +64,10 @@ export default function OpdSidebar({
   const user = propsUser || authUser;
   const liveWaiting = propsQueueCount !== undefined ? propsQueueCount : waitingCount;
 
+  // Auto-collapsible hover expansion state
+  const [isHovered, setIsHovered] = useState(false);
+  const showFullSidebar = isHovered || !collapsed;
+
   // Track expanded parent sections
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
     clinical: true,
@@ -217,24 +221,24 @@ export default function OpdSidebar({
       <div key={item.id} className="space-y-1">
         <div
           onClick={() => handleNavClick(item)}
-          title={collapsed ? item.label : undefined}
+          title={!showFullSidebar ? item.label : undefined}
           className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer select-none ${
             isActive && !hasSubItems
               ? "bg-teal-600 text-white shadow-xs font-semibold"
               : isActive && hasSubItems
               ? "bg-slate-800 text-teal-300 font-semibold"
               : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
-          } ${collapsed ? "justify-center px-0" : ""}`}
+          } ${!showFullSidebar ? "justify-center px-0" : ""}`}
         >
           <Icon
             size={18}
             strokeWidth={2}
             className={isActive ? (hasSubItems ? "text-teal-400 shrink-0" : "text-white shrink-0") : "text-slate-400 shrink-0"}
           />
-          {!collapsed && (
+          {showFullSidebar && (
             <span className="truncate flex-1 text-left">{item.label}</span>
           )}
-          {!collapsed && item.badge && (
+          {showFullSidebar && item.badge && (
             <span
               className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
                 isActive
@@ -245,7 +249,7 @@ export default function OpdSidebar({
               {item.badge}
             </span>
           )}
-          {!collapsed && hasSubItems && (
+          {showFullSidebar && hasSubItems && (
             <button
               onClick={(e) => toggleExpand(item.id, e)}
               className="p-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
@@ -256,7 +260,7 @@ export default function OpdSidebar({
         </div>
 
         {/* Embedded Sub-menu Dedicated Direct Links */}
-        {!collapsed && hasSubItems && isExpanded && (
+        {showFullSidebar && hasSubItems && isExpanded && (
           <div className="ml-3 pl-3 border-l border-slate-800 space-y-1 py-1">
             {item.subItems!.map(sub => {
               const subActive = isSubItemActive(sub);
@@ -283,8 +287,10 @@ export default function OpdSidebar({
 
   return (
     <aside
-      className={`relative flex flex-col bg-slate-900 border-r border-slate-800 text-slate-300 transition-all duration-200 z-30 select-none ${
-        collapsed ? "w-[68px]" : "w-64"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`relative flex flex-col bg-slate-900 border-r border-slate-800 text-slate-300 transition-all duration-300 ease-in-out z-30 select-none ${
+        !showFullSidebar ? "w-[68px]" : "w-64 shadow-2xl"
       }`}
     >
       {/* Brand Header */}
@@ -301,7 +307,7 @@ export default function OpdSidebar({
               (e.target as HTMLElement).style.display = "none";
             }}
           />
-          {!collapsed && (
+          {showFullSidebar && (
             <div className="min-w-0 flex-1">
               <h1 className="text-sm font-bold text-white tracking-tight truncate leading-tight group-hover:text-teal-300 transition-colors">
                 CarePoint Medical
@@ -317,9 +323,9 @@ export default function OpdSidebar({
         <button
           onClick={onToggleCollapse}
           className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={!showFullSidebar ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {collapsed ? <ChevronRight size={16} strokeWidth={2} /> : <ChevronLeft size={16} strokeWidth={2} />}
+          {!showFullSidebar ? <ChevronRight size={16} strokeWidth={2} /> : <ChevronLeft size={16} strokeWidth={2} />}
         </button>
       </div>
 
@@ -328,7 +334,7 @@ export default function OpdSidebar({
         {/* Clinical Care Section */}
         {clinicalItems.length > 0 && (
           <div>
-            {!collapsed && (
+            {showFullSidebar && (
               <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Clinical Care
               </div>
@@ -342,7 +348,7 @@ export default function OpdSidebar({
         {/* Patient Registration Section */}
         {registrationItems.length > 0 && (
           <div className="pt-2">
-            {!collapsed && (
+            {showFullSidebar && (
               <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Patient Registration
               </div>
@@ -356,7 +362,7 @@ export default function OpdSidebar({
         {/* Billing & Census Section */}
         {billingItems.length > 0 && (
           <div className="pt-2">
-            {!collapsed && (
+            {showFullSidebar && (
               <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Billing & Discharges
               </div>
@@ -370,7 +376,7 @@ export default function OpdSidebar({
         {/* Governance & Admin Section */}
         {managementItems.length > 0 && (
           <div className="pt-2">
-            {!collapsed && (
+            {showFullSidebar && (
               <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 Governance & Admin
               </div>
@@ -385,20 +391,20 @@ export default function OpdSidebar({
         <div className="pt-3 border-t border-slate-800/80 mt-3">
           <button
             onClick={() => navigate("/")}
-            title={collapsed ? "Public Hospital Site" : undefined}
+            title={!showFullSidebar ? "Public Hospital Site" : undefined}
             className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-teal-300 hover:bg-slate-800/60 transition-colors cursor-pointer ${
-              collapsed ? "justify-center px-0" : ""
+              !showFullSidebar ? "justify-center px-0" : ""
             }`}
           >
             <Building2 size={18} strokeWidth={1.75} className="shrink-0 text-slate-400" />
-            {!collapsed && <span className="truncate flex-1 text-left">Public Hospital Site</span>}
+            {showFullSidebar && <span className="truncate flex-1 text-left">Public Hospital Site</span>}
           </button>
         </div>
       </div>
 
       {/* User Session Footer */}
       <div className="p-3 border-t border-slate-800 bg-slate-950/60">
-        {!collapsed ? (
+        {showFullSidebar ? (
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center shrink-0">
               {user?.avatarInitials || "ST"}

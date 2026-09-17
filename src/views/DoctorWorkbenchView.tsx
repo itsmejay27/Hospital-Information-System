@@ -5,7 +5,9 @@ import {
   HealthRecord,
   DiagnosticResult,
   MedicationOrder,
+  PhilHealthClaim,
 } from "../types";
+import { useOpdData } from "../context/OpdDataContext";
 import { ICD10_CATALOG } from "../mockData";
 import {
   Stethoscope,
@@ -20,7 +22,12 @@ import {
   ShieldCheck,
   AlertCircle,
   Activity,
+  CreditCard,
+  ChevronRight,
 } from "../components/Icons";
+import PrescriptionModal from "../components/PrescriptionModal";
+import LabOrderModal from "../components/LabOrderModal";
+import EClaimModal from "../components/EClaimModal";
 
 interface Props {
   user: User;
@@ -46,10 +53,16 @@ export default function DoctorWorkbenchView({
   onAddMedication,
   initialPatientId,
 }: Props) {
+  const { claims = [], addClaim: contextAddClaim } = useOpdData();
   const [selectedPatientId, setSelectedPatientId] = useState(
     initialPatientId || patients[0]?.id || "P-2024-001"
   );
   const [notification, setNotification] = useState<string | null>(null);
+
+  // Modal Pop-up States for De-cluttered Clinical Actions
+  const [isRxModalOpen, setIsRxModalOpen] = useState(false);
+  const [isLabModalOpen, setIsLabModalOpen] = useState(false);
+  const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
 
   const selectedPatient =
     patients.find(p => p.id === selectedPatientId) || patients[0] || {
@@ -84,19 +97,6 @@ export default function DoctorWorkbenchView({
   const [internalNotes, setInternalNotes] = useState(
     "Patient is motivated and compliant. PhilHealth Konsulta package covers generic anti-hypertensive medications."
   );
-
-  // e-Prescription Quick Order State
-  const [rxMedName, setRxMedName] = useState("");
-  const [rxDose, setRxDose] = useState("");
-  const [rxRoute, setRxRoute] = useState("Oral (PO)");
-  const [rxFreq, setRxFreq] = useState("Once daily (OD) in morning");
-  const [rxNotes, setRxNotes] = useState("Take with or without food. Maintain hydration.");
-
-  // Lab Quick Order State
-  const [labOrderName, setLabOrderName] = useState("12-Lead Electrocardiogram (ECG)");
-  const [labCategory, setLabCategory] = useState<DiagnosticResult["category"]>("Cardiology");
-  const [labSpecimen, setLabSpecimen] = useState("Surface Electrode Tracing");
-  const [labIndication, setLabIndication] = useState("Baseline cardiac evaluation for stage 1 hypertension");
 
   const notify = (msg: string) => {
     setNotification(msg);
@@ -137,70 +137,11 @@ export default function DoctorWorkbenchView({
     notify(`SOAP Clinical Encounter note officially signed and archived for ${selectedPatient.name}.`);
   };
 
-  // Submit Prescription
-  const handleAddPrescription = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rxMedName.trim() || !rxDose.trim()) return;
-
-    const newMed: MedicationOrder = {
-      id: `RX-2026-${Date.now().toString().slice(-4)}`,
-      patientId: selectedPatient.id,
-      patientName: selectedPatient.name,
-      name: rxMedName,
-      dose: rxDose,
-      route: rxRoute,
-      freq: rxFreq,
-      start: new Date().toISOString().split("T")[0],
-      prescribedBy: user.name,
-      prescribedByLicense: user.licenseNumber || "PRC Lic. #0084721",
-      status: "Active",
-      refillable: true,
-      notes: rxNotes,
-    };
-
-    onAddMedication(newMed);
-    setRxMedName("");
-    setRxDose("");
-    notify(`e-Prescription for ${rxMedName} successfully transmitted for ${selectedPatient.name}.`);
-  };
-
-  // Submit Lab Order
-  const handleOrderLab = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!labOrderName.trim()) return;
-
-    const newLab: DiagnosticResult = {
-      id: `LAB-2026-${Date.now().toString().slice(-4)}`,
-      patientId: selectedPatient.id,
-      patientName: selectedPatient.name,
-      test: labOrderName,
-      category: labCategory,
-      date: new Date().toISOString().split("T")[0],
-      status: "In-Progress",
-      specimenType: labSpecimen,
-      orderingPhysician: user.name,
-      orderingPhysicianLicense: user.licenseNumber || "PRC-MD-001",
-      releasedBy: "OPD Central Pathology & Diagnostic Center",
-      summary: labIndication,
-      items: [
-        {
-          name: labOrderName,
-          value: "Processing Analysis",
-          ref: "Standard Laboratory Protocol",
-          flag: null,
-          unit: "Ref Range",
-        },
-      ],
-    };
-
-    onAddLabResult(newLab);
-    notify(`Diagnostic order for "${labOrderName}" successfully dispatched to laboratory queue.`);
-  };
-
   // Filtered lists for selected patient
   const patientRecords = records.filter(r => r.patientId === selectedPatient.id);
   const patientMeds = medications.filter(m => m.patientId === selectedPatient.id && m.status === "Active");
   const patientLabs = labResults.filter(l => l.patientId === selectedPatient.id);
+  const patientClaims = claims.filter(c => c.patientId === selectedPatient.id);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -309,6 +250,44 @@ export default function DoctorWorkbenchView({
               {selectedPatient.allergies?.join(", ") || "No known drug allergies (NKDA)"}
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Prominent Clinical Action Bar */}
+      <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+            Rapid Clinical Actions
+          </span>
+          <p className="text-xs text-slate-600 font-medium">
+            Launch focused clinical dialogs without leaving the patient's encounter
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setIsRxModalOpen(true)}
+            className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-transform hover:scale-102 cursor-pointer"
+          >
+            <Pill size={15} strokeWidth={2.5} />
+            <span>+ New e-Prescription</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsLabModalOpen(true)}
+            className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-transform hover:scale-102 cursor-pointer"
+          >
+            <FlaskConical size={15} strokeWidth={2.5} />
+            <span>+ Order Diagnostic Lab</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsClaimModalOpen(true)}
+            className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-transform hover:scale-102 cursor-pointer"
+          >
+            <CreditCard size={15} strokeWidth={2.5} />
+            <span>+ File PhilHealth eClaim</span>
+          </button>
         </div>
       </div>
 
@@ -529,240 +508,231 @@ export default function DoctorWorkbenchView({
           </div>
         </div>
 
-        {/* Right Column: Direct Clinical Order Action Panels (5 Cols) */}
+        {/* Right Column: De-cluttered Clinical Overview & Modals Triggers (5 Cols) */}
         <div className="lg:col-span-5 space-y-6">
-          {/* Quick e-Prescription (Rx) Order Form */}
-          <form onSubmit={handleAddPrescription} className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+          {/* Card 1: Active Regimens & e-Prescriptions */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <div className="flex items-center gap-2">
                 <Pill size={18} className="text-indigo-600" />
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                  Direct e-Prescription (Rx) Order
+                  Active Medications ({patientMeds.length})
                 </h3>
               </div>
-              <span className="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full border border-indigo-200">
-                PhilHealth Konsulta
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
-                  Medication Generic / Brand Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={rxMedName}
-                  onChange={e => setRxMedName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-semibold focus:bg-white focus:border-indigo-500 focus:outline-hidden"
-                  placeholder="e.g. Amlodipine Besylate"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
-                    Dosage & Strength <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={rxDose}
-                    onChange={e => setRxDose(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:bg-white focus:border-indigo-500 focus:outline-hidden"
-                    placeholder="e.g. 5mg Tablet"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
-                    Route
-                  </label>
-                  <select
-                    value={rxRoute}
-                    onChange={e => setRxRoute(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-hidden"
-                  >
-                    <option value="Oral (PO)">Oral (PO)</option>
-                    <option value="Intravenous (IV)">Intravenous (IV)</option>
-                    <option value="Subcutaneous (SC)">Subcutaneous (SC)</option>
-                    <option value="Sublingual (SL)">Sublingual (SL)</option>
-                    <option value="Inhalation">Inhalation</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
-                  Frequency / Sig
-                </label>
-                <input
-                  type="text"
-                  value={rxFreq}
-                  onChange={e => setRxFreq(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-hidden"
-                  placeholder="e.g. Once daily in the morning"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
-                  Patient Instructions & Dispensing Notes
-                </label>
-                <input
-                  type="text"
-                  value={rxNotes}
-                  onChange={e => setRxNotes(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-hidden"
-                  placeholder="e.g. Take after meal, maintain hydration"
-                />
-              </div>
-
               <button
-                type="submit"
-                className="w-full bg-indigo-700 hover:bg-indigo-800 text-white font-bold text-xs py-2.5 rounded-xl transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                type="button"
+                onClick={() => setIsRxModalOpen(true)}
+                className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-1 border border-indigo-200 transition-colors cursor-pointer"
               >
-                <Plus size={16} />
-                <span>Issue & Sign e-Prescription</span>
+                <Plus size={13} strokeWidth={2.5} />
+                <span>+ New Rx</span>
               </button>
             </div>
 
-            {/* Active Meds Summary */}
-            <div className="pt-2 border-t border-slate-100">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
-                Active Regimens ({patientMeds.length})
-              </span>
-              {patientMeds.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">No active medications currently ordered.</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {patientMeds.map(m => (
-                    <div key={m.id} className="flex items-center justify-between text-xs bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200/60">
+            {patientMeds.length === 0 ? (
+              <div className="py-6 text-center text-slate-400 text-xs space-y-2">
+                <p className="italic">No active medications prescribed for {selectedPatient.name}.</p>
+                <button
+                  type="button"
+                  onClick={() => setIsRxModalOpen(true)}
+                  className="text-indigo-600 hover:text-indigo-700 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>Issue e-Prescription</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {patientMeds.map(m => (
+                  <div
+                    key={m.id}
+                    className="p-3 bg-slate-50 hover:bg-indigo-50/40 rounded-xl border border-slate-200/70 text-xs transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
                       <div>
                         <span className="font-bold text-slate-900">{m.name}</span>{" "}
-                        <span className="text-slate-500 font-mono">({m.dose})</span>
-                        <div className="text-[10px] text-slate-500">{m.freq}</div>
+                        <span className="text-indigo-700 font-mono font-semibold">({m.dose})</span>
+                        <div className="text-[11px] text-slate-600 mt-0.5">
+                          {m.route} • {m.freq}
+                        </div>
                       </div>
-                      <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                      <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full shrink-0">
                         {m.status}
                       </span>
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </form>
+                    {m.notes && (
+                      <p className="text-[10px] text-slate-500 mt-1.5 pt-1.5 border-t border-slate-200/60">
+                        {m.notes}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
-          {/* Quick Diagnostic / Lab Order Form */}
-          <form onSubmit={handleOrderLab} className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
+          {/* Card 2: Diagnostic Laboratory Orders & Results */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <div className="flex items-center gap-2">
                 <FlaskConical size={18} className="text-amber-600" />
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                  Diagnostic & Pathology Request
+                  Diagnostic Orders ({patientLabs.length})
                 </h3>
               </div>
-              <span className="text-[10px] bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded-full border border-amber-200">
-                Central Lab Dispatch
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
-                  Test / Diagnostic Procedure <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={labOrderName}
-                  onChange={e => setLabOrderName(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-semibold focus:bg-white focus:border-amber-500 focus:outline-hidden"
-                  placeholder="e.g. 12-Lead ECG, Complete Blood Count"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
-                    Category
-                  </label>
-                  <select
-                    value={labCategory}
-                    onChange={e => setLabCategory(e.target.value as DiagnosticResult["category"])}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-hidden"
-                  >
-                    <option value="Cardiology">Cardiology</option>
-                    <option value="Hematology">Hematology</option>
-                    <option value="Clinical Chemistry">Clinical Chemistry</option>
-                    <option value="Radiology">Radiology</option>
-                    <option value="Microbiology">Microbiology</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
-                    Specimen / Method
-                  </label>
-                  <input
-                    type="text"
-                    value={labSpecimen}
-                    onChange={e => setLabSpecimen(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-hidden"
-                    placeholder="e.g. Venous Blood"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
-                  Clinical Indication / Reason
-                </label>
-                <input
-                  type="text"
-                  value={labIndication}
-                  onChange={e => setLabIndication(e.target.value)}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-hidden"
-                  placeholder="e.g. Screen for hypertensive end-organ damage"
-                />
-              </div>
-
               <button
-                type="submit"
-                className="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs py-2.5 rounded-xl transition-colors shadow-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                type="button"
+                onClick={() => setIsLabModalOpen(true)}
+                className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs flex items-center gap-1 border border-amber-200 transition-colors cursor-pointer"
               >
-                <Plus size={16} />
-                <span>Transmit Diagnostic Order</span>
+                <Plus size={13} strokeWidth={2.5} />
+                <span>+ Order Lab</span>
               </button>
             </div>
 
-            {/* Diagnostic Results Summary */}
-            <div className="pt-2 border-t border-slate-100">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-2">
-                Recent Diagnostic Orders ({patientLabs.length})
-              </span>
-              {patientLabs.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">No laboratory tests on record for this patient.</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {patientLabs.slice(0, 3).map(l => (
-                    <div key={l.id} className="text-xs bg-slate-50 p-2 rounded-lg border border-slate-200/60 flex items-center justify-between">
+            {patientLabs.length === 0 ? (
+              <div className="py-6 text-center text-slate-400 text-xs space-y-2">
+                <p className="italic">No laboratory or imaging orders recorded for this patient.</p>
+                <button
+                  type="button"
+                  onClick={() => setIsLabModalOpen(true)}
+                  className="text-amber-700 hover:text-amber-800 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>Order Diagnostic Test</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {patientLabs.map(l => (
+                  <div
+                    key={l.id}
+                    className="p-3 bg-slate-50 hover:bg-amber-50/40 rounded-xl border border-slate-200/70 text-xs transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
                       <div>
                         <div className="font-bold text-slate-900">{l.test}</div>
-                        <div className="text-[10px] text-slate-500 font-mono">{l.date} • {l.category}</div>
+                        <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                          {l.category} • {l.specimenType}
+                        </div>
                       </div>
-                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                        l.status === "Ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
-                      }`}>
+                      <span
+                        className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                          l.status === "Ready"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
                         {l.status}
                       </span>
                     </div>
-                  ))}
-                </div>
-              )}
+                    {l.summary && (
+                      <p className="text-[10px] text-slate-500 mt-1 pt-1 border-t border-slate-200/60">
+                        {l.summary}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Card 3: PhilHealth eClaims & Coverage */}
+          <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3.5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+              <div className="flex items-center gap-2">
+                <CreditCard size={18} className="text-emerald-600" />
+                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                  PhilHealth eClaims ({patientClaims.length})
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsClaimModalOpen(true)}
+                className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center gap-1 border border-emerald-200 transition-colors cursor-pointer"
+              >
+                <Plus size={13} strokeWidth={2.5} />
+                <span>+ File eClaim</span>
+              </button>
             </div>
-          </form>
+
+            {patientClaims.length === 0 ? (
+              <div className="py-6 text-center text-slate-400 text-xs space-y-2">
+                <p className="italic">No eClaims filed yet for this patient encounter.</p>
+                <button
+                  type="button"
+                  onClick={() => setIsClaimModalOpen(true)}
+                  className="text-emerald-700 hover:text-emerald-800 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus size={14} />
+                  <span>Transmit CF2 eClaim</span>
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {patientClaims.map(c => (
+                  <div
+                    key={c.id}
+                    className="p-3 bg-slate-50 hover:bg-emerald-50/40 rounded-xl border border-slate-200/70 text-xs transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-bold text-slate-900">{c.diagnosisWithIcd}</div>
+                        <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                          PIN: {c.pin} • {c.membershipType}
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 shrink-0">
+                        {c.claimStatus}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-slate-200/60 text-[10px]">
+                      <span className="text-slate-500">{c.caseRateAmount}</span>
+                      <span className="font-bold text-emerald-700">Benefit: ₱{c.philhealthBenefit.toLocaleString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Modal Overlays for De-cluttered Clinical Care */}
+      <PrescriptionModal
+        isOpen={isRxModalOpen}
+        onClose={() => setIsRxModalOpen(false)}
+        patient={selectedPatient}
+        doctorUser={user}
+        onAddMedication={(newMed) => {
+          onAddMedication(newMed);
+          notify(`e-Prescription for ${newMed.name} successfully issued.`);
+        }}
+      />
+
+      <LabOrderModal
+        isOpen={isLabModalOpen}
+        onClose={() => setIsLabModalOpen(false)}
+        patient={selectedPatient}
+        doctorUser={user}
+        onAddLabResult={(newLab) => {
+          onAddLabResult(newLab);
+          notify(`Diagnostic order for "${newLab.test}" dispatched to laboratory queue.`);
+        }}
+      />
+
+      <EClaimModal
+        isOpen={isClaimModalOpen}
+        onClose={() => setIsClaimModalOpen(false)}
+        patient={selectedPatient}
+        doctorUser={user}
+        onAddClaim={(newClaim) => {
+          if (contextAddClaim) {
+            contextAddClaim(newClaim);
+          }
+          notify(`PhilHealth eClaim for ${newClaim.memberName} officially transmitted.`);
+        }}
+      />
     </div>
   );
 }

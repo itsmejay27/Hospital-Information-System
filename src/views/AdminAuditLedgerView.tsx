@@ -9,6 +9,7 @@ import {
   Lock,
   Download,
   Filter,
+  Calendar,
 } from "../components/Icons";
 
 interface Props {
@@ -34,6 +35,7 @@ export default function AdminAuditLedgerView({ user, auditLogs }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedDate, setSelectedDate] = useState<string>("");
   const [notification, setNotification] = useState<string | null>(null);
 
   const totalLogs = auditLogs.length;
@@ -54,7 +56,7 @@ export default function AdminAuditLedgerView({ user, auditLogs }: Props) {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `CityCare_Cryptographic_Audit_Ledger_${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute("download", `CarePoint_Cryptographic_Audit_Ledger_${selectedDate || new Date().toISOString().split("T")[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -64,6 +66,11 @@ export default function AdminAuditLedgerView({ user, auditLogs }: Props) {
   };
 
   const filteredLogs = auditLogs.filter(log => {
+    // Exact date filter (YYYY-MM-DD matches start of timestamp YYYY-MM-DD HH:mm:ss)
+    if (selectedDate && !log.timestamp.startsWith(selectedDate)) {
+      return false;
+    }
+
     const matchesSearch =
       log.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -184,6 +191,28 @@ export default function AdminAuditLedgerView({ user, auditLogs }: Props) {
           </div>
 
           <div className="flex items-center gap-2.5 flex-wrap">
+            {/* HTML5 Date Picker Filter */}
+            <div className="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1">
+              <Calendar size={14} className="text-amber-700 shrink-0" />
+              <span className="font-semibold text-slate-700">Date:</span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={e => setSelectedDate(e.target.value)}
+                className="bg-transparent border-0 text-xs text-slate-900 font-semibold focus:outline-hidden cursor-pointer"
+              />
+              {selectedDate && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate("")}
+                  className="ml-1 text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+                  title="Clear Date Filter"
+                >
+                  ✕ Clear
+                </button>
+              )}
+            </div>
+
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
               <Filter size={14} />
               <span>Role:</span>
@@ -214,6 +243,25 @@ export default function AdminAuditLedgerView({ user, auditLogs }: Props) {
             </div>
           </div>
         </div>
+
+        {/* Active Date Filter Banner */}
+        {selectedDate && (
+          <div className="flex items-center justify-between bg-amber-50/80 border border-amber-200 rounded-xl px-3.5 py-2 text-xs text-amber-900 animate-fadeIn">
+            <div className="flex items-center gap-2">
+              <Calendar size={14} className="text-amber-700 shrink-0" />
+              <span>
+                Displaying audit events for date: <strong className="font-mono">{selectedDate}</strong> ({filteredLogs.length} {filteredLogs.length === 1 ? "record" : "records"} found)
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedDate("")}
+              className="text-xs text-amber-800 hover:text-amber-950 font-bold underline cursor-pointer"
+            >
+              Reset to view all dates
+            </button>
+          </div>
+        )}
 
         {/* Ledger Table */}
         {filteredLogs.length === 0 ? (

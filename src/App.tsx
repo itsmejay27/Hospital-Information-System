@@ -362,7 +362,7 @@ function ReportsRoute() {
 // — Professional Full-Width OPD Layout —
 function OpdAppLayout() {
   const { hospitalConfig } = useOpdData();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-slate-100/70 font-sans text-slate-800 antialiased">

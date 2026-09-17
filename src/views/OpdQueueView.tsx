@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { OpdQueueItem, QueueStatus, Patient, TriageTier } from "../types";
 import { useOpdData } from "../context/OpdDataContext";
+import { useAuth } from "../context/AuthContext";
 import {
   Users,
   Search,
@@ -31,6 +32,8 @@ export default function OpdQueueView({
   onNavigateToWorkbench: propsNavigateToWorkbench,
 }: OpdQueueViewProps) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isDoctor = user?.role === "doctor";
   const {
     queue: contextQueue,
     setQueue: contextSetQueue,
@@ -296,39 +299,64 @@ export default function OpdQueueView({
 
                     {/* Queue Status with quick dropdown */}
                     <td className="py-3.5 px-3 whitespace-nowrap">
-                      <select
-                        value={item.status}
-                        onChange={e => handleStatusChange(item.id, e.target.value as QueueStatus)}
-                        className={`text-xs font-semibold rounded-lg px-2.5 py-1 border focus:outline-hidden cursor-pointer ${
-                          item.status === "In-Consultation"
-                            ? "bg-teal-50 text-teal-800 border-teal-300"
-                            : item.status === "Waiting"
-                            ? "bg-blue-50 text-blue-700 border-blue-200"
-                            : item.status === "Completed"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-slate-50 text-slate-700 border-slate-300"
-                        }`}
-                      >
-                        <option value="Waiting">Waiting</option>
-                        <option value="In-Consultation">In-Consultation</option>
-                        <option value="Completed">Completed</option>
-                        <option value="Referred">Referred</option>
-                        <option value="No-Show">No-Show</option>
-                      </select>
+                      {isDoctor ? (
+                        <select
+                          value={item.status}
+                          onChange={e => handleStatusChange(item.id, e.target.value as QueueStatus)}
+                          className={`text-xs font-semibold rounded-lg px-2.5 py-1 border focus:outline-hidden cursor-pointer ${
+                            item.status === "In-Consultation"
+                              ? "bg-teal-50 text-teal-800 border-teal-300"
+                              : item.status === "Waiting"
+                              ? "bg-blue-50 text-blue-700 border-blue-200"
+                              : item.status === "Completed"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-slate-50 text-slate-700 border-slate-300"
+                          }`}
+                        >
+                          <option value="Waiting">Waiting</option>
+                          <option value="In-Consultation">In-Consultation</option>
+                          <option value="Completed">Completed</option>
+                          <option value="Referred">Referred</option>
+                          <option value="No-Show">No-Show</option>
+                        </select>
+                      ) : (
+                        <select
+                          disabled
+                          value={item.status}
+                          title="Read-only view: Only attending physicians may change queue status"
+                          className={`text-xs font-semibold rounded-lg px-2.5 py-1 border opacity-90 cursor-not-allowed select-none ${
+                            item.status === "In-Consultation"
+                              ? "bg-teal-50 text-teal-800 border-teal-300"
+                              : item.status === "Waiting"
+                              ? "bg-blue-50 text-blue-700 border-blue-200"
+                              : item.status === "Completed"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-slate-50 text-slate-700 border-slate-300"
+                          }`}
+                        >
+                          <option value={item.status}>{item.status}</option>
+                        </select>
+                      )}
                     </td>
 
                     {/* Actions */}
                     <td className="py-3.5 px-4 text-center whitespace-nowrap">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => handleStartConsult(item)}
-                          className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs transition-colors inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                          title="Open in Physician Workbench"
-                        >
-                          <Stethoscope size={13} strokeWidth={2} />
-                          <span>Consult</span>
-                        </button>
-                      </div>
+                      {isDoctor ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleStartConsult(item)}
+                            className="px-3 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold text-xs transition-colors inline-flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                            title="Open in Physician Workbench"
+                          >
+                            <Stethoscope size={13} strokeWidth={2} />
+                            <span>Consult</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 font-medium italic">
+                          Physician Only
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))

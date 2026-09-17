@@ -21,6 +21,7 @@ import {
   Siren,
   X,
   Check,
+  Calendar,
 } from "../components/Icons";
 
 interface Props {
@@ -95,6 +96,7 @@ export default function AdminCompliance({
   };
 
   const [logFilter, setLogFilter] = useState("all");
+  const [selectedLogDate, setSelectedLogDate] = useState<string>("");
   const [notification, setNotification] = useState<string | null>(null);
 
   // Hospital Branding Form State
@@ -233,6 +235,9 @@ export default function AdminCompliance({
   ];
 
   const filteredLogs = auditLogs.filter(l => {
+    if (selectedLogDate && !l.timestamp.startsWith(selectedLogDate)) {
+      return false;
+    }
     if (logFilter === "all") return true;
     return l.userRole === logFilter;
   });
@@ -634,21 +639,63 @@ export default function AdminCompliance({
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500">Filter Role:</span>
-                <select
-                  value={logFilter}
-                  onChange={e => setLogFilter(e.target.value)}
-                  className="border rounded-md px-3 py-1.5 text-xs bg-white"
-                >
-                  <option value="all">All Roles</option>
-                  <option value="doctor">Doctor</option>
-                  <option value="nurse">Nurse</option>
-                  <option value="staff">Staff</option>
-                  <option value="admin">Admin</option>
-                </select>
+              <div className="flex items-center gap-3 flex-wrap">
+                {/* HTML5 Date Picker */}
+                <div className="flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 border border-slate-300 rounded-md px-2.5 py-1">
+                  <Calendar size={13} className="text-amber-700 shrink-0" />
+                  <span className="font-semibold text-slate-700">Date:</span>
+                  <input
+                    type="date"
+                    value={selectedLogDate}
+                    onChange={e => setSelectedLogDate(e.target.value)}
+                    className="bg-transparent border-0 text-xs text-slate-900 font-semibold focus:outline-hidden cursor-pointer"
+                  />
+                  {selectedLogDate && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedLogDate("")}
+                      className="ml-1 text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-1.5 py-0.5 rounded cursor-pointer transition-colors"
+                      title="Clear Date Filter"
+                    >
+                      ✕ Clear
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">Filter Role:</span>
+                  <select
+                    value={logFilter}
+                    onChange={e => setLogFilter(e.target.value)}
+                    className="border border-slate-300 rounded-md px-3 py-1.5 text-xs bg-white text-slate-800 font-medium"
+                  >
+                    <option value="all">All Roles</option>
+                    <option value="doctor">Doctor</option>
+                    <option value="nurse">Nurse</option>
+                    <option value="staff">Staff</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                </div>
               </div>
             </div>
+
+            {selectedLogDate && (
+              <div className="flex items-center justify-between bg-amber-50/80 border border-amber-200 rounded-lg px-3.5 py-2 text-xs text-amber-900 mb-4 animate-fadeIn">
+                <div className="flex items-center gap-2">
+                  <Calendar size={14} className="text-amber-700 shrink-0" />
+                  <span>
+                    Displaying records for date: <strong className="font-mono">{selectedLogDate}</strong> ({filteredLogs.length} {filteredLogs.length === 1 ? "entry" : "entries"} found)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedLogDate("")}
+                  className="text-xs text-amber-800 hover:text-amber-950 font-bold underline cursor-pointer"
+                >
+                  Clear date filter
+                </button>
+              </div>
+            )}
 
             <div className="overflow-x-auto">
               <table className="w-full text-xs text-left">
