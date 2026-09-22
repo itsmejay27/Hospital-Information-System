@@ -27,22 +27,22 @@ export default function RegistrationDirectoryView({ user, patients }: Props) {
   });
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-              Registration Records • Isolated Route
+    <div className="space-y-6 max-w-7xl mx-auto pb-10">
+      {/* Header Banner (Medzone Hospital Emerald Theme) */}
+      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="relative z-10 max-w-xl">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
+              Registration Records • Master Index
             </span>
-            <span className="text-xs text-slate-400 font-mono">/registration/directory</span>
+            <span className="text-xs text-emerald-200/80 font-mono">/registration/directory</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Users size={24} className="text-emerald-600" />
-            <span>Master Patient Directory Table</span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
+            <Users size={28} className="text-emerald-300" />
+            <span>Master Patient Directory</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Total Registered Patients: <span className="font-bold text-slate-800">{patients.length}</span> records in hospital master database
+          <p className="text-xs sm:text-sm text-emerald-100/90 mt-1">
+            Total Registered Patients: <span className="font-bold text-white">{patients.length}</span> records in hospital master database.
           </p>
         </div>
       </div>

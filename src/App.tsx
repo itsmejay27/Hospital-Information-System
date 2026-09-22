@@ -26,10 +26,10 @@ import RegistrationNewPatientView from "./views/RegistrationNewPatientView";
 import RegistrationDirectoryView from "./views/RegistrationDirectoryView";
 import RegistrationVisitorsView from "./views/RegistrationVisitorsView";
 import AdminAccountsView from "./views/AdminAccountsView";
-import AdminBrandingView from "./views/AdminBrandingView";
 import AdminAuditLedgerView from "./views/AdminAuditLedgerView";
 import AdminRbacView from "./views/AdminRbacView";
 import AdminComplianceView from "./views/AdminComplianceView";
+import SettingsView from "./views/SettingsView";
 
 import { User, Role } from "./types";
 
@@ -252,33 +252,6 @@ function AdminAccountsRoute() {
   );
 }
 
-function AdminBrandingRoute() {
-  const { user, logout } = useAuth();
-  const { hospitalConfig, updateHospitalConfig } = useOpdData();
-
-  const adminUser: User =
-    user?.role === "admin"
-      ? user
-      : {
-          id: "ADM-001",
-          name: "System Administrator",
-          role: "admin",
-          title: "Hospital Administrator",
-          avatarInitials: "SA",
-          department: "Administration",
-          status: "active",
-        };
-
-  return (
-    <AdminBrandingView
-      user={adminUser}
-      hospitalConfig={hospitalConfig}
-      onUpdateHospitalConfig={updateHospitalConfig}
-      onSignOut={logout}
-    />
-  );
-}
-
 function AdminAuditLedgerRoute() {
   const { user, logout } = useAuth();
   const { auditLogs } = useOpdData();
@@ -363,10 +336,10 @@ function ReportsRoute() {
 // — Professional Full-Width OPD Layout —
 function OpdAppLayout() {
   const { hospitalConfig } = useOpdData();
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-100/70 font-sans text-slate-800 antialiased">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#F4F7F6] font-sans text-slate-800 antialiased">
       {/* Persistent Collapsible Sidebar with Dynamic Routing */}
       <OpdSidebar
         collapsed={isSidebarCollapsed}
@@ -379,7 +352,7 @@ function OpdAppLayout() {
         <OpdTopNav emergencyHotline={hospitalConfig.emergencyHotline} />
 
         {/* Dynamic Routed Outpatient Department Workspace */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 min-w-0">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-7 min-w-0">
           <Outlet />
         </main>
       </div>
@@ -473,7 +446,7 @@ export default function App() {
               <Route
                 path="/registration/directory"
                 element={
-                  <ProtectedRoute allowedRoles={["staff", "doctor", "nurse"]}>
+                  <ProtectedRoute allowedRoles={["staff"]}>
                     <RegistrationDirectoryRoute />
                   </ProtectedRoute>
                 }
@@ -481,7 +454,7 @@ export default function App() {
               <Route
                 path="/registration/visitors"
                 element={
-                  <ProtectedRoute allowedRoles={["staff", "nurse"]}>
+                  <ProtectedRoute allowedRoles={["staff"]}>
                     <RegistrationVisitorsRoute />
                   </ProtectedRoute>
                 }
@@ -547,6 +520,18 @@ export default function App() {
                 element={
                   <ProtectedRoute allowedRoles={["doctor", "nurse", "staff"]}>
                     <ReportsRoute />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* ============================================================ */}
+              {/* SYSTEM & CLINICAL SETTINGS */}
+              {/* ============================================================ */}
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute allowedRoles={["doctor", "nurse", "staff", "admin"]}>
+                    <SettingsView />
                   </ProtectedRoute>
                 }
               />

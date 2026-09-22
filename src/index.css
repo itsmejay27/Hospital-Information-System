@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Plus+Jakarta+Sans:ital,wght@0,300..800;1,300..800&display=swap');
 @import 'tailwindcss';
 
 @theme inline {
@@ -16,30 +16,30 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-border: var(--border);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
   --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 2px);
+  --radius-lg: calc(var(--radius) + 4px);
   --font-sans: var(--font-body);
   --font-serif: var(--font-display);
 }
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f2744;
+  --background: #f4f7f6;
+  --foreground: #0f172a;
   --card: #ffffff;
-  --card-foreground: #0f2744;
-  --primary: #0f2744;
+  --card-foreground: #0f172a;
+  --primary: #059669;
   --primary-foreground: #ffffff;
-  --secondary: #e8f4f8;
-  --secondary-foreground: #0f2744;
+  --secondary: #e6f4ea;
+  --secondary-foreground: #065f46;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #0891b2;
+  --accent: #10b981;
   --accent-foreground: #ffffff;
   --border: #e2e8f0;
-  --ring: #0891b2;
-  --radius: 4px;
-  --font-body: 'DM Sans', system-ui, sans-serif;
+  --ring: #10b981;
+  --radius: 16px;
+  --font-body: 'Plus Jakarta Sans', 'DM Sans', system-ui, sans-serif;
   --font-display: 'DM Serif Display', Georgia, serif;
 }
 
@@ -64,3 +64,18 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Clinical ribbed texture accent for hero card */
+.bg-clinical-ribbed {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0px,
+    rgba(255, 255, 255, 0.04) 18px,
+    transparent 18px,
+    transparent 36px
+  );
+}
+
+.bg-radial-glow {
+  background: radial-gradient(circle at 75% 35%, rgba(16, 185, 129, 0.25), transparent 60%);
+}

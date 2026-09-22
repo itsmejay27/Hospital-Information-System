@@ -24,6 +24,8 @@ import {
   KeyRound,
   FileText,
   Settings,
+  Rocket,
+  LogOut,
 } from "./Icons";
 
 interface OpdSidebarProps {
@@ -59,7 +61,7 @@ export default function OpdSidebar({
 }: OpdSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user: authUser } = useAuth();
+  const { user: authUser, logout } = useAuth();
   const { waitingCount } = useOpdData();
 
   const user = propsUser || authUser;
@@ -76,12 +78,14 @@ export default function OpdSidebar({
     admin: true,
   });
 
+  const currentRole = user?.role;
+
   const navItems: NavItem[] = [
-    // --- Clinical Care ---
+    // --- Core Workstation ---
     {
       id: "dashboard",
       path: "/dashboard",
-      label: "OPD Dashboard",
+      label: currentRole === "admin" ? "System Console" : "OPD Dashboard",
       icon: LayoutDashboard,
       roles: ["doctor", "nurse", "staff", "admin"],
       group: "clinical",
@@ -109,20 +113,28 @@ export default function OpdSidebar({
         { id: "vitals-bmi", label: "Vitals & BMI Assessment", path: "/clinical?tab=vitals", roles: ["doctor", "nurse"] },
       ],
     },
+    {
+      id: "nurse-beds",
+      path: "/registration/beds",
+      label: "Ward Bed Allocation",
+      icon: Bed,
+      roles: ["nurse"],
+      group: "clinical",
+    },
 
-    // --- Patient Registration ---
+    // --- Patient Registration (Staff Only) ---
     {
       id: "registration-group",
       path: "/registration/new-patient",
       label: "Patient Registration",
       icon: UserPlus,
-      roles: ["staff", "nurse"],
+      roles: ["staff"],
       group: "registration",
       subItems: [
-        { id: "new-patient", label: "Patient Registration & Intake", path: "/registration/new-patient" },
-        { id: "beds", label: "Inpatient Bed Allocation", path: "/registration/beds" },
-        { id: "directory", label: "Master Patient Directory", path: "/registration/directory" },
-        { id: "visitors", label: "Front Desk Visitor Log", path: "/registration/visitors" },
+        { id: "new-patient", label: "Patient Registration & Intake", path: "/registration/new-patient", roles: ["staff"] },
+        { id: "beds", label: "Inpatient Bed Allocation", path: "/registration/beds", roles: ["staff"] },
+        { id: "directory", label: "Master Patient Directory", path: "/registration/directory", roles: ["staff"] },
+        { id: "visitors", label: "Front Desk Visitor Log", path: "/registration/visitors", roles: ["staff"] },
       ],
     },
 
@@ -145,7 +157,7 @@ export default function OpdSidebar({
       group: "billing",
     },
 
-    // --- Governance & Admin ---
+    // --- Governance & Admin (Admin Only) ---
     {
       id: "admin-group",
       path: "/admin/accounts",
@@ -154,15 +166,14 @@ export default function OpdSidebar({
       roles: ["admin"],
       group: "management",
       subItems: [
-        { id: "accounts", label: "Account Directory & Roles", path: "/admin/accounts" },
-        { id: "audit-ledger", label: "Cryptographic Audit Ledger", path: "/admin/audit-ledger" },
-        { id: "rbac", label: "RBAC Permissions Matrix", path: "/admin/rbac" },
-        { id: "compliance", label: "Security & NPC Guidelines", path: "/admin/compliance" },
+        { id: "accounts", label: "Account Directory & Roles", path: "/admin/accounts", roles: ["admin"] },
+        { id: "audit-ledger", label: "Cryptographic Audit Ledger", path: "/admin/audit-ledger", roles: ["admin"] },
+        { id: "rbac", label: "RBAC Permissions Matrix", path: "/admin/rbac", roles: ["admin"] },
+        { id: "compliance", label: "Security & NPC Guidelines", path: "/admin/compliance", roles: ["admin"] },
       ],
     },
   ];
 
-  const currentRole = user?.role;
   const isItemVisible = (item: NavItem) => {
     if (!item.roles || item.roles.length === 0) return true;
     return currentRole ? item.roles.includes(currentRole) : false;
@@ -243,28 +254,36 @@ export default function OpdSidebar({
         <div
           onClick={() => handleNavClick(item)}
           title={!showFullSidebar ? item.label : undefined}
-          className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer select-none ${
+          className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all duration-200 cursor-pointer select-none ${
             isActive && !hasSubItems
-              ? "bg-teal-600 text-white shadow-xs font-semibold"
+              ? "bg-white text-emerald-950 shadow-md shadow-black/20"
               : isActive && hasSubItems
-              ? "bg-slate-800 text-teal-300 font-semibold"
-              : "text-slate-400 hover:text-slate-100 hover:bg-slate-800/70"
+              ? "bg-slate-800 text-emerald-300 font-bold"
+              : "text-slate-400 hover:text-white hover:bg-slate-800/60 font-medium"
           } ${!showFullSidebar ? "justify-center px-0" : ""}`}
         >
           <Icon
             size={18}
-            strokeWidth={2}
-            className={isActive ? (hasSubItems ? "text-teal-400 shrink-0" : "text-white shrink-0") : "text-slate-400 shrink-0"}
+            strokeWidth={2.2}
+            className={
+              isActive
+                ? hasSubItems
+                  ? "text-emerald-400 shrink-0"
+                  : "text-emerald-600 shrink-0"
+                : "text-slate-400 shrink-0 group-hover:text-white"
+            }
           />
           {showFullSidebar && (
             <span className="truncate flex-1 text-left whitespace-nowrap">{item.label}</span>
           )}
           {showFullSidebar && item.badge && (
             <span
-              className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
-                isActive
-                  ? "bg-white/20 text-white"
-                  : "bg-teal-500/20 text-teal-300 border border-teal-500/30"
+              className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 shadow-xs ${
+                typeof item.badge === "number" || item.badge === "10"
+                  ? "bg-amber-500 text-slate-950"
+                  : isActive
+                  ? "bg-emerald-100 text-emerald-800"
+                  : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
               }`}
             >
               {item.badge}
@@ -282,20 +301,20 @@ export default function OpdSidebar({
 
         {/* Embedded Sub-menu Dedicated Direct Links */}
         {showFullSidebar && hasSubItems && isExpanded && (
-          <div className="ml-3 pl-3 border-l border-slate-800 space-y-1 py-1">
+          <div className="ml-4 pl-3 border-l border-slate-800/80 space-y-1 py-1">
             {visibleSubItems.map(sub => {
               const subActive = isSubItemActive(sub);
               return (
                 <button
                   key={sub.id}
                   onClick={() => handleSubItemClick(sub)}
-                  className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer ${
+                  className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl text-[11px] font-medium transition-all cursor-pointer ${
                     subActive
-                      ? "bg-teal-500/20 text-teal-300 font-bold border-l-2 border-teal-400 pl-2 shadow-xs"
+                      ? "bg-white text-emerald-950 font-bold shadow-xs"
                       : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
                   }`}
                 >
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${subActive ? "bg-teal-400" : "bg-slate-600"}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${subActive ? "bg-emerald-600" : "bg-slate-600"}`} />
                   <span className="truncate text-left whitespace-nowrap">{sub.label}</span>
                 </button>
               );
@@ -310,31 +329,26 @@ export default function OpdSidebar({
     <aside
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative flex flex-col bg-slate-900 border-r border-slate-800 text-slate-300 transition-all duration-300 ease-in-out z-30 select-none overflow-hidden ${
+      className={`relative flex flex-col bg-[#0B0F17] border-r border-slate-800/80 text-slate-300 transition-all duration-300 ease-in-out z-30 select-none overflow-hidden ${
         !showFullSidebar ? "w-[68px]" : "w-64 shadow-2xl"
       }`}
     >
       {/* Brand Header */}
-      <div className="h-16 flex items-center justify-between px-3.5 border-b border-slate-800/80 bg-slate-950/40 shrink-0">
+      <div className="h-16 flex items-center justify-between px-3.5 border-b border-slate-800/80 bg-[#070A0F] shrink-0">
         <div
           onClick={() => navigate("/dashboard")}
           className="flex items-center gap-3 overflow-hidden cursor-pointer group"
         >
-          <img
-            src="/carepoint-logo.png"
-            alt="CarePoint Medical Center"
-            className="w-9 h-9 rounded-xl object-contain bg-white p-0.5 shadow-sm shrink-0 group-hover:scale-105 transition-transform"
-            onError={(e) => {
-              (e.target as HTMLElement).style.display = "none";
-            }}
-          />
+          <div className="w-9 h-9 rounded-xl bg-white text-emerald-700 font-extrabold flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition-transform">
+            m
+          </div>
           {showFullSidebar && (
             <div className="min-w-0 flex-1 whitespace-nowrap">
-              <h1 className="text-sm font-bold text-white tracking-tight truncate leading-tight group-hover:text-teal-300 transition-colors">
-                CarePoint Medical
+              <h1 className="text-base font-bold text-white tracking-tight truncate leading-tight group-hover:text-emerald-400 transition-colors">
+                Medzone
               </h1>
-              <p className="text-[10px] text-teal-400 font-medium tracking-wide uppercase truncate">
-                Hospital System (HIS)
+              <p className="text-[9px] text-emerald-400 font-semibold tracking-wider uppercase truncate">
+                CarePoint Hospital
               </p>
             </div>
           )}
@@ -346,18 +360,18 @@ export default function OpdSidebar({
           className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
           title={!showFullSidebar ? "Expand sidebar" : "Collapse sidebar"}
         >
-          {!showFullSidebar ? <ChevronRight size={16} strokeWidth={2} /> : <ChevronLeft size={16} strokeWidth={2} />}
+          {!showFullSidebar ? <ChevronRight size={15} strokeWidth={2} /> : <ChevronLeft size={15} strokeWidth={2} />}
         </button>
       </div>
 
       {/* Navigation list */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2.5 space-y-3 scrollbar-thin">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-3 space-y-3 scrollbar-thin">
         {/* Clinical Care Section */}
         {clinicalItems.length > 0 && (
           <div>
             {showFullSidebar && (
-              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">
-                Clinical Care
+              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                {currentRole === "admin" ? "System Console" : currentRole === "nurse" ? "Nursing Care" : currentRole === "staff" ? "Outpatient Frontline" : "Clinical Care"}
               </div>
             )}
             <div className="space-y-1">
@@ -370,7 +384,7 @@ export default function OpdSidebar({
         {registrationItems.length > 0 && (
           <div className="pt-2">
             {showFullSidebar && (
-              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">
+              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
                 Patient Registration
               </div>
             )}
@@ -384,7 +398,7 @@ export default function OpdSidebar({
         {billingItems.length > 0 && (
           <div className="pt-2">
             {showFullSidebar && (
-              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">
+              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
                 Billing & Discharges
               </div>
             )}
@@ -398,7 +412,7 @@ export default function OpdSidebar({
         {managementItems.length > 0 && (
           <div className="pt-2">
             {showFullSidebar && (
-              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">
+              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
                 Governance & Admin
               </div>
             )}
@@ -408,8 +422,68 @@ export default function OpdSidebar({
           </div>
         )}
 
-        {/* Public Website Shortcut */}
-        <div className="pt-3 border-t border-slate-800/80 mt-3">
+        {/* Bottom Shift Status Card (Medzone Inspired) */}
+        {showFullSidebar ? (
+          <div className="mt-3 pt-1">
+            <div className="p-3.5 rounded-2xl bg-gradient-to-b from-teal-900/90 via-emerald-950 to-[#02211B] border border-emerald-700/40 text-center shadow-lg relative overflow-hidden group">
+              <div className="w-10 h-10 mx-auto rounded-2xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center mb-2 shadow-inner group-hover:scale-110 transition-transform">
+                <Rocket size={20} className="text-emerald-400" />
+              </div>
+              <p className="text-xs font-bold text-white leading-tight">
+                OPD Shift Active
+              </p>
+              <p className="text-[10px] text-emerald-300/80 mt-0.5 mb-2.5">
+                Live Monitoring & Triage Online
+              </p>
+              <button
+                onClick={() => navigate("/queue")}
+                className="w-full py-1.5 px-3 rounded-full bg-white hover:bg-slate-100 text-slate-900 font-bold text-[11px] shadow-sm transition-all cursor-pointer hover:shadow-md"
+              >
+                View Live Queue
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="my-2 flex justify-center">
+            <button
+              onClick={() => navigate("/queue")}
+              title="View Live Queue"
+              className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 flex items-center justify-center cursor-pointer transition-all"
+            >
+              <Rocket size={17} />
+            </button>
+          </div>
+        )}
+
+        {/* Settings & Sign Out Actions */}
+        <div className="pt-2 border-t border-slate-800/80 mt-2 space-y-0.5">
+          <button
+            onClick={() => navigate("/settings")}
+            title={!showFullSidebar ? "Settings" : undefined}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+              location.pathname === "/settings"
+                ? "bg-emerald-600 text-white shadow-xs"
+                : "text-slate-400 hover:text-white hover:bg-slate-800/60"
+            } ${!showFullSidebar ? "justify-center px-0" : ""}`}
+          >
+            <Settings size={18} strokeWidth={1.8} className={`shrink-0 ${location.pathname === "/settings" ? "text-white" : "text-slate-400"}`} />
+            {showFullSidebar && <span className="truncate flex-1 text-left whitespace-nowrap">Settings</span>}
+          </button>
+
+          <button
+            onClick={() => {
+              logout();
+              navigate("/");
+            }}
+            title={!showFullSidebar ? "Log Out" : undefined}
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-slate-800/60 transition-colors cursor-pointer ${
+              !showFullSidebar ? "justify-center px-0" : ""
+            }`}
+          >
+            <LogOut size={18} strokeWidth={1.8} className="shrink-0 text-slate-400 hover:text-rose-400" />
+            {showFullSidebar && <span className="truncate flex-1 text-left whitespace-nowrap">Log Out</span>}
+          </button>
+
           <button
             onClick={() => navigate("/")}
             title={!showFullSidebar ? "Public Hospital Site" : undefined}
@@ -424,18 +498,18 @@ export default function OpdSidebar({
       </div>
 
       {/* User Session Footer */}
-      <div className="p-3 border-t border-slate-800 bg-slate-950/60 shrink-0">
+      <div className="p-3 border-t border-slate-800/80 bg-[#070A0F] shrink-0">
         {showFullSidebar ? (
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-full bg-emerald-700/80 border border-emerald-500/40 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
               {user?.avatarInitials || "ST"}
             </div>
             <div className="min-w-0 flex-1 whitespace-nowrap">
-              <p className="text-xs font-semibold text-slate-200 truncate leading-tight">
+              <p className="text-xs font-semibold text-white truncate leading-tight">
                 {user?.name || "Clinician Session"}
               </p>
               <div className="flex items-center gap-1.5">
-                <span className="text-[10px] text-teal-400 uppercase font-medium">
+                <span className="text-[10px] text-emerald-400 uppercase font-bold">
                   {user?.role || "Staff"}
                 </span>
                 {user?.licenseNumber && (
@@ -448,7 +522,7 @@ export default function OpdSidebar({
           </div>
         ) : (
           <div
-            className="w-8 h-8 mx-auto rounded-full bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center cursor-default"
+            className="w-8 h-8 mx-auto rounded-full bg-emerald-700/80 border border-emerald-500/40 text-white font-bold text-xs flex items-center justify-center cursor-default shadow-xs"
             title={`${user?.name || "Clinician"} (${user?.role || "Staff"})`}
           >
             {user?.avatarInitials || "ST"}

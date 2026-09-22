@@ -20,7 +20,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STORAGE_KEY = "citycare_opd_auth_session";
+const STORAGE_KEY = "carepoint_opd_auth_session";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
@@ -87,6 +87,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       saveSession(matched.user, generatedToken);
       return true;
     }
+
+    // Also check dynamic registered users in persistent store
+    try {
+      const storedUsers = localStorage.getItem("carepoint_users");
+      if (storedUsers) {
+        const parsed: User[] = JSON.parse(storedUsers);
+        const dynamicMatched = parsed.find(
+          u =>
+            u.username?.toLowerCase() === key ||
+            u.id.toLowerCase() === key ||
+            u.name.toLowerCase().includes(key)
+        );
+        if (dynamicMatched) {
+          const generatedToken = `jwt-mock-${dynamicMatched.id}-${btoa(dynamicMatched.name)}-${Date.now()}`;
+          setUser(dynamicMatched);
+          setToken(generatedToken);
+          saveSession(dynamicMatched, generatedToken);
+          return true;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     return false;
   };
 

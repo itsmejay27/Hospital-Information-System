@@ -161,40 +161,40 @@ export default function DoctorWorkbenchView({
         </div>
       )}
 
-      {/* Header & Attending Doctor Strip */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
-              Clinical Care • Isolated Route
+      {/* Header & Attending Doctor Strip (Emerald Hospital Theme) */}
+      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="relative z-10 max-w-xl">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
+              Clinical Care • Attending Physician
             </span>
-            <span className="text-xs text-slate-400 font-mono">/clinical/doctor-workbench</span>
+            <span className="text-xs text-emerald-200/80 font-mono">/clinical/doctor-workbench</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Stethoscope size={24} className="text-teal-600" />
-            <span>Doctor Workbench & Clinical Encounters</span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
+            <Stethoscope size={28} className="text-emerald-300" />
+            <span>Doctor Workbench & Encounters</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Attending Clinician: <span className="font-semibold text-slate-800">{user.name}</span> •{" "}
-            <span className="font-mono text-slate-600">{user.licenseNumber || "PRC Physician"}</span> ({user.department})
+          <p className="text-xs sm:text-sm text-emerald-100/90 mt-1">
+            Attending Clinician: <span className="font-semibold text-white">{user.name}</span> •{" "}
+            <span className="font-mono text-emerald-200">{user.licenseNumber || "PRC Verified"}</span> ({user.department})
           </p>
         </div>
 
         {/* Patient Switcher Dropdown */}
-        <div className="flex items-center gap-2.5 bg-slate-50 p-2 rounded-xl border border-slate-200">
-          <UserIcon size={16} className="text-slate-500 shrink-0" />
+        <div className="relative z-10 flex items-center gap-2.5 bg-white/10 p-2.5 rounded-2xl border border-white/20 backdrop-blur-xs">
+          <UserIcon size={18} className="text-emerald-200 shrink-0" />
           <div className="text-left">
-            <label htmlFor="patient-select" className="text-[10px] font-bold uppercase text-slate-400 block leading-tight">
-              Active Patient:
+            <label htmlFor="patient-select" className="text-[10px] font-bold uppercase text-emerald-200/80 block leading-tight">
+              Active Consultation:
             </label>
             <select
               id="patient-select"
               value={selectedPatientId}
               onChange={e => setSelectedPatientId(e.target.value)}
-              className="bg-transparent font-bold text-xs text-slate-900 focus:outline-hidden cursor-pointer"
+              className="bg-transparent font-bold text-xs text-white focus:outline-hidden cursor-pointer"
             >
               {patients.map(p => (
-                <option key={p.id} value={p.id}>
+                <option key={p.id} value={p.id} className="text-slate-900 bg-white">
                   {p.name} ({p.id}) — {p.triageTier.toUpperCase()}
                 </option>
               ))}
@@ -204,10 +204,10 @@ export default function DoctorWorkbenchView({
       </div>
 
       {/* Active Patient Demographics Strip */}
-      <div className="bg-slate-900 text-white rounded-2xl p-5 border border-slate-800 shadow-md">
+      <div className="bg-gradient-to-br from-teal-900 via-emerald-950 to-[#02211B] text-white rounded-3xl p-6 border border-emerald-800/50 shadow-md">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-2 flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-teal-500/20 border border-teal-400/40 text-teal-300 font-bold flex items-center justify-center text-lg shrink-0">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-bold flex items-center justify-center text-lg shrink-0 shadow-inner">
               {selectedPatient.name
                 .split(" ")
                 .map(n => n[0])
@@ -280,34 +280,34 @@ export default function DoctorWorkbenchView({
           <button
             type="button"
             onClick={() => setShowHistoryTimeline(true)}
-            className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-teal-300 border border-slate-700 font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-transform hover:scale-102 cursor-pointer"
+            className="flex-1 sm:flex-initial px-4 py-2 rounded-full bg-slate-900 hover:bg-slate-800 text-emerald-300 border border-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all hover:scale-105 cursor-pointer"
           >
             <History size={15} strokeWidth={2.5} />
-            <span>📋 Full History</span>
+            <span>Full History</span>
           </button>
           <button
             type="button"
             onClick={() => setIsRxModalOpen(true)}
-            className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-transform hover:scale-102 cursor-pointer"
+            className="flex-1 sm:flex-initial px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all hover:scale-105 cursor-pointer"
           >
             <Pill size={15} strokeWidth={2.5} />
-            <span>+ New e-Prescription</span>
+            <span>+ e-Prescription</span>
           </button>
           <button
             type="button"
             onClick={() => setIsLabModalOpen(true)}
-            className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-transform hover:scale-102 cursor-pointer"
+            className="flex-1 sm:flex-initial px-4 py-2 rounded-full bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all hover:scale-105 cursor-pointer"
           >
             <FlaskConical size={15} strokeWidth={2.5} />
-            <span>+ Order Diagnostic Lab</span>
+            <span>+ Diagnostic Lab</span>
           </button>
           <button
             type="button"
             onClick={() => setIsClaimModalOpen(true)}
-            className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-transform hover:scale-102 cursor-pointer"
+            className="flex-1 sm:flex-initial px-4 py-2 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all hover:scale-105 cursor-pointer"
           >
             <CreditCard size={15} strokeWidth={2.5} />
-            <span>+ File PhilHealth eClaim</span>
+            <span>+ PhilHealth eClaim</span>
           </button>
         </div>
       </div>

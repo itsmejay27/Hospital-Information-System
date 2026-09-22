@@ -22,14 +22,14 @@ export default function AdminComplianceView({ user, hospitalConfig }: Props) {
       status: "Fully Compliant",
       badge: "bg-emerald-100 text-emerald-800 border-emerald-300",
       description:
-        "CityCare General enforces strict organizational, physical, and technical measures for safeguarding Sensitive Personal Information (SPI) including health diagnoses, prescriptions, and biometric data.",
+        "CarePoint Medical Center enforces strict organizational, physical, and technical measures for safeguarding Sensitive Personal Information (SPI) including health diagnoses, prescriptions, and biometric data.",
     },
     {
       title: "National Privacy Commission (NPC) Circular Compliance",
       status: "Registered & Verified",
       badge: "bg-emerald-100 text-emerald-800 border-emerald-300",
       description:
-        `Hospital facility registration filed with the NPC. Designated Data Protection Officer (DPO): ${hospitalConfig.dpoEmail || "dpo@citycarehospital.ph"}.`,
+        `Hospital facility registration filed with the NPC. Designated Data Protection Officer (DPO): ${hospitalConfig.dpoEmail || "dpo@carepointmedical.ph"}.`,
     },
     {
       title: "Mandatory 72-Hour Security Incident Protocol",
@@ -95,8 +95,8 @@ export default function AdminComplianceView({ user, hospitalConfig }: Props) {
           <span>Institutional Data Protection Officer (DPO) Inquiries</span>
         </h3>
         <p className="text-xs text-slate-300 leading-relaxed">
-          For patient privacy concerns, access requests under RA 10173, or security audit logs verification, contact the CityCare General Data Protection Office directly at{" "}
-          <strong className="text-white font-mono">{hospitalConfig.dpoEmail || "dpo@citycarehospital.ph"}</strong> or via the administrative desk at{" "}
+          For patient privacy concerns, access requests under RA 10173, or security audit logs verification, contact the CarePoint Medical Center Data Protection Office directly at{" "}
+          <strong className="text-white font-mono">{hospitalConfig.dpoEmail || "dpo@carepointmedical.ph"}</strong> or via the administrative desk at{" "}
           <span className="font-mono">{hospitalConfig.phone}</span>.
         </p>
       </div>

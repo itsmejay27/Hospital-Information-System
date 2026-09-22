@@ -9,6 +9,8 @@ import {
   Activity,
   CreditCard,
   Download,
+  Users,
+  Clock,
 } from "../components/Icons";
 
 interface OpdReportsViewProps {
@@ -45,40 +47,42 @@ export default function OpdReportsView({
   const totalPatientPaid = claims.reduce((a, b) => a + b.patientPayable, 0);
 
   return (
-    <div className="space-y-5">
-      {/* Header Bar */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-teal-50 text-teal-700 border border-teal-200">
-            <PieChart size={20} strokeWidth={2} />
+    <div className="space-y-6 max-w-7xl mx-auto pb-10">
+      {/* Top Banner (Medzone Hospital Emerald Theme) */}
+      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="relative z-10 max-w-xl">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
+              Departmental Analytics • DOH FHSIS
+            </span>
+            <span className="text-xs text-emerald-200/80 font-mono">/reports</span>
           </div>
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 leading-tight">
-              OPD Census, Morbidity & Claims Analytics
-            </h2>
-            <p className="text-xs text-slate-500">
-              Departmental clinical reporting, ICD-10 epidemiology, and DOH statistical census
-            </p>
-          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
+            <PieChart size={28} className="text-emerald-300" />
+            <span>OPD Census & Morbidity Analytics</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-emerald-100/90 mt-1">
+            Departmental clinical reporting, ICD-10 epidemiology statistics, and Universal Health Care metrics.
+          </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="relative z-10 flex items-center gap-3">
           <select
             value={reportPeriod}
             onChange={e => setReportPeriod(e.target.value)}
-            className="bg-white border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-700 focus:outline-hidden focus:border-teal-500"
+            className="bg-white/10 border border-white/20 text-white font-semibold rounded-full px-4 py-2 text-xs focus:outline-hidden backdrop-blur-xs cursor-pointer"
           >
-            <option value="Today">Today (Sep 15, 2026)</option>
-            <option value="This Week">This Week (Sep 10 - 15)</option>
-            <option value="This Month">This Month (September 2026)</option>
-            <option value="Quarterly">Q3 2026</option>
+            <option value="Today" className="text-slate-900 bg-white">Today (Sep 15, 2026)</option>
+            <option value="This Week" className="text-slate-900 bg-white">This Week (Sep 10 - 15)</option>
+            <option value="This Month" className="text-slate-900 bg-white">This Month (September 2026)</option>
+            <option value="Quarterly" className="text-slate-900 bg-white">Q3 2026</option>
           </select>
 
           <button
             onClick={() => window.print()}
-            className="px-3.5 py-1.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-xs transition-colors"
+            className="px-5 py-2 rounded-full bg-white text-slate-900 font-bold text-xs shadow-xs hover:bg-slate-100 transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
           >
-            <Printer size={14} strokeWidth={2} />
+            <Printer size={15} strokeWidth={2} />
             <span>Print Report</span>
           </button>
         </div>
@@ -86,79 +90,91 @@ export default function OpdReportsView({
 
       {/* 4 High-Level Aggregate Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-            Total OPD Consultations
-          </span>
-          <div className="text-2xl font-bold text-slate-900 mt-1">{totalPatientsToday}</div>
-          <div className="text-[10px] text-slate-500 mt-1">
-            {femalePatients} Females • {malePatients} Males
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100/90 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-slate-500">Total Consultations</span>
+            <div className="text-2xl font-extrabold text-slate-900 mt-1">{totalPatientsToday}</div>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">
+              {femalePatients} Females • {malePatients} Males
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center font-bold text-sm shadow-inner">
+            <Users size={22} />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-semibold text-teal-700 uppercase tracking-wide">
-            PhilHealth Benefit Total
-          </span>
-          <div className="text-2xl font-bold text-teal-800 mt-1 font-mono">
-            ₱{totalPhilHealthReimbursed.toLocaleString()}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100/90 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-emerald-700">PhilHealth Covered</span>
+            <div className="text-2xl font-extrabold text-emerald-900 mt-1 font-mono">
+              ₱{totalPhilHealthReimbursed.toLocaleString()}
+            </div>
+            <span className="text-[10px] text-emerald-600 mt-0.5 block">
+              {claims.length} claims submitted
+            </span>
           </div>
-          <div className="text-[10px] text-teal-600 mt-1">
-            {claims.length} claims submitted
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-semibold text-blue-700 uppercase tracking-wide">
-            Senior & PWD Consults
-          </span>
-          <div className="text-2xl font-bold text-blue-900 mt-1">{seniorPatients}</div>
-          <div className="text-[10px] text-blue-600 mt-1">
-            30.4% Priority lane ratio
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-sm shadow-inner">
+            <CreditCard size={22} />
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">
-            Patient Copay Collected
-          </span>
-          <div className="text-2xl font-bold text-emerald-900 mt-1 font-mono">
-            ₱{totalPatientPaid.toLocaleString()}
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100/90 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-blue-700">Priority Lane (PWD/Sr)</span>
+            <div className="text-2xl font-extrabold text-blue-900 mt-1">{seniorPatients}</div>
+            <span className="text-[10px] text-blue-600 mt-0.5 block">
+              30.4% Priority lane ratio
+            </span>
           </div>
-          <div className="text-[10px] text-emerald-600 mt-1">
-            100% Cashier cleared
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center font-bold text-sm shadow-inner">
+            <CheckCircle size={22} />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100/90 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-emerald-700">Patient Copay</span>
+            <div className="text-2xl font-extrabold text-emerald-900 mt-1 font-mono">
+              ₱{totalPatientPaid.toLocaleString()}
+            </div>
+            <span className="text-[10px] text-emerald-600 mt-0.5 block">
+              100% Cashier cleared
+            </span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-sm shadow-inner">
+            ₱
           </div>
         </div>
       </div>
 
       {/* Two Column Layout: Top ICD-10 Morbidities & Triage Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Top 6 ICD-10 OPD Morbidities */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs space-y-4">
+        <div className="bg-white rounded-3xl border border-slate-100/90 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="text-sm font-bold text-slate-900">
-              Leading OPD Causes of Morbidity (ICD-10)
+              Leading Causes of Morbidity (ICD-10)
             </h3>
-            <span className="text-[10px] bg-teal-50 text-teal-700 font-mono font-semibold px-2 py-0.5 rounded">
+            <span className="text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold px-2.5 py-0.5 rounded-full">
               DOH FHSIS Form
             </span>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {topDiagnoses.map(item => (
-              <div key={item.icd} className="space-y-1 text-xs">
+              <div key={item.icd} className="space-y-1.5 text-xs">
                 <div className="flex justify-between items-center text-slate-700">
-                  <span className="font-medium">
-                    <span className="font-mono font-bold text-teal-700 mr-1.5">[{item.icd}]</span>
+                  <span className="font-semibold">
+                    <span className="font-mono font-bold text-emerald-700 mr-1.5">[{item.icd}]</span>
                     {item.name}
                   </span>
-                  <span className="font-mono text-slate-500 font-semibold">
+                  <span className="font-mono text-slate-500 font-bold">
                     {item.count} cases ({item.percentage}%)
                   </span>
                 </div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
                   <div
-                    className="bg-teal-600 h-2 rounded-full transition-all duration-500"
+                    className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500"
                     style={{ width: `${item.percentage * 2}%` }}
                   ></div>
                 </div>
@@ -168,26 +184,26 @@ export default function OpdReportsView({
         </div>
 
         {/* Right: Hospital Financial & Demographics Summary */}
-        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs space-y-4">
+        <div className="bg-white rounded-3xl border border-slate-100/90 p-6 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h3 className="text-sm font-bold text-slate-900">
               Financial & PhilHealth Utilization Breakdown
             </h3>
-            <span className="text-[10px] bg-slate-100 text-slate-600 font-mono px-2 py-0.5 rounded">
-              PhilHealth CF-2 Summary
+            <span className="text-[10px] bg-slate-100 text-slate-700 font-semibold px-2.5 py-0.5 rounded-full">
+              PhilHealth CF-2
             </span>
           </div>
 
           <div className="divide-y divide-slate-100 text-xs">
             <div className="py-2.5 flex justify-between items-center">
               <span className="text-slate-600">Gross Outpatient Charges</span>
-              <span className="font-mono font-semibold text-slate-900">
+              <span className="font-mono font-bold text-slate-900">
                 ₱{totalPhilHealthBilled.toLocaleString()}
               </span>
             </div>
 
-            <div className="py-2.5 flex justify-between items-center text-teal-700">
-              <span>PhilHealth Benefit Share (Covered)</span>
+            <div className="py-2.5 flex justify-between items-center text-emerald-700">
+              <span className="font-semibold">PhilHealth Benefit Share (Covered)</span>
               <span className="font-mono font-bold">
                 ₱{totalPhilHealthReimbursed.toLocaleString()} (
                 {Math.round((totalPhilHealthReimbursed / (totalPhilHealthBilled || 1)) * 100)}%)
@@ -195,27 +211,27 @@ export default function OpdReportsView({
             </div>
 
             <div className="py-2.5 flex justify-between items-center text-slate-700">
-              <span>Patient Direct Out-of-Pocket Copay</span>
-              <span className="font-mono font-semibold">
+              <span className="text-slate-600">Patient Direct Out-of-Pocket Copay</span>
+              <span className="font-mono font-bold">
                 ₱{totalPatientPaid.toLocaleString()}
               </span>
             </div>
 
             <div className="py-2.5 flex justify-between items-center text-slate-600">
               <span>Average Consultation Turnaround Time</span>
-              <span className="font-mono font-semibold text-slate-800">14.2 minutes</span>
+              <span className="font-mono font-bold text-slate-800">14.2 minutes</span>
             </div>
 
             <div className="py-2.5 flex justify-between items-center text-slate-600">
               <span>Prescription Fulfillment Rate</span>
-              <span className="font-mono font-semibold text-emerald-700">98.5% (Hospital Pharmacy)</span>
+              <span className="font-mono font-bold text-emerald-700">98.5% (Hospital Pharmacy)</span>
             </div>
           </div>
 
-          <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-[11px] text-slate-600 space-y-1">
-            <div className="font-semibold text-slate-800">Hospital Accreditation Certification:</div>
+          <div className="p-3.5 bg-emerald-50/60 rounded-2xl border border-emerald-200 text-[11px] text-slate-700 space-y-1">
+            <div className="font-bold text-emerald-950">Hospital Accreditation Certification:</div>
             <div>{hospitalConfig.accreditation}</div>
-            <div className="text-[10px] text-slate-400">
+            <div className="text-[10px] text-slate-500">
               Report certified by Head of Medical Records & DPO Office
             </div>
           </div>

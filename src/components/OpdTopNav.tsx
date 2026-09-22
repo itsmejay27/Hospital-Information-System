@@ -18,6 +18,8 @@ import {
   X,
   Building2,
   UserPlus,
+  Bell,
+  Settings,
 } from "./Icons";
 import AuthModal from "./AuthModal";
 
@@ -106,7 +108,13 @@ export default function OpdTopNav({
     }
     setIsSearchOpen(false);
     setSearchQuery("");
-    navigate("/clinical/doctor-workbench");
+    if (user?.role === "doctor") {
+      navigate("/clinical?tab=workbench");
+    } else if (user?.role === "nurse") {
+      navigate("/clinical?tab=vitals");
+    } else if (user?.role === "staff") {
+      navigate("/registration/directory");
+    }
   };
 
   const handleSwitchSession = (targetUser: User) => {
@@ -147,8 +155,32 @@ export default function OpdTopNav({
 
   return (
     <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between gap-4 z-20 shrink-0 select-none shadow-2xs">
-      {/* Left Area: Emergency Hotline & Selected Patient Badge */}
+      {/* Left Area: CarePoint Logo, Emergency Hotline & Selected Patient Badge */}
       <div className="flex items-center gap-3">
+        {/* CarePoint Hospital Logo */}
+        <div
+          onClick={() => navigate("/dashboard")}
+          className="flex items-center gap-2.5 cursor-pointer group shrink-0 mr-1"
+          title="CarePoint Medical Center Dashboard"
+        >
+          <img
+            src="/carepoint-logo.png"
+            alt="CarePoint Medical Center"
+            className="w-8 h-8 rounded-lg object-contain bg-white p-0.5 border border-slate-200 shadow-2xs group-hover:scale-105 transition-transform"
+            onError={(e) => {
+              (e.target as HTMLElement).style.display = "none";
+            }}
+          />
+          <div className="hidden xl:block leading-tight">
+            <span className="font-serif font-bold text-xs text-slate-900 block group-hover:text-teal-700 transition-colors">
+              CarePoint Medical Center
+            </span>
+            <span className="text-[9px] text-teal-600 font-semibold tracking-wider uppercase block">
+              Hospital System (HIS)
+            </span>
+          </div>
+        </div>
+
         {/* Emergency Hotline Pill */}
         <a
           href={`tel:${emergencyHotline}`}
@@ -173,12 +205,20 @@ export default function OpdTopNav({
           <span className="text-[11px] font-medium">Public Site</span>
         </button>
 
-        {/* Currently Active Patient Context Pill (Clinical Roles Only) */}
+        {/* Currently Active Patient Context Pill (Clinical / Staff Roles Only) */}
         {activePatient && user?.role !== "admin" ? (
           <div
-            onClick={() => navigate("/clinical/doctor-workbench")}
+            onClick={() => {
+              if (user?.role === "doctor") {
+                navigate("/clinical?tab=workbench");
+              } else if (user?.role === "nurse") {
+                navigate("/clinical?tab=vitals");
+              } else {
+                navigate("/registration/directory");
+              }
+            }}
             className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-md bg-teal-50 border border-teal-200 text-xs cursor-pointer hover:bg-teal-100/70 transition-colors"
-            title="Click to view Active Patient in Doctor Workbench"
+            title={`Active Patient: ${activePatient.name} - Click to view records`}
           >
             <span className="text-teal-700 font-medium">Active Patient:</span>
             <span className="font-semibold text-slate-800">{activePatient.name}</span>
@@ -202,9 +242,9 @@ export default function OpdTopNav({
       {/* Middle Area: Global Search (Restricted for Admin) */}
       <div className="relative flex-1 max-w-md hidden md:block">
         {user?.role === "admin" ? (
-          <div className="px-3 py-1.5 bg-slate-100 border border-slate-200 rounded-lg text-slate-500 text-xs flex items-center justify-between font-mono">
+          <div className="px-4 py-2 bg-slate-100 border border-slate-200 rounded-full text-slate-500 text-xs flex items-center justify-between font-mono">
             <span>System Console Mode (Zero PHI Access)</span>
-            <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold uppercase">ADMIN</span>
+            <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold uppercase">ADMIN</span>
           </div>
         ) : (
           <>
@@ -212,15 +252,15 @@ export default function OpdTopNav({
               <Search
                 size={16}
                 strokeWidth={2}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
               />
               <input
                 type="text"
-                placeholder="Search patient by name, MRN (P-2024-xxx), or PhilHealth PIN..."
+                placeholder="Search anything (patient, MRN, diagnosis, PhilHealth)..."
                 value={searchQuery}
                 onChange={e => handleSearchChange(e.target.value)}
                 onFocus={() => setIsSearchOpen(true)}
-                className="w-full pl-9 pr-8 py-1.5 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs text-slate-800 placeholder:text-slate-400 rounded-lg border border-slate-200 focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all outline-hidden"
+                className="w-full pl-10 pr-9 py-2 bg-slate-100/80 hover:bg-slate-100 focus:bg-white text-xs text-slate-800 placeholder:text-slate-400 rounded-full border border-slate-200/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all outline-hidden shadow-2xs"
               />
               {searchQuery && (
                 <button
@@ -229,7 +269,7 @@ export default function OpdTopNav({
                     setGlobalSearchQuery("");
                     setIsSearchOpen(false);
                   }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
                   <X size={14} strokeWidth={2} />
                 </button>
@@ -238,8 +278,8 @@ export default function OpdTopNav({
 
             {/* Search Results Dropdown */}
             {isSearchOpen && searchQuery.trim() && (
-              <div className="absolute top-full left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-lg shadow-xl py-1 z-50 max-h-72 overflow-y-auto">
-                <div className="px-3 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl py-1 z-50 max-h-72 overflow-y-auto">
+                <div className="px-3.5 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
                   Found {searchResults.length} Patient{searchResults.length !== 1 ? "s" : ""}
                 </div>
                 {searchResults.length === 0 ? (
@@ -251,7 +291,7 @@ export default function OpdTopNav({
                     <button
                       key={p.id}
                       onClick={() => handlePatientSelect(p)}
-                      className="w-full text-left px-3 py-2 hover:bg-slate-50 flex items-center justify-between border-b border-slate-100 last:border-b-0 transition-colors cursor-pointer"
+                      className="w-full text-left px-3.5 py-2.5 hover:bg-emerald-50/50 flex items-center justify-between border-b border-slate-100 last:border-b-0 transition-colors cursor-pointer"
                     >
                       <div>
                         <div className="flex items-center gap-2">
@@ -265,12 +305,13 @@ export default function OpdTopNav({
                         </div>
                       </div>
                       <span
-                        className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${p.triageTier === "critical"
+                        className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                          p.triageTier === "critical"
                             ? "bg-rose-50 text-rose-700 border border-rose-200"
                             : p.triageTier === "observation"
-                              ? "bg-amber-50 text-amber-800 border border-amber-200"
-                              : "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                          }`}
+                            ? "bg-amber-50 text-amber-800 border border-amber-200"
+                            : "bg-emerald-50 text-emerald-800 border border-emerald-200"
+                        }`}
                       >
                         {p.triageTier}
                       </span>
@@ -283,26 +324,41 @@ export default function OpdTopNav({
         )}
       </div>
 
-      {/* Right Area: Real-Time Clock & Dynamic Role Switcher */}
+      {/* Right Area: Real-Time Clock, Notification Bell & Dynamic Role Switcher */}
       <div className="flex items-center gap-3">
         {/* Live Clock */}
-        <div className="hidden xl:flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-200 font-mono">
+        <div className="hidden xl:flex items-center gap-1.5 text-xs text-slate-600 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-200/80 font-mono shadow-2xs">
           <Clock size={13} strokeWidth={2} className="text-slate-400" />
           <span>{timeString}</span>
+        </div>
+
+        {/* Medzone Notification Bell */}
+        <div
+          onClick={() => navigate("/queue")}
+          className="relative p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+          title="Live OPD Queue Notifications"
+        >
+          <Bell size={18} strokeWidth={2} />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white animate-pulse"></span>
         </div>
 
         {/* Quick Role Switcher Dropdown */}
         <div className="relative">
           <button
             onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
-            className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 hover:border-slate-300 text-xs transition-all shadow-2xs cursor-pointer"
+            className="flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-xs transition-all shadow-2xs cursor-pointer group"
           >
-            {user && getRoleIcon(user.role, 16)}
+            <div className="relative">
+              <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center border border-emerald-300 shadow-2xs">
+                {user?.avatarInitials || "DR"}
+              </div>
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>
+            </div>
             <div className="text-left leading-tight hidden sm:block">
-              <div className="font-semibold text-slate-800 truncate max-w-[140px]">
+              <div className="font-semibold text-slate-800 truncate max-w-[130px] group-hover:text-emerald-700 transition-colors">
                 {user?.name || "Active Session"}
               </div>
-              <div className="text-[10px] text-teal-700 font-bold uppercase truncate max-w-[150px]">
+              <div className="text-[10px] text-emerald-600 font-bold uppercase truncate max-w-[130px]">
                 {user?.role} • {user?.department || user?.title || "Clinical Staff"}
               </div>
             </div>
@@ -353,6 +409,17 @@ export default function OpdTopNav({
               </div>
 
               <div className="px-2 py-1.5 border-t border-slate-100 space-y-1">
+                <button
+                  onClick={() => {
+                    setIsRoleMenuOpen(false);
+                    navigate("/settings");
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-900 rounded-lg transition-colors font-medium cursor-pointer"
+                >
+                  <Settings size={14} strokeWidth={2} className="text-emerald-700" />
+                  <span>Clinical & System Settings</span>
+                </button>
+
                 <button
                   onClick={() => {
                     setIsRoleMenuOpen(false);

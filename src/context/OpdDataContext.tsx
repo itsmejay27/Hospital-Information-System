@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo } from "react";
+import React, { createContext, useContext, useState, useMemo, useEffect } from "react";
 import {
   Patient,
   HealthRecord,
@@ -34,6 +34,7 @@ import {
   INITIAL_OPD_REFERRALS,
   INITIAL_OPD_DISCHARGES,
 } from "../mockData";
+import { hospitalDb } from "../services/db";
 
 interface OpdDataContextType {
   // Queue & Patients
@@ -107,12 +108,20 @@ interface OpdDataContextType {
     ward?: string,
     bed?: string
   ) => void;
+
+  // Database Management
+  exportDatabase: () => Promise<string>;
+  resetDatabase: () => Promise<void>;
+  isDbReady: boolean;
 }
 
 const OpdDataContext = createContext<OpdDataContextType | undefined>(undefined);
 
 export function OpdDataProvider({ children }: { children: React.ReactNode }) {
-  // Queue state
+  // Database status
+  const [isDbReady, setIsDbReady] = useState(false);
+
+  // Queue & Patient state
   const [queue, setQueue] = useState<OpdQueueItem[]>(INITIAL_OPD_QUEUE);
   const [patients, setPatients] = useState<Patient[]>(INITIAL_PATIENTS);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(INITIAL_PATIENTS[0] || null);
@@ -138,6 +147,42 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
 
   // Global search state
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
+
+  // Initialize and Hydrate from Persistent Database
+  useEffect(() => {
+    let mounted = true;
+    hospitalDb
+      .initializeDatabase()
+      .then((state) => {
+        if (!mounted) return;
+        setPatients(state.patients);
+        setQueue(state.queue);
+        setRecords(state.records);
+        setMedications(state.medications);
+        setLabResults(state.labResults);
+        setTreatments(state.treatments);
+        setAdmissions(state.admissions);
+        setReferrals(state.referrals);
+        setDischarges(state.discharges);
+        setClaims(state.claims);
+        setVisitorLogs(state.visitorLogs);
+        setAuditLogs(state.auditLogs);
+        setHospitalConfig(state.hospitalConfig);
+        setUsersList(state.users);
+        if (state.patients.length > 0) {
+          setSelectedPatient(state.patients[0]);
+        }
+        setIsDbReady(true);
+      })
+      .catch((err) => {
+        console.warn("CarePoint IndexedDB initialization note:", err);
+        setIsDbReady(true);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   // Dynamically computed metrics derived directly from queue array
   const waitingCount = useMemo(
@@ -176,8 +221,8 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateQueueStatus = (id: string, status: QueueStatus, room?: string) => {
-    setQueue(prev =>
-      prev.map(item => {
+    setQueue(prev => {
+      const updated = prev.map(item => {
         if (item.id === id) {
           return {
             ...item,
@@ -186,20 +231,24 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
           };
         }
         return item;
-      })
-    );
+      });
+      hospitalDb.saveQueue(updated).catch(console.error);
+      return updated;
+    });
   };
 
   const callNextPatient = (): OpdQueueItem | null => {
     const nextWaiting = queue.find(q => q.status === "Waiting");
     if (nextWaiting) {
-      setQueue(prev =>
-        prev.map(q =>
+      setQueue(prev => {
+        const updated = prev.map(q =>
           q.id === nextWaiting.id
-            ? { ...q, status: "In-Consultation", roomOrBooth: "Consultation Room 1" }
+            ? { ...q, status: "In-Consultation" as QueueStatus, roomOrBooth: "Consultation Room 1" }
             : q
-        )
-      );
+        );
+        hospitalDb.saveQueue(updated).catch(console.error);
+        return updated;
+      });
 
       const targetPatient = patients.find(p => p.id === nextWaiting.patientId);
       if (targetPatient) {
@@ -211,13 +260,15 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const consultPatient = (patientId: string): Patient | null => {
-    setQueue(prev =>
-      prev.map(q =>
+    setQueue(prev => {
+      const updated = prev.map(q =>
         q.patientId === patientId
-          ? { ...q, status: "In-Consultation", roomOrBooth: "Consultation Room 1" }
+          ? { ...q, status: "In-Consultation" as QueueStatus, roomOrBooth: "Consultation Room 1" }
           : q
-      )
-    );
+      );
+      hospitalDb.saveQueue(updated).catch(console.error);
+      return updated;
+    });
 
     const targetPatient = patients.find(p => p.id === patientId) || null;
     if (targetPatient) {
@@ -228,6 +279,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
 
   const addPatient = (newPatient: Patient) => {
     setPatients(prev => [newPatient, ...prev]);
+    hospitalDb.savePatient(newPatient).catch(console.error);
 
     // Also automatically add to OPD queue if outpatient
     const newQueueItem: OpdQueueItem = {
@@ -244,7 +296,13 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
       status: "Waiting",
       roomOrBooth: "Waiting Lounge A",
     };
-    setQueue(prev => [...prev, newQueueItem]);
+
+    setQueue(prev => {
+      const updated = [...prev, newQueueItem];
+      hospitalDb.saveQueue(updated).catch(console.error);
+      return updated;
+    });
+
     setSelectedPatient(newPatient);
   };
 
@@ -255,81 +313,102 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
     bed?: string
   ) => {
     setPatients(prev =>
-      prev.map(p =>
-        p.id === patientId
-          ? {
+      prev.map(p => {
+        if (p.id === patientId) {
+          const updated: Patient = {
             ...p,
             admissionStatus: status,
             ward: ward !== undefined ? ward : p.ward,
             bed: bed !== undefined ? bed : p.bed,
-          }
-          : p
-      )
+          };
+          hospitalDb.savePatient(updated).catch(console.error);
+          return updated;
+        }
+        return p;
+      })
     );
   };
 
   const addClaim = (newClaim: PhilHealthClaim) => {
     setClaims(prev => [newClaim, ...prev]);
+    hospitalDb.saveClaim(newClaim).catch(console.error);
   };
 
   const addRecord = (newRecord: HealthRecord) => {
     setRecords(prev => [newRecord, ...prev]);
+    hospitalDb.saveRecord(newRecord).catch(console.error);
   };
 
   const addMedication = (newMed: MedicationOrder) => {
     setMedications(prev => [newMed, ...prev]);
+    hospitalDb.saveMedication(newMed).catch(console.error);
   };
 
   const administerMedication = (medId: string, nurseName: string, nurseLicense?: string) => {
     const timeNow = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     setMedications(prev =>
-      prev.map(m =>
-        m.id === medId
-          ? {
+      prev.map(m => {
+        if (m.id === medId) {
+          const updated: MedicationOrder = {
             ...m,
             lastAdministered: `Today, ${timeNow}`,
             administeredBy: nurseName,
             administeredByLicense: nurseLicense || "PRC Lic. Registered Nurse",
-          }
-          : m
-      )
+          };
+          hospitalDb.saveMedication(updated).catch(console.error);
+          return updated;
+        }
+        return m;
+      })
     );
   };
 
   const addLabResult = (newLab: DiagnosticResult) => {
     setLabResults(prev => [newLab, ...prev]);
+    hospitalDb.saveLabResult(newLab).catch(console.error);
   };
 
   const addTreatment = (newTreatment: TreatmentLog) => {
     setTreatments(prev => [newTreatment, ...prev]);
+    hospitalDb.saveTreatment(newTreatment).catch(console.error);
   };
 
   const addReferral = (newRef: OpdReferral) => {
     setReferrals(prev => [newRef, ...prev]);
+    hospitalDb.saveReferral(newRef).catch(console.error);
   };
 
   const addDischarge = (newDis: OpdDischarge) => {
     setDischarges(prev => [newDis, ...prev]);
+    hospitalDb.saveDischarge(newDis).catch(console.error);
   };
 
   const addAdmission = (newAdm: AdmissionEntry) => {
     setAdmissions(prev => [newAdm, ...prev]);
+    hospitalDb.saveAdmission(newAdm).catch(console.error);
   };
 
   const addAuditLog = (newLog: AuditLog) => {
     setAuditLogs(prev => [newLog, ...prev]);
+    hospitalDb.saveAuditLog(newLog).catch(console.error);
   };
 
   const addVisitorLog = (newVisitor: VisitorLog) => {
     setVisitorLogs(prev => [newVisitor, ...prev]);
+    hospitalDb.saveVisitorLog(newVisitor).catch(console.error);
   };
 
   const checkOutVisitor = (visitorId: string) => {
     const timeNow = new Date().toISOString().replace("T", " ").substring(0, 16);
     setVisitorLogs(prev =>
-      prev.map(v =>
-        v.id === visitorId ? { ...v, timeOut: timeNow, status: "Departed" } : v
-      )
+      prev.map(v => {
+        if (v.id === visitorId) {
+          const updated: VisitorLog = { ...v, timeOut: timeNow, status: "Departed" };
+          hospitalDb.saveVisitorLog(updated).catch(console.error);
+          return updated;
+        }
+        return v;
+      })
     );
   };
 
@@ -339,10 +418,13 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
 
   const updateHospitalConfig = (cfg: HospitalConfig) => {
     setHospitalConfig(cfg);
+    hospitalDb.saveHospitalConfig(cfg).catch(console.error);
   };
 
   const addUser = (newUser: User, _password = "pass") => {
     setUsersList(prev => [...prev, newUser]);
+    hospitalDb.saveUser(newUser).catch(console.error);
+
     const newLog: AuditLog = {
       id: `AUD-${Date.now().toString().slice(-4)}`,
       timestamp: new Date().toISOString().replace("T", " ").substring(0, 19),
@@ -356,18 +438,44 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
       status: "Authorized",
     };
     setAuditLogs(prev => [newLog, ...prev]);
+    hospitalDb.saveAuditLog(newLog).catch(console.error);
   };
 
   const toggleUserStatus = (userId: string) => {
     setUsersList(prev =>
       prev.map(u => {
         if (u.id === userId) {
-          const newStatus = u.status === "suspended" ? "active" : "suspended";
-          return { ...u, status: newStatus };
+          const newStatus: "active" | "suspended" = u.status === "suspended" ? "active" : "suspended";
+          const updated: User = { ...u, status: newStatus };
+          hospitalDb.saveUser(updated).catch(console.error);
+          return updated;
         }
         return u;
       })
     );
+  };
+
+  const exportDatabase = async () => {
+    return hospitalDb.exportDatabaseToJson();
+  };
+
+  const resetDatabase = async () => {
+    await hospitalDb.resetDatabaseToDefaults();
+    const state = await hospitalDb.loadFullState();
+    setPatients(state.patients);
+    setQueue(state.queue);
+    setRecords(state.records);
+    setMedications(state.medications);
+    setLabResults(state.labResults);
+    setTreatments(state.treatments);
+    setAdmissions(state.admissions);
+    setReferrals(state.referrals);
+    setDischarges(state.discharges);
+    setClaims(state.claims);
+    setVisitorLogs(state.visitorLogs);
+    setAuditLogs(state.auditLogs);
+    setHospitalConfig(state.hospitalConfig);
+    setUsersList(state.users);
   };
 
   return (
@@ -424,6 +532,9 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
         updateQueueStatus,
         addPatient,
         updatePatientAdmissionStatus,
+        exportDatabase,
+        resetDatabase,
+        isDbReady,
       }}
     >
       {children}

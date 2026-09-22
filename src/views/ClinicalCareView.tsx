@@ -193,70 +193,73 @@ export default function ClinicalCareView() {
       )}
 
       {/* Clinical Care Header with Tabbed Navigation */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
-                CarePoint Clinical Care • Unified Service
+      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="relative z-10 max-w-xl">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
+              CarePoint Clinical Care • Unified Service
+            </span>
+            <span className="text-xs text-emerald-200/80 font-mono">/clinical</span>
+            {isNurse && (
+              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-200 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-300/30">
+                Nurse Triaging Mode (Vitals Only)
               </span>
-              <span className="text-xs text-slate-400 font-mono">/clinical</span>
-              {isNurse && (
-                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
-                  Nurse Triaging Mode (Vitals Only)
+            )}
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
+            <Stethoscope size={28} className="text-emerald-300" />
+            <span>Clinical Care & Diagnostics Hub</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-emerald-100/90 mt-1">
+            Integrated physician consultations, clinical prescriptions, laboratory orders, and bedside hemodynamics.
+          </p>
+        </div>
+
+        <div className="relative z-10 flex items-center gap-3 bg-white/10 p-3 rounded-2xl border border-white/20 backdrop-blur-xs">
+          <div className="w-11 h-11 rounded-full bg-emerald-500/30 text-emerald-100 border border-emerald-300/40 flex items-center justify-center font-bold text-sm shadow-inner">
+            {user?.avatarInitials || "MD"}
+          </div>
+          <div className="text-right sm:text-left">
+            <span className="text-xs font-bold text-white block leading-tight">
+              {user?.name || "Clinician"}
+            </span>
+            <span className="text-[10px] text-emerald-300 uppercase font-semibold">
+              {user?.role || "Staff"} • {user?.licenseNumber || "PRC Certified"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabbed Navigation Bar */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-1.5 shadow-xs flex items-center gap-1.5 overflow-x-auto scrollbar-thin">
+        {availableTabs.map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+
+          return (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                isActive
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "bg-transparent hover:bg-slate-100 text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              <Icon size={16} strokeWidth={2.2} className={isActive ? "text-white" : "text-slate-500"} />
+              <span>{tab.label}</span>
+              {tab.badge !== undefined && tab.badge > 0 && (
+                <span
+                  className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
+                    isActive ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800"
+                  }`}
+                >
+                  {tab.badge}
                 </span>
               )}
-            </div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-              <Stethoscope size={26} className="text-teal-600" />
-              <span>Clinical Care & Diagnostics Hub</span>
-            </h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Integrated physician consultations, clinical prescriptions, laboratory orders, and bedside hemodynamics.
-            </p>
-          </div>
-
-          <div className="text-right">
-            <span className="text-[11px] font-bold text-slate-700 block">
-              Active Session: {user?.name || "Clinician"}
-            </span>
-            <span className="text-[10px] text-teal-600 uppercase font-semibold">
-              Role: {user?.role || "Staff"} • {user?.licenseNumber || "PRC Certified"}
-            </span>
-          </div>
-        </div>
-
-        {/* Tabbed Navigation Bar */}
-        <div className="flex items-center gap-2 border-t border-slate-100 pt-3 overflow-x-auto scrollbar-thin">
-          {availableTabs.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
-                  isActive
-                    ? "bg-teal-700 text-white shadow-xs"
-                    : "bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-200/70"
-                }`}
-              >
-                <Icon size={16} strokeWidth={2.2} className={isActive ? "text-white" : "text-slate-500"} />
-                <span>{tab.label}</span>
-                {tab.badge !== undefined && tab.badge > 0 && (
-                  <span
-                    className={`text-[10px] font-bold px-1.5 py-0.2 rounded-full ${
-                      isActive ? "bg-white/20 text-white" : "bg-teal-100 text-teal-800"
-                    }`}
-                  >
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+            </button>
+          );
+        })}
       </div>
 
       {/* ========================================================================= */}
@@ -308,7 +311,7 @@ export default function ClinicalCareView() {
               <button
                 type="button"
                 onClick={() => setIsRxModalOpen(true)}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-transform hover:scale-102 flex items-center gap-2 cursor-pointer"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2.5 rounded-full shadow-xs transition-all hover:scale-102 flex items-center gap-2 cursor-pointer"
               >
                 <Plus size={16} strokeWidth={2.5} />
                 <span>+ Issue New e-Prescription</span>
@@ -457,7 +460,7 @@ export default function ClinicalCareView() {
               <button
                 type="button"
                 onClick={() => setIsLabModalOpen(true)}
-                className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-transform hover:scale-102 flex items-center gap-2 cursor-pointer"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2.5 rounded-full shadow-xs transition-all hover:scale-102 flex items-center gap-2 cursor-pointer"
               >
                 <Plus size={16} strokeWidth={2.5} />
                 <span>+ Order Diagnostic Lab</span>

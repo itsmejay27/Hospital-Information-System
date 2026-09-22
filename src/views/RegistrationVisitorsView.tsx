@@ -109,31 +109,33 @@ export default function RegistrationVisitorsView({
         </div>
       )}
 
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-              Front Desk & Security • Isolated Route
+      {/* Header Banner (Medzone Hospital Emerald Theme) */}
+      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="relative z-10 max-w-xl">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
+              Front Desk & Security • Visitor Logistics
             </span>
-            <span className="text-xs text-slate-400 font-mono">/registration/visitors</span>
+            <span className="text-xs text-emerald-200/80 font-mono">/registration/visitors</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Users size={24} className="text-emerald-600" />
-            <span>Front Desk Visitor Log & Security Badging</span>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
+            <Users size={28} className="text-emerald-300" />
+            <span>Visitor Log & Security Badging</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Currently In-Facility: <span className="font-bold text-emerald-700">{activeVisitors} Active Visitors</span>
+          <p className="text-xs sm:text-sm text-emerald-100/90 mt-1">
+            Currently In-Facility: <span className="font-bold text-white">{activeVisitors} Active Visitors</span> across inpatient wards.
           </p>
         </div>
 
-        <button
-          onClick={handleOpenCheckInModal}
-          className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer self-start sm:self-auto"
-        >
-          <Plus size={16} />
-          <span>Log New Visitor Entry</span>
-        </button>
+        <div className="relative z-10 flex items-center gap-2">
+          <button
+            onClick={handleOpenCheckInModal}
+            className="px-5 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold border border-emerald-300/40 shadow-sm transition-all flex items-center gap-2 cursor-pointer hover:scale-105"
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            <span>Log New Visitor</span>
+          </button>
+        </div>
       </div>
 
       {/* Table Card */}

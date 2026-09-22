@@ -131,22 +131,32 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
         </div>
       )}
 
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
+      {/* Header Banner (Medzone Emerald Hospital Theme) */}
+      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="relative z-10 max-w-xl">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
               Admissions Desk • Registration Workflow
             </span>
-            <span className="text-xs text-slate-400 font-mono">/registration/new-patient</span>
+            <span className="text-xs text-emerald-200/80 font-mono">/registration/new-patient</span>
           </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <UserPlus size={24} className="text-teal-600" />
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
+            <UserPlus size={28} className="text-emerald-300" />
             <span>Patient Registration & Intake</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Intake Officer: <span className="font-semibold text-slate-800">{user.name}</span> ({user.department || user.title})
+          <p className="text-xs sm:text-sm text-emerald-100/90 mt-1">
+            Intake Officer: <span className="font-semibold text-white">{user.name}</span> ({user.department || user.title})
           </p>
+        </div>
+
+        <div className="relative z-10 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate("/registration/directory")}
+            className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/30 backdrop-blur-xs transition-all cursor-pointer"
+          >
+            <span>Master Directory</span>
+          </button>
         </div>
       </div>
 
@@ -154,9 +164,9 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* COLUMN 1: PATIENT DEMOGRAPHICS */}
-          <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+          <div className="bg-white rounded-3xl border border-slate-100/90 p-6 shadow-xs space-y-4">
             <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
-              <div className="w-8 h-8 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center font-bold text-xs">
+              <div className="w-8 h-8 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center justify-center font-bold text-xs">
                 1
               </div>
               <div>
@@ -434,14 +444,14 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
         </div>
 
         {/* Digital Consents & Submit Bar */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-white rounded-3xl border border-slate-100/90 p-5 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="space-y-1.5 text-xs text-slate-600">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={regConsentTreatment}
                 onChange={e => setRegConsentTreatment(e.target.checked)}
-                className="w-4 h-4 text-teal-600 rounded-sm focus:ring-teal-500 border-slate-300"
+                className="w-4 h-4 text-emerald-600 rounded-sm focus:ring-emerald-500 border-slate-300"
               />
               <span>Patient authorizes clinical evaluation, nursing care, and emergency procedures.</span>
             </label>
@@ -450,7 +460,7 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
                 type="checkbox"
                 checked={regConsentPrivacy}
                 onChange={e => setRegConsentPrivacy(e.target.checked)}
-                className="w-4 h-4 text-teal-600 rounded-sm focus:ring-teal-500 border-slate-300"
+                className="w-4 h-4 text-emerald-600 rounded-sm focus:ring-emerald-500 border-slate-300"
               />
               <span>DPA 2012 Consent for electronic health record processing at CarePoint Medical Center.</span>
             </label>
@@ -460,13 +470,13 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
             <button
               type="button"
               onClick={() => navigate("/registration/directory")}
-              className="px-4 py-2.5 border border-slate-300 hover:bg-slate-50 rounded-xl text-slate-700 text-xs font-semibold cursor-pointer"
+              className="px-5 py-2.5 border border-slate-200 hover:bg-slate-50 rounded-full text-slate-700 text-xs font-semibold cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+              className="px-7 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-bold shadow-xs hover:scale-102 transition-all flex items-center gap-2 cursor-pointer"
             >
               <UserPlus size={16} strokeWidth={2} />
               <span>Enroll Patient & Enqueue</span>

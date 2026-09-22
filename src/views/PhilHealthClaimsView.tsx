@@ -137,111 +137,121 @@ export default function PhilHealthClaimsView({
   };
 
   return (
-    <div className="space-y-5">
-      {/* Top Banner / Metrics */}
-      <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-2xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <div className="p-2 rounded-lg bg-teal-50 text-teal-700 border border-teal-200">
-                <CreditCard size={20} strokeWidth={2} />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-slate-900 leading-tight">
-                  PhilHealth & eClaims Management
-                </h2>
-                <p className="text-xs text-slate-500">
-                  Universal Health Care (RA 11223) & Electronic Hospital Claims Portal
-                </p>
-              </div>
-            </div>
+    <div className="space-y-6 max-w-7xl mx-auto pb-10">
+      {/* Top Banner / Metrics (Medzone Emerald Hospital Theme) */}
+      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="relative z-10 max-w-xl">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
+              Universal Health Care (RA 11223) • eClaims
+            </span>
+            <span className="text-xs text-emerald-200/80 font-mono">/philhealth</span>
           </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
+            <CreditCard size={28} className="text-emerald-300" />
+            <span>PhilHealth & eClaims Management</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-emerald-100/90 mt-1">
+            Real-time outpatient case rates, member PIN verification, XML adjudication, and reimbursement tracking.
+          </p>
+        </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsNewClaimModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-xs transition-colors"
-            >
-              <Plus size={15} strokeWidth={2} />
-              <span>Create New eClaim</span>
-            </button>
+        <div className="relative z-10 flex items-center gap-2">
+          <button
+            onClick={() => setIsNewClaimModalOpen(true)}
+            className="px-5 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold border border-emerald-300/40 shadow-sm transition-all flex items-center gap-2 cursor-pointer hover:scale-105"
+          >
+            <Plus size={16} strokeWidth={2.5} />
+            <span>+ Create New eClaim</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 4 Summary Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100/90 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-slate-500">Total eClaims</span>
+            <div className="text-2xl font-extrabold text-slate-900 mt-1">{totalClaimsCount}</div>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">Outpatient registry</span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-teal-50 border border-teal-200 text-teal-700 flex items-center justify-center font-bold text-sm shadow-inner">
+            <CreditCard size={22} />
           </div>
         </div>
 
-        {/* 4 Summary Stat Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-4">
-          <div className="bg-slate-50 border border-slate-200/80 rounded-lg p-3">
-            <div className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">
-              Total eClaims
-            </div>
-            <div className="text-xl font-bold text-slate-800 mt-0.5">{totalClaimsCount}</div>
-            <div className="text-[10px] text-slate-400 mt-1">Hospital outpatient census</div>
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100/90 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-blue-700">Ready for Batch</span>
+            <div className="text-2xl font-extrabold text-blue-900 mt-1">{readyClaimsCount}</div>
+            <span className="text-[10px] text-blue-600 mt-0.5 block">XML pending upload</span>
           </div>
-
-          <div className="bg-blue-50/60 border border-blue-100 rounded-lg p-3">
-            <div className="text-[11px] font-medium text-blue-700 uppercase tracking-wide">
-              Ready for Submission
-            </div>
-            <div className="text-xl font-bold text-blue-900 mt-0.5">{readyClaimsCount}</div>
-            <div className="text-[10px] text-blue-600 mt-1">Pending XML batch upload</div>
+          <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center font-bold text-sm shadow-inner">
+            <Clock size={22} />
           </div>
+        </div>
 
-          <div className="bg-emerald-50/60 border border-emerald-100 rounded-lg p-3">
-            <div className="text-[11px] font-medium text-emerald-700 uppercase tracking-wide">
-              Approved & Settled
-            </div>
-            <div className="text-xl font-bold text-emerald-900 mt-0.5">{approvedClaimsCount}</div>
-            <div className="text-[10px] text-emerald-600 mt-1">Direct deposit credited</div>
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100/90 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-emerald-700">Settled & Credited</span>
+            <div className="text-2xl font-extrabold text-emerald-900 mt-1">{approvedClaimsCount}</div>
+            <span className="text-[10px] text-emerald-600 mt-0.5 block">Reimbursement released</span>
           </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-sm shadow-inner">
+            <CheckCircle size={22} />
+          </div>
+        </div>
 
-          <div className="bg-teal-50/60 border border-teal-100 rounded-lg p-3">
-            <div className="text-[11px] font-medium text-teal-700 uppercase tracking-wide">
-              Total Case Rate Value
-            </div>
-            <div className="text-xl font-bold text-teal-900 mt-0.5 font-mono">
+        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100/90 shadow-xs flex items-center justify-between">
+          <div>
+            <span className="text-xs font-semibold text-teal-700">Total Case Rate</span>
+            <div className="text-2xl font-extrabold text-teal-900 mt-1 font-mono">
               ₱{totalReimbursedAmount.toLocaleString()}
             </div>
-            <div className="text-[10px] text-teal-600 mt-1">PhilHealth benefit covered</div>
+            <span className="text-[10px] text-teal-600 mt-0.5 block">PhilHealth covered</span>
+          </div>
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-bold text-sm shadow-inner">
+            ₱
           </div>
         </div>
       </div>
 
       {/* Main Table Card */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+      <div className="bg-white rounded-3xl border border-slate-100/90 shadow-xs overflow-hidden">
         {/* Controls Bar: Search & Status Filter */}
-        <div className="p-4 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row items-center justify-between gap-3">
-          <div className="relative w-full md:w-80">
-            <Search
-              size={15}
-              strokeWidth={2}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-            />
-            <input
-              type="text"
-              placeholder="Search by PIN (12-xxxx), Member Name, or ICD-10..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:outline-hidden focus:border-teal-500 focus:ring-1 focus:ring-teal-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-2 w-full md:w-auto justify-end">
-            <div className="flex items-center gap-1 text-xs text-slate-500">
-              <Filter size={14} strokeWidth={2} className="text-slate-400" />
-              <span>Status:</span>
+        <div className="p-5 border-b border-slate-100 space-y-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="relative w-full md:w-96">
+              <Search
+                size={16}
+                strokeWidth={2}
+                className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              />
+              <input
+                type="text"
+                placeholder="Search by PIN (12-xxxx), Member Name, or ICD-10..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 hover:bg-slate-100 focus:bg-white text-xs text-slate-800 placeholder:text-slate-400 rounded-full border border-slate-200/80 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all outline-hidden shadow-2xs"
+              />
             </div>
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-700 focus:outline-hidden focus:border-teal-500"
-            >
-              <option value="All">All Statuses</option>
-              <option value="Ready for Submission">Ready for Submission</option>
-              <option value="Transmitted">Transmitted</option>
-              <option value="Under Adjudication">Under Adjudication</option>
-              <option value="Approved / Reimbursed">Approved / Reimbursed</option>
-              <option value="Returned / Pending Docs">Returned / Pending Docs</option>
-            </select>
+
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Status:</span>
+              {["All", "Ready for Submission", "Transmitted", "Approved / Reimbursed"].map(s => (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`px-3 py-1.5 rounded-full font-bold text-xs transition-all cursor-pointer ${
+                    statusFilter === s
+                      ? "bg-emerald-600 text-white shadow-xs"
+                      : "bg-slate-100 hover:bg-slate-200 text-slate-600"
+                  }`}
+                >
+                  {s === "Ready for Submission" ? "Ready" : s === "Approved / Reimbursed" ? "Approved" : s}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 

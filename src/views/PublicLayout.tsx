@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, NavLink, Outlet, useNavigate, useOutletContext } from "react-router-dom";
+import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
 import { HEALTHCARE_TEAM_DIRECTORY } from "../mockData";
