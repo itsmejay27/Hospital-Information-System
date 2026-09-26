@@ -265,11 +265,11 @@ export default function ClinicalCareView() {
         <div className="space-y-6">
           {/* Patient Selection & Quick Stats Strip */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center font-bold">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 shrink-0 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-700 flex items-center justify-center font-bold">
                 <Pill size={20} />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <label className="text-[10px] font-bold uppercase text-slate-400 block">Select Patient For Rx:</label>
                 <select
                   value={selectedPatientId}
@@ -311,7 +311,7 @@ export default function ClinicalCareView() {
                 />
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-[10px] font-bold uppercase text-slate-400">Filter Status:</span>
                 {(["All", "Active", "Completed", "Discontinued"] as const).map(status => (
                   <button
@@ -414,11 +414,11 @@ export default function ClinicalCareView() {
         <div className="space-y-6">
           {/* Patient Selection Strip */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center font-bold">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 shrink-0 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center font-bold">
                 <FlaskConical size={20} />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <label className="text-[10px] font-bold uppercase text-slate-400 block">Select Patient For Labs:</label>
                 <select
                   value={selectedPatientId}
@@ -460,7 +460,7 @@ export default function ClinicalCareView() {
                 />
               </div>
 
-              <div className="flex items-center gap-1.5 overflow-x-auto">
+              <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-[10px] font-bold uppercase text-slate-400">Category:</span>
                 {(["All", "Hematology", "Clinical Chemistry", "Radiology", "Cardiology"] as const).map(cat => (
                   <button

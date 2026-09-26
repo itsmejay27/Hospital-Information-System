@@ -207,7 +207,7 @@ export default function OpdQueueView({
       </div>
 
       {/* 4 Stat Telemetry Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100/90 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold text-slate-500">Waiting Patients</span>
