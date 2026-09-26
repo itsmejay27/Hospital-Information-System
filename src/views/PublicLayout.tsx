@@ -26,6 +26,8 @@ import {
   Pill,
   FileCheck,
   ArrowRight,
+  Bell,
+  CheckCircle,
   HeartPulse,
   Microscope,
   Scan,
@@ -346,12 +348,12 @@ export default function PublicLayout() {
 
 // Medical departments shown on the home and departments pages
 const DEPARTMENTS = [
-  { name: "Internal Medicine & Cardiology", desc: "Adult specialty care, hypertension, echocardiography, cardiac monitoring.", icon: HeartPulse },
-  { name: "General & Laparoscopic Surgery", desc: "24/7 operating suites, minimally invasive appendectomy, wound debridement.", icon: Stethoscope },
-  { name: "Emergency & Trauma Center", desc: "Level 3 trauma resuscitation unit, stat triage, resuscitation beds.", icon: Siren },
-  { name: "Clinical Pathology & Laboratory", desc: "Automated hematology, clinical chemistry, microbiology, blood banking.", icon: Microscope },
-  { name: "Radiology & Diagnostic Imaging", desc: "Digital PA X-ray, multi-slice CT, ultrasound sonograms.", icon: Scan },
-  { name: "Inpatient Ward Administration", desc: "Comprehensive bedside nursing, IV therapy, SBAR shift continuity.", icon: Bed },
+  { name: "Internal Medicine & Cardiology", short: "Cardiology", tagline: "Heart & adult medicine", desc: "Adult specialty care, hypertension, echocardiography, cardiac monitoring.", icon: HeartPulse },
+  { name: "General & Laparoscopic Surgery", short: "Surgery", tagline: "Open & keyhole surgery", desc: "24/7 operating suites, minimally invasive appendectomy, wound debridement.", icon: Stethoscope },
+  { name: "Emergency & Trauma Center", short: "Emergency", tagline: "24/7 trauma care", desc: "Level 3 trauma resuscitation unit, stat triage, resuscitation beds.", icon: Siren },
+  { name: "Clinical Pathology & Laboratory", short: "Laboratory", tagline: "Blood & lab tests", desc: "Automated hematology, clinical chemistry, microbiology, blood banking.", icon: Microscope },
+  { name: "Radiology & Diagnostic Imaging", short: "Radiology", tagline: "X-ray, CT, ultrasound", desc: "Digital PA X-ray, multi-slice CT, ultrasound sonograms.", icon: Scan },
+  { name: "Inpatient Ward Administration", short: "Nursing Wards", tagline: "Inpatient bedside care", desc: "Comprehensive bedside nursing, IV therapy, SBAR shift continuity.", icon: Bed },
 ];
 
 // — Public Home Page —
@@ -366,145 +368,158 @@ export function PublicHomePage() {
     if (open) open();
   };
 
-  const quickInfo = [
-    {
-      icon: Siren,
-      title: "24/7 Emergency",
-      value: `Call ${hospitalConfig.emergencyHotline}`,
-      tone: "text-rose-600 bg-rose-50 border-rose-100",
-    },
-    { icon: Phone, title: "Appointments & Inquiries", value: hospitalConfig.phone, tone: "text-sky-700 bg-sky-50 border-sky-100" },
-    { icon: Clock, title: "Outpatient Clinic Hours", value: "Mon – Sat, 8:00 AM – 5:00 PM", tone: "text-emerald-700 bg-emerald-50 border-emerald-100" },
-    { icon: MapPin, title: "Location", value: hospitalConfig.address, tone: "text-amber-700 bg-amber-50 border-amber-100" },
+  const quickLinks = [
+    { label: "Services", icon: Stethoscope, to: "/departments" },
+    { label: "Doctors", icon: Users, to: "/staff" },
+    { label: "News", icon: Bell, to: "/announcements" },
+    { label: "Contact", icon: Phone, to: "/contact" },
   ];
 
-  const steps = [
-    { n: "1", title: "Register", desc: "Present a valid ID and PhilHealth details at the front desk." },
-    { n: "2", title: "Triage & Vitals", desc: "A nurse takes your vital signs and chief complaint." },
-    { n: "3", title: "Consultation", desc: "See your doctor for assessment, orders and prescriptions." },
-    { n: "4", title: "Billing & Discharge", desc: "PhilHealth benefits are applied before you pay." },
+  const benefits = [
+    "Licensed doctors, nurses and specialists",
+    "24/7 emergency and trauma care",
+    "Laboratory and imaging on site",
+    "PhilHealth-accredited — benefits applied at billing",
+  ];
+
+  const hours = [
+    { day: "Monday – Friday", time: "08:00 – 17:00" },
+    { day: "Saturday", time: "08:00 – 12:00" },
+    { day: "Sunday & Holidays", time: "Closed" },
+    { day: "Emergency Room", time: "Open 24/7" },
   ];
 
   return (
     <div className="bg-white">
-      {/* Hero */}
-      <section className="bg-gradient-to-b from-sky-50 to-white border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14 sm:py-20 grid lg:grid-cols-2 gap-10 items-center">
-          <div>
-            <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
-              {hospitalConfig.name}
-            </span>
-            <h1 className="mt-4 text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
-              Quality Care.
-              <br />
-              <span className="text-sky-700">Closer to You.</span>
-            </h1>
-            <p className="mt-4 text-sm sm:text-base text-slate-600 leading-relaxed max-w-lg">
-              Outpatient consultations, emergency care, laboratory and imaging services, and inpatient wards — all in one
-              PhilHealth-accredited hospital.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
+      {/* Photo hero */}
+      <section className="relative bg-teal-900 overflow-hidden">
+        <img
+          src="https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=1800&h=900&fit=crop&auto=format"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          onError={e => ((e.target as HTMLImageElement).style.display = "none")}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-teal-950/70 via-teal-900/60 to-teal-900/80" />
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-20 pb-40 sm:pt-28 sm:pb-48 text-center text-white">
+          <p className="text-xs sm:text-sm font-semibold uppercase tracking-[0.25em] text-teal-100">
+            Welcome to {hospitalConfig.name}
+          </p>
+          <h1 className="mt-4 text-4xl sm:text-6xl font-extrabold uppercase tracking-tight leading-tight drop-shadow-sm">
+            Quality Care.
+            <br />
+            Closer to You.
+          </h1>
+          <p className="mt-4 text-sm sm:text-base text-teal-50/90 max-w-xl mx-auto">
+            Outpatient clinics, emergency care, laboratory, imaging and inpatient wards — all under one roof.
+          </p>
+
+          {/* Quick-link tiles */}
+          <div className="mt-9 flex flex-wrap justify-center gap-3">
+            {quickLinks.map(q => (
               <Link
-                to="/departments"
-                className="px-5 py-3 rounded-xl bg-sky-700 hover:bg-sky-800 text-white text-sm font-bold flex items-center gap-2"
+                key={q.label}
+                to={q.to}
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl bg-teal-600/90 hover:bg-teal-500 border border-white/30 flex flex-col items-center justify-center gap-2 text-xs font-bold shadow-lg transition-colors"
               >
-                Our Services <ArrowRight size={16} />
+                <q.icon size={26} strokeWidth={1.75} />
+                {q.label}
               </Link>
-              <Link
-                to="/contact"
-                className="px-5 py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-sm font-bold"
-              >
-                Contact Us
-              </Link>
-            </div>
-          </div>
-          <div className="hidden lg:flex justify-center">
-            <img
-              src="/carepoint-logo-full.jpg"
-              alt={`${hospitalConfig.name} — Quality Care. Closer to You.`}
-              className="w-96 h-96 object-contain rounded-3xl bg-white p-4 shadow-xl border border-slate-100"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Quick information */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 -mt-8 relative">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {quickInfo.map(q => (
-            <div key={q.title} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex items-start gap-3">
-              <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${q.tone}`}>
-                <q.icon size={18} />
-              </div>
-              <div className="min-w-0">
-                <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{q.title}</div>
-                <div className="text-sm font-semibold text-slate-900 mt-0.5">{q.value}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Services */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-8">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Our Services</h2>
-            <p className="text-sm text-slate-500 mt-1">Specialist departments ready to care for you and your family.</p>
-          </div>
-          <Link to="/departments" className="text-sm font-bold text-sky-700 hover:text-sky-800 flex items-center gap-1">
-            View all departments <ArrowRight size={14} />
-          </Link>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {DEPARTMENTS.map(d => (
-            <div key={d.name} className="rounded-2xl border border-slate-200 p-5 hover:border-sky-300 hover:shadow-sm transition-all flex gap-4">
-              <div className="w-11 h-11 rounded-xl bg-sky-50 text-sky-700 border border-sky-100 flex items-center justify-center shrink-0">
-                <d.icon size={20} />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">{d.name}</h3>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">{d.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Patient visit steps */}
-      <section className="bg-slate-50 border-y border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 text-center">Your Visit, Step by Step</h2>
-          <p className="text-sm text-slate-500 mt-1 text-center">What to expect when you come for an outpatient consultation.</p>
-          <ol className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {steps.map(st => (
-              <li key={st.n} className="bg-white rounded-2xl border border-slate-200 p-5">
-                <div className="w-9 h-9 rounded-full bg-emerald-600 text-white font-extrabold flex items-center justify-center">
-                  {st.n}
-                </div>
-                <h3 className="mt-3 text-sm font-bold text-slate-900">{st.title}</h3>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">{st.desc}</p>
-              </li>
             ))}
-          </ol>
+            <button
+              onClick={openStaffPortal}
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-xl bg-white/15 hover:bg-white/25 border border-white/40 flex flex-col items-center justify-center gap-2 text-xs font-bold shadow-lg transition-colors cursor-pointer"
+            >
+              <LogIn size={26} strokeWidth={1.75} />
+              {isAuthenticated && user ? "Dashboard" : "Staff Login"}
+            </button>
+          </div>
         </div>
       </section>
 
-      {/* Staff portal (single, low-key entry point) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
-        <div className="rounded-2xl border border-slate-200 px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-base font-bold text-slate-900">Are you a CarePoint staff member?</h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Doctors, nurses, front desk and administrators sign in to the Hospital Information System here.
+      {/* Info band overlapping the hero */}
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 -mt-28 sm:-mt-32">
+        <div className="grid grid-cols-1 md:grid-cols-3 bg-teal-700 text-white rounded-2xl shadow-2xl overflow-hidden divide-y md:divide-y-0 md:divide-x divide-teal-600">
+          <div className="p-6">
+            <h2 className="text-lg font-bold">Find a Doctor</h2>
+            <p className="text-sm text-teal-100 mt-2 leading-relaxed">
+              See our doctors and nurses by department and plan your consultation with the right specialist.
             </p>
+            <Link
+              to="/staff"
+              className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-white/70 hover:bg-white hover:text-teal-800 text-sm font-bold transition-colors"
+            >
+              View Doctors <ArrowRight size={15} />
+            </Link>
           </div>
-          <button
-            onClick={openStaffPortal}
-            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold flex items-center gap-2 cursor-pointer shrink-0"
-          >
-            {isAuthenticated && user ? "Go to Dashboard" : "Staff Sign In"} <LogIn size={16} />
-          </button>
+          <div className="p-6">
+            <h2 className="text-lg font-bold">Why CarePoint</h2>
+            <ul className="mt-3 space-y-2.5 text-sm text-teal-50">
+              {benefits.map(b => (
+                <li key={b} className="flex items-start gap-2">
+                  <CheckCircle size={16} className="text-teal-200 mt-0.5 shrink-0" />
+                  {b}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="p-6 bg-teal-800/60">
+            <h2 className="text-lg font-bold">Working Hours</h2>
+            <p className="text-xs text-teal-200 mt-1">Outpatient department</p>
+            <table className="w-full mt-3 text-sm">
+              <tbody>
+                {hours.map(h => (
+                  <tr key={h.day} className="border-b border-teal-600/70 last:border-0">
+                    <td className="py-2 text-teal-50">{h.day}</td>
+                    <td className="py-2 text-right font-semibold whitespace-nowrap">{h.time}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* Department list */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16 text-center">
+        <h2 className="text-3xl font-light text-slate-900">
+          Department <span className="font-bold text-teal-700">List</span>
+        </h2>
+        <p className="mt-2 text-sm text-slate-500 max-w-xl mx-auto">
+          Specialist departments ready to care for you and your family, from first consultation to recovery.
+        </p>
+        <div className="mt-10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          {DEPARTMENTS.map(d => (
+            <Link
+              key={d.name}
+              to="/departments"
+              className="group rounded-xl bg-teal-50/60 border border-teal-100 hover:bg-teal-700 hover:border-teal-700 p-5 transition-colors"
+            >
+              <d.icon size={34} strokeWidth={1.5} className="mx-auto text-teal-700 group-hover:text-white" />
+              <h3 className="mt-3 text-sm font-bold text-teal-800 group-hover:text-white">{d.short}</h3>
+              <p className="mt-1 text-[11px] text-slate-500 group-hover:text-teal-100 leading-snug">{d.tagline}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Emergency call-out */}
+      <section className="bg-slate-50 border-t border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+              <Siren size={22} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Need emergency care?</h2>
+              <p className="text-sm text-slate-500">Our emergency room is open 24 hours a day, 7 days a week.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-2xl font-extrabold text-rose-600">{hospitalConfig.emergencyHotline}</span>
+            <Link to="/contact" className="px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-sm font-bold">
+              Contact & Directions
+            </Link>
+          </div>
         </div>
       </section>
     </div>
