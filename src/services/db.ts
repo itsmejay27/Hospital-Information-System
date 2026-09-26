@@ -1,6 +1,9 @@
 // ==============================================================================
 // CarePoint Medical Center — Hospital Information System (HIS)
 // High-Performance Browser Database Service (IndexedDB + Local Storage Fallback)
+// When Supabase is configured, it is the source of truth and IndexedDB acts as
+// an offline cache: reads come from Supabase, writes go to both. Supabase access
+// requires a signed-in staff account (see database/supabase_setup.sql).
 // ==============================================================================
 
 import {
@@ -36,9 +39,27 @@ import {
   INITIAL_HOSPITAL_CONFIG,
   DEMO_USERS,
 } from "../mockData";
+import { supabase } from "./supabase";
 
 const DB_NAME = "CarePointMedicalCenter_HIS_DB";
 const DB_VERSION = 1;
+
+const STORES = [
+  "patients",
+  "opd_queue",
+  "health_records",
+  "medication_orders",
+  "diagnostic_results",
+  "treatment_logs",
+  "admission_entries",
+  "opd_referrals",
+  "opd_discharges",
+  "philhealth_claims",
+  "visitor_logs",
+  "audit_logs",
+  "hospital_config",
+  "users",
+];
 
 export interface DatabaseState {
   patients: Patient[];
@@ -76,24 +97,7 @@ class CarePointDatabaseService {
 
         request.onupgradeneeded = (event) => {
           const db = (event.target as IDBOpenDBRequest).result;
-          const stores = [
-            "patients",
-            "opd_queue",
-            "health_records",
-            "medication_orders",
-            "diagnostic_results",
-            "treatment_logs",
-            "admission_entries",
-            "opd_referrals",
-            "opd_discharges",
-            "philhealth_claims",
-            "visitor_logs",
-            "audit_logs",
-            "hospital_config",
-            "users",
-          ];
-
-          stores.forEach((storeName) => {
+          STORES.forEach((storeName) => {
             if (!db.objectStoreNames.contains(storeName)) {
               db.createObjectStore(storeName, { keyPath: "id" });
             }
@@ -113,8 +117,8 @@ class CarePointDatabaseService {
     return this.dbPromise;
   }
 
-  // --- Generic Store Operations ---
-  private async getAllFromStore<T>(storeName: string): Promise<T[]> {
+  // --- Local (IndexedDB / LocalStorage) Store Operations ---
+  private async localGetAll<T>(storeName: string): Promise<T[]> {
     try {
       const db = await this.getDB();
       return new Promise<T[]>((resolve, reject) => {
@@ -132,7 +136,7 @@ class CarePointDatabaseService {
     }
   }
 
-  private async putInStore<T extends { id: string }>(storeName: string, item: T): Promise<void> {
+  private async localPut<T extends { id: string }>(storeName: string, item: T): Promise<void> {
     try {
       const db = await this.getDB();
       return new Promise<void>((resolve, reject) => {
@@ -145,7 +149,7 @@ class CarePointDatabaseService {
     } catch {
       // LocalStorage fallback
       const key = `carepoint_${storeName}`;
-      const existing = await this.getAllFromStore<T>(storeName);
+      const existing = await this.localGetAll<T>(storeName);
       const index = existing.findIndex((i) => i.id === item.id);
       if (index >= 0) {
         existing[index] = item;
@@ -156,7 +160,7 @@ class CarePointDatabaseService {
     }
   }
 
-  private async bulkPutInStore<T extends { id: string }>(storeName: string, items: T[]): Promise<void> {
+  private async localBulkPut<T extends { id: string }>(storeName: string, items: T[]): Promise<void> {
     try {
       const db = await this.getDB();
       return new Promise<void>((resolve, reject) => {
@@ -170,6 +174,63 @@ class CarePointDatabaseService {
       const key = `carepoint_${storeName}`;
       localStorage.setItem(key, JSON.stringify(items));
     }
+  }
+
+  private async localReplaceAll<T extends { id: string }>(storeName: string, items: T[]): Promise<void> {
+    try {
+      const db = await this.getDB();
+      return new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        store.clear();
+        items.forEach((item) => store.put(item));
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch {
+      localStorage.setItem(`carepoint_${storeName}`, JSON.stringify(items));
+    }
+  }
+
+  // --- Remote (Supabase) Store Operations ---
+  // Each table keeps the app object as-is in a `data` jsonb column keyed by `id`.
+  private async remoteGetAll<T>(storeName: string): Promise<T[]> {
+    const { data, error } = await supabase!.from(storeName).select("data");
+    if (error) throw error;
+    return (data ?? []).map((row: { data: T }) => row.data);
+  }
+
+  private async remoteUpsert<T extends { id: string }>(storeName: string, items: T[]): Promise<void> {
+    if (items.length === 0) return;
+    const now = new Date().toISOString();
+    const { error } = await supabase!
+      .from(storeName)
+      .upsert(items.map((item) => ({ id: item.id, data: item, updated_at: now })));
+    if (error) throw error;
+  }
+
+  // --- Generic Store Operations ---
+  private async getAllFromStore<T extends { id: string }>(storeName: string): Promise<T[]> {
+    if (supabase) {
+      try {
+        const items = await this.remoteGetAll<T>(storeName);
+        this.localReplaceAll(storeName, items).catch(console.error);
+        return items;
+      } catch (err) {
+        console.warn(`Supabase read failed for "${storeName}", using local cache:`, err);
+      }
+    }
+    return this.localGetAll<T>(storeName);
+  }
+
+  private async putInStore<T extends { id: string }>(storeName: string, item: T): Promise<void> {
+    await this.localPut(storeName, item);
+    if (supabase) await this.remoteUpsert(storeName, [item]);
+  }
+
+  private async bulkPutInStore<T extends { id: string }>(storeName: string, items: T[]): Promise<void> {
+    await this.localBulkPut(storeName, items);
+    if (supabase) await this.remoteUpsert(storeName, items);
   }
 
   // --- Seed Initialization ---
@@ -228,7 +289,7 @@ class CarePointDatabaseService {
       this.getAllFromStore<PhilHealthClaim>("philhealth_claims"),
       this.getAllFromStore<VisitorLog>("visitor_logs"),
       this.getAllFromStore<AuditLog>("audit_logs"),
-      this.getAllFromStore<any>("hospital_config"),
+      this.getAllFromStore<HospitalConfig & { id: string }>("hospital_config"),
       this.getAllFromStore<User>("users"),
     ]);
 
@@ -332,30 +393,23 @@ class CarePointDatabaseService {
   public async resetDatabaseToDefaults(): Promise<void> {
     try {
       const db = await this.getDB();
-      const stores = [
-        "patients",
-        "opd_queue",
-        "health_records",
-        "medication_orders",
-        "diagnostic_results",
-        "treatment_logs",
-        "admission_entries",
-        "opd_referrals",
-        "opd_discharges",
-        "philhealth_claims",
-        "visitor_logs",
-        "audit_logs",
-        "hospital_config",
-        "users",
-      ];
-      const tx = db.transaction(stores, "readwrite");
-      stores.forEach((s) => tx.objectStore(s).clear());
+      const tx = db.transaction(STORES, "readwrite");
+      STORES.forEach((s) => tx.objectStore(s).clear());
       await new Promise<void>((resolve, reject) => {
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
       });
     } catch {
       localStorage.clear();
+    }
+
+    if (supabase) {
+      await Promise.all(
+        STORES.map(async (storeName) => {
+          const { error } = await supabase!.from(storeName).delete().neq("id", "");
+          if (error) throw error;
+        })
+      );
     }
 
     await this.initializeDatabase();

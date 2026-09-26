@@ -35,6 +35,8 @@ import {
   INITIAL_OPD_DISCHARGES,
 } from "../mockData";
 import { hospitalDb } from "../services/db";
+import { isSupabaseConfigured } from "../services/supabase";
+import { useAuth } from "./AuthContext";
 
 interface OpdDataContextType {
   // Queue & Patients
@@ -148,8 +150,14 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
   // Global search state
   const [globalSearchQuery, setGlobalSearchQuery] = useState("");
 
+  // Supabase data is only readable once a staff member has signed in, so
+  // (re)load whenever the signed-in account changes.
+  const { user: authUser } = useAuth();
+  const authUserId = authUser?.id ?? null;
+
   // Initialize and Hydrate from Persistent Database
   useEffect(() => {
+    if (isSupabaseConfigured && !authUserId) return;
     let mounted = true;
     hospitalDb
       .initializeDatabase()
@@ -182,7 +190,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [authUserId]);
 
   // Dynamically computed metrics derived directly from queue array
   const waitingCount = useMemo(

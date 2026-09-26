@@ -29,15 +29,17 @@ export default function AuthModal({
   initialTab = "signin",
 }: AuthModalProps) {
   const navigate = useNavigate();
-  const { login, switchUser } = useAuth();
+  const { login, switchUser, isSecureMode } = useAuth();
   const { addUser } = useOpdData();
 
   // Active tab state
-  const [activeTab, setActiveTab] = useState<"signin" | "signup">(initialTab);
+  const [activeTab, setActiveTab] = useState<"signin" | "signup">(
+    isSecureMode ? "signin" : initialTab
+  );
 
   // Sign In form state
-  const [signInUsername, setSignInUsername] = useState("dr.jacobe");
-  const [signInPassword, setSignInPassword] = useState("pass");
+  const [signInUsername, setSignInUsername] = useState(isSecureMode ? "" : "dr.jacobe");
+  const [signInPassword, setSignInPassword] = useState(isSecureMode ? "" : "pass");
   const [signInError, setSignInError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -55,39 +57,38 @@ export default function AuthModal({
 
   if (!isOpen) return null;
 
-  const handleSignInSubmit = (e: React.FormEvent) => {
+  const handleSignInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSignInError(null);
     setIsLoading(true);
 
-    setTimeout(() => {
-      const success = login(signInUsername, signInPassword);
-      setIsLoading(false);
-      if (success) {
-        onClose();
-        navigate("/dashboard");
-      } else {
-        setSignInError(
-          "Invalid credentials. Please select one of the authorized staff demo profiles below or verify your clinician username."
-        );
-      }
-    }, 200);
-  };
-
-  const handleQuickLogin = (uname: string) => {
-    setSignInError(null);
-    const success = login(uname, "pass");
-    if (success) {
+    const error = await login(signInUsername, signInPassword);
+    setIsLoading(false);
+    if (error) {
+      setSignInError(error);
+    } else {
       onClose();
       navigate("/dashboard");
-    } else {
+    }
+  };
+
+  const handleQuickLogin = async (uname: string) => {
+    setSignInError(null);
+    const error = await login(uname, "pass");
+    if (error) {
       setSignInError(`Unable to authenticate as ${uname}`);
+    } else {
+      onClose();
+      navigate("/dashboard");
     }
   };
 
   const handleSignUpSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSignUpError(null);
+
+    // Accounts are provisioned by the administrator when using Supabase Auth
+    if (isSecureMode) return;
 
     if (!signUpName.trim() || !signUpUsername.trim()) {
       setSignUpError("Please fill out all required fields.");
@@ -233,6 +234,7 @@ export default function AuthModal({
             <span>Sign In</span>
           </button>
 
+          {!isSecureMode && (
           <button
             type="button"
             onClick={() => setActiveTab("signup")}
@@ -245,6 +247,7 @@ export default function AuthModal({
             <UserPlus size={14} />
             <span>Sign Up / Staff Registration</span>
           </button>
+          )}
         </div>
 
         {/* Modal Scrollable Body */}
@@ -275,14 +278,15 @@ export default function AuthModal({
               <form onSubmit={handleSignInSubmit} className="space-y-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Username / Clinician ID
+                    {isSecureMode ? "Staff Email" : "Username / Clinician ID"}
                   </label>
                   <input
-                    type="text"
+                    type={isSecureMode ? "email" : "text"}
                     required
+                    autoComplete={isSecureMode ? "email" : "username"}
                     value={signInUsername}
                     onChange={(e) => setSignInUsername(e.target.value)}
-                    placeholder="e.g. dr.jacobe, nurse.palma, admin.jp"
+                    placeholder={isSecureMode ? "you@carepointmedical.ph" : "e.g. dr.jacobe, nurse.palma, admin.jp"}
                     className="w-full px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 outline-hidden transition-all bg-white font-medium"
                   />
                 </div>
@@ -292,13 +296,16 @@ export default function AuthModal({
                     <label className="block text-xs font-bold text-slate-700">
                       Password / Credential
                     </label>
-                    <span className="text-[11px] text-slate-400">
-                      (Demo: any password or "pass")
-                    </span>
+                    {!isSecureMode && (
+                      <span className="text-[11px] text-slate-400">
+                        (Demo: any password or "pass")
+                      </span>
+                    )}
                   </div>
                   <input
                     type="password"
                     required
+                    autoComplete="current-password"
                     value={signInPassword}
                     onChange={(e) => setSignInPassword(e.target.value)}
                     placeholder="Enter security key"
@@ -317,6 +324,7 @@ export default function AuthModal({
               </form>
 
               {/* 1-Click Demo Logins for Quick Role Testing */}
+              {!isSecureMode && (
               <div className="pt-3 border-t border-slate-200">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
@@ -357,6 +365,7 @@ export default function AuthModal({
                   })}
                 </div>
               </div>
+              )}
             </div>
           )}
 

@@ -40,7 +40,9 @@ interface ProtectedRouteProps {
 }
 
 function ProtectedRoute({ allowedRoles, children }: ProtectedRouteProps) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isAuthReady } = useAuth();
+
+  if (!isAuthReady) return null;
 
   if (!isAuthenticated || !user) {
     return <Navigate to="/" replace />;
