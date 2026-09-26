@@ -43,7 +43,7 @@ export default function OpdTopNav({
   emergencyHotline = "911",
 }: OpdTopNavProps) {
   const navigate = useNavigate();
-  const { user: authUser, switchUser: authSwitchUser, logout: authLogout } = useAuth();
+  const { user: authUser, switchUser: authSwitchUser, logout: authLogout, isSecureMode } = useAuth();
   const {
     patients: contextPatients,
     selectedPatient: contextSelectedPatient,
@@ -136,7 +136,8 @@ export default function OpdTopNav({
     navigate("/");
   };
 
-  const accounts = Object.values(DEMO_USERS).map(u => u.user);
+  // Switching clinicians is a demo-only feature; with Supabase Auth you are who you signed in as
+  const accounts = isSecureMode ? [] : Object.values(DEMO_USERS).map(u => u.user);
 
   const getRoleIcon = (role: Role, size = 15) => {
     switch (role) {
@@ -368,6 +369,7 @@ export default function OpdTopNav({
           {/* Role Dropdown Menu */}
           {isRoleMenuOpen && (
             <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 divide-y divide-slate-100">
+              {accounts.length > 0 && (
               <div className="px-3.5 py-2">
                 <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Switch Active Clinician
@@ -376,6 +378,7 @@ export default function OpdTopNav({
                   Select a clinical session with official PRC license credentials:
                 </p>
               </div>
+              )}
 
               <div className="py-1">
                 {accounts.map(acc => {

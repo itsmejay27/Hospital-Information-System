@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { User, Role } from "../types";
 import { DEMO_USERS } from "../mockData";
+import { supabase, isSupabaseConfigured } from "../services/supabase";
 
 interface AuthSession {
   token: string;
@@ -13,7 +14,12 @@ interface AuthContextType {
   role: Role | null;
   token: string | null;
   isAuthenticated: boolean;
-  login: (username: string, password?: string) => boolean;
+  /** True when sign-in goes through Supabase Auth instead of the demo profiles. */
+  isSecureMode: boolean;
+  /** False until a stored Supabase session has been checked on page load. */
+  isAuthReady: boolean;
+  /** Resolves to null on success, or an error message. */
+  login: (username: string, password?: string) => Promise<string | null>;
   logout: () => void;
   switchUser: (targetUser: User) => void;
 }
@@ -22,8 +28,28 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const STORAGE_KEY = "carepoint_opd_auth_session";
 
+// Resolves the CarePoint staff profile linked to a Supabase Auth login via
+// public.staff_accounts. Returns null if the login is not linked to any staff.
+async function loadStaffProfile(authId: string): Promise<User | null> {
+  const { data: link, error } = await supabase!
+    .from("staff_accounts")
+    .select("user_id")
+    .eq("auth_id", authId)
+    .maybeSingle();
+  if (error || !link) return null;
+
+  const { data: row } = await supabase!
+    .from("users")
+    .select("data")
+    .eq("id", link.user_id)
+    .maybeSingle();
+  return (row?.data as User | undefined) ?? null;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
+    // Supabase restores its own session in the effect below
+    if (isSupabaseConfigured) return null;
     // Try to restore session from localStorage
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -43,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const [token, setToken] = useState<string | null>(() => {
+    if (isSupabaseConfigured) return null;
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
@@ -71,7 +98,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = (username: string, password = "pass"): boolean => {
+  const [isAuthReady, setIsAuthReady] = useState(!isSupabaseConfigured);
+
+  // Keep React state in sync with the Supabase Auth session
+  useEffect(() => {
+    if (!supabase) return;
+    let active = true;
+
+    const applySession = async (authId: string | null, accessToken: string | null) => {
+      const profile = authId ? await loadStaffProfile(authId) : null;
+      if (!active) return;
+      setUser(profile);
+      setToken(profile ? accessToken : null);
+      setIsAuthReady(true);
+    };
+
+    supabase.auth.getSession().then(({ data }) => {
+      applySession(data.session?.user.id ?? null, data.session?.access_token ?? null);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        setUser(null);
+        setToken(null);
+      } else if (event === "TOKEN_REFRESHED") {
+        setToken(session?.access_token ?? null);
+      }
+    });
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const loginWithSupabase = async (email: string, password: string): Promise<string | null> => {
+    const { data, error } = await supabase!.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    if (error || !data.session) {
+      return "Invalid email or password.";
+    }
+
+    const profile = await loadStaffProfile(data.session.user.id);
+    if (!profile) {
+      await supabase!.auth.signOut();
+      return "This account is not linked to a CarePoint staff profile. Contact the system administrator.";
+    }
+    if (profile.status && profile.status !== "active") {
+      await supabase!.auth.signOut();
+      return "This staff account is suspended or inactive.";
+    }
+
+    setUser(profile);
+    setToken(data.session.access_token);
+    return null;
+  };
+
+  const login = async (username: string, password = "pass"): Promise<string | null> => {
+    if (supabase) return loginWithSupabase(username, password);
+    return loginDemo(username) ? null : "Invalid credentials. Please select one of the authorized staff demo profiles below or verify your clinician username.";
+  };
+
+  const loginDemo = (username: string): boolean => {
     const key = username.toLowerCase().trim();
     const matched = Object.values(DEMO_USERS).find(
       u =>
@@ -115,12 +205,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    if (supabase) supabase.auth.signOut().catch(console.error);
     setUser(null);
     setToken(null);
     saveSession(null, null);
   };
 
   const switchUser = (targetUser: User) => {
+    // Identity comes from the signed-in Supabase account; no impersonation.
+    if (isSupabaseConfigured) return;
     const newToken = `jwt-mock-${targetUser.id}-${btoa(targetUser.name)}-${Date.now()}`;
     setUser(targetUser);
     setToken(newToken);
@@ -134,6 +227,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: user?.role ?? null,
         token,
         isAuthenticated: !!user,
+        isSecureMode: isSupabaseConfigured,
+        isAuthReady,
         login,
         logout,
         switchUser,
