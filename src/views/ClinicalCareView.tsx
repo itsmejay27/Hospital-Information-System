@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import StaffAvatar from "../components/StaffAvatar";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
@@ -216,9 +217,7 @@ export default function ClinicalCareView() {
         </div>
 
         <div className="relative z-10 flex items-center gap-3 bg-white/10 p-3 rounded-2xl border border-white/20 backdrop-blur-xs">
-          <div className="w-11 h-11 rounded-full bg-emerald-500/30 text-emerald-100 border border-emerald-300/40 flex items-center justify-center font-bold text-sm shadow-inner">
-            {user?.avatarInitials || "MD"}
-          </div>
+          <StaffAvatar user={user} size={44} />
           <div className="text-right sm:text-left">
             <span className="text-xs font-bold text-white block leading-tight">
               {user?.name || "Clinician"}

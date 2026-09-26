@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
+import { useWardData } from "../context/WardDataContext";
+import StaffAvatar from "../components/StaffAvatar";
 import {
   Settings,
   User as UserIcon,
@@ -23,8 +25,13 @@ import {
 } from "../components/Icons";
 
 export default function SettingsView() {
-  const { user } = useAuth();
+  const { user, changePassword, isSecureMode } = useAuth();
   const { hospitalConfig } = useOpdData();
+  const { staffPhotos, saveMyPhoto } = useWardData();
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordBusy, setPasswordBusy] = useState(false);
 
   const [activeTab, setActiveTab] = useState<"profile" | "clinical" | "display" | "security">("profile");
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
@@ -77,16 +84,87 @@ export default function SettingsView() {
     notify("Display and hospital theme preferences saved.");
   };
 
-  const handleSaveSecurity = (e: React.FormEvent) => {
+  // Center-crops and shrinks the chosen image to a 256px JPEG before saving
+  const resizePhoto = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const side = Math.min(img.width, img.height);
+        const canvas = document.createElement("canvas");
+        canvas.width = 256;
+        canvas.height = 256;
+        canvas
+          .getContext("2d")!
+          .drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, 256, 256);
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("unreadable"));
+      };
+      img.src = url;
+    });
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setPhotoError(null);
+    if (!file.type.startsWith("image/")) {
+      setPhotoError("Please choose an image file (JPG or PNG).");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setPhotoError("Image is too large. Please choose one under 10 MB.");
+      return;
+    }
+    setPhotoBusy(true);
+    try {
+      await saveMyPhoto(await resizePhoto(file));
+      notify("Profile picture updated.");
+    } catch {
+      setPhotoError("Could not save the picture. Please try again.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    setPhotoBusy(true);
+    try {
+      await saveMyPhoto(null);
+      notify("Profile picture removed.");
+    } catch {
+      setPhotoError("Could not remove the picture. Please try again.");
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const handleSaveSecurity = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword && newPassword !== confirmPassword) {
-      alert("New password and confirmation do not match.");
+    setPasswordError(null);
+    if (!currentPassword || !newPassword) {
+      setPasswordError("Enter your current password and a new password.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("New password and confirmation do not match.");
+      return;
+    }
+    setPasswordBusy(true);
+    const error = await changePassword(currentPassword, newPassword);
+    setPasswordBusy(false);
+    if (error) {
+      setPasswordError(error);
       return;
     }
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
-    notify("Security credentials and session preferences updated successfully.");
+    notify("Password changed successfully. Use your new password the next time you sign in.");
   };
 
   return (
@@ -123,9 +201,7 @@ export default function SettingsView() {
         </div>
 
         <div className="relative z-10 flex items-center gap-3 bg-white/10 p-3 rounded-2xl border border-white/20 backdrop-blur-xs">
-          <div className="w-12 h-12 rounded-full bg-emerald-500/30 text-emerald-100 border border-emerald-300/40 flex items-center justify-center font-bold text-base shadow-inner">
-            {user?.avatarInitials || "MD"}
-          </div>
+          <StaffAvatar user={user} size={48} />
           <div>
             <span className="text-xs font-bold text-white block leading-tight">
               {user?.name || "Active Session"}
@@ -196,6 +272,38 @@ export default function SettingsView() {
       {/* ========================================================================= */}
       {activeTab === "profile" && (
         <form onSubmit={handleSaveProfile} className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-6">
+          {/* Profile Picture */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+            <StaffAvatar user={user} size={80} />
+            <div className="flex-1 text-xs">
+              <h3 className="text-sm font-bold text-slate-900">Profile Picture</h3>
+              <p className="text-slate-500 mt-0.5">
+                Shown in the top bar and staff directory. JPG or PNG; it is cropped to a square.
+              </p>
+              {photoError && <p className="text-rose-600 font-semibold mt-1.5">{photoError}</p>}
+            </div>
+            <div className="flex items-center gap-2">
+              <label
+                className={`px-4 py-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer ${
+                  photoBusy ? "opacity-60 pointer-events-none" : ""
+                }`}
+              >
+                {photoBusy ? "Saving..." : "Upload Photo"}
+                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoChange} />
+              </label>
+              {user && staffPhotos[user.id] && (
+                <button
+                  type="button"
+                  onClick={handleRemovePhoto}
+                  disabled={photoBusy}
+                  className="px-4 py-2 rounded-full border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold cursor-pointer"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+
           <div>
             <h3 className="text-base font-bold text-slate-900">Professional Identity & Licensure</h3>
             <p className="text-xs text-slate-500 mt-0.5">
@@ -583,6 +691,16 @@ export default function SettingsView() {
               <KeyRound size={16} className="text-emerald-700" />
               <span>Change Account Password</span>
             </h4>
+            <p className="text-slate-500 -mt-2">
+              {isSecureMode
+                ? "For your security, confirm your current password before choosing a new one (at least 8 characters)."
+                : "Password changes are available once the system is connected to the hospital database."}
+            </p>
+            {passwordError && (
+              <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 font-semibold">
+                {passwordError}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -590,6 +708,7 @@ export default function SettingsView() {
                 <input
                   type="password"
                   value={currentPassword}
+                  autoComplete="current-password"
                   onChange={e => setCurrentPassword(e.target.value)}
                   placeholder="••••••••"
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-hidden"
@@ -601,6 +720,8 @@ export default function SettingsView() {
                 <input
                   type="password"
                   value={newPassword}
+                  autoComplete="new-password"
+                  minLength={8}
                   onChange={e => setNewPassword(e.target.value)}
                   placeholder="Min. 8 characters"
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-hidden"
@@ -612,6 +733,7 @@ export default function SettingsView() {
                 <input
                   type="password"
                   value={confirmPassword}
+                  autoComplete="new-password"
                   onChange={e => setConfirmPassword(e.target.value)}
                   placeholder="Re-type new password"
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-900 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-hidden"
@@ -695,7 +817,7 @@ export default function SettingsView() {
               className="px-6 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs hover:scale-102 transition-all cursor-pointer flex items-center gap-2"
             >
               <Check size={16} strokeWidth={2.5} />
-              <span>Update Security Credentials</span>
+              <span>{passwordBusy ? "Updating..." : "Change Password"}</span>
             </button>
           </div>
         </form>

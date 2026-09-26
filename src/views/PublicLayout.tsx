@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import StaffAvatar from "../components/StaffAvatar";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
@@ -160,9 +161,7 @@ export default function PublicLayout() {
                     className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity"
                     title="Go to OPD Dashboard"
                   >
-                    <div className="w-8 h-8 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-bold shadow-xs">
-                      {user.avatarInitials}
-                    </div>
+                    <StaffAvatar user={user} size={32} />
                     <div className="hidden sm:block">
                       <div className="text-xs font-semibold text-slate-900 leading-tight">
                         {user.name.split(" ")[0]}
@@ -363,12 +362,13 @@ export function PublicHomePage() {
           className="absolute inset-0 w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/80 to-transparent" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-16 text-white">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-16 text-white w-full flex items-center justify-between gap-10">
+          <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 bg-teal-500/20 text-teal-300 border border-teal-400/30 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-4">
               CarePoint Medical Center
             </div>
             <h1 className="font-serif text-3xl sm:text-5xl leading-tight mb-5 text-white font-bold">
-              Compassionate Care.<br />Trusted Service.<br />Better Health.
+              Quality Care.<br />Closer to You.
             </h1>
             <p className="text-slate-200 text-sm sm:text-base leading-relaxed mb-8">
               A modern hospital information system integrating physician consultation workbenches, structured MAR tables, 3-tier Priority Watch triage, bedside fluid charting, and immutable cryptographic audit ledgers.
@@ -403,6 +403,12 @@ export function PublicHomePage() {
               </Link>
             </div>
           </div>
+          <img
+            src="/carepoint-logo-full.jpg"
+            alt="CarePoint Medical Center — Quality Care. Closer to You."
+            className="hidden lg:block w-80 h-80 rounded-3xl bg-white p-3 shadow-2xl object-contain shrink-0"
+          />
+        </div>
       </section>
 
       {/* Hospital Operational Pillars */}

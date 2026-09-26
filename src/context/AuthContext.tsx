@@ -21,6 +21,8 @@ interface AuthContextType {
   /** Resolves to null on success, or an error message. */
   login: (username: string, password?: string) => Promise<string | null>;
   logout: () => void;
+  /** Verifies the current password, then sets the new one. Resolves to null on success, or an error message. */
+  changePassword: (currentPassword: string, newPassword: string) => Promise<string | null>;
   switchUser: (targetUser: User) => void;
 }
 
@@ -204,6 +206,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return false;
   };
 
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<string | null> => {
+    if (!supabase) {
+      return "Password changes are only available when the system is connected to the hospital database.";
+    }
+    if (newPassword.length < 8) return "New password must be at least 8 characters.";
+    if (newPassword === currentPassword) return "New password must be different from your current password.";
+
+    const { data } = await supabase.auth.getUser();
+    const email = data.user?.email;
+    if (!email) return "Your session has expired. Please sign in again.";
+
+    // Re-authenticate to confirm the current password before changing it
+    const { error: verifyError } = await supabase.auth.signInWithPassword({ email, password: currentPassword });
+    if (verifyError) return "Current password is incorrect.";
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) return error.message;
+    return null;
+  };
+
   const logout = () => {
     if (supabase) supabase.auth.signOut().catch(console.error);
     setUser(null);
@@ -231,6 +253,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthReady,
         login,
         logout,
+        changePassword,
         switchUser,
       }}
     >

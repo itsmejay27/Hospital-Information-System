@@ -258,8 +258,8 @@ export default function VitalsBmiView({
 
       {/* Two Column Layout: Vitals Form (Left) & Historical Trend Table (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Comprehensive Vitals Entry Card (7 Cols) */}
-        <div className="lg:col-span-7">
+        {/* Vitals Entry Form (full width) */}
+        <div className="lg:col-span-12">
           <form onSubmit={handleSaveVitals} className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -522,7 +522,7 @@ export default function VitalsBmiView({
         </div>
 
         {/* Right Column: Historical Vitals Table & Trends (5 Cols) */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="lg:col-span-12 space-y-6">
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -541,50 +541,52 @@ export default function VitalsBmiView({
                 No previous vitals recordings registered for this encounter.
               </div>
             ) : (
-              <div className="space-y-3">
-                {patientVitalsLogs.map(log => (
-                  <div
-                    key={log.id}
-                    className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/70 text-xs space-y-2 hover:border-slate-300 transition-colors"
-                  >
-                    <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
-                      <span className="font-bold text-slate-900">{log.treatmentName}</span>
-                      <span className="text-[10px] font-mono text-slate-500">{log.timestamp}</span>
-                    </div>
-
-                    <div className="font-mono text-xs text-slate-800 bg-white p-2 rounded-lg border border-slate-200/60 leading-relaxed">
-                      {log.vitalsAtTreatment || "Parameters recorded in bedside flow sheet"}
-                    </div>
-
-                    {log.structuredVitals && (
-                      <div className="grid grid-cols-3 gap-2 text-[10px]">
-                        <div className="bg-white p-1.5 rounded border border-slate-200/60">
-                          <span className="text-slate-400 block">BMI</span>
-                          <span className="font-bold text-slate-800">{log.structuredVitals.bmi || "N/A"}</span>
-                        </div>
-                        <div className="bg-white p-1.5 rounded border border-slate-200/60">
-                          <span className="text-slate-400 block">Intake</span>
-                          <span className="font-bold text-slate-800">{log.structuredVitals.fluidIntakeMl || 0} mL</span>
-                        </div>
-                        <div className="bg-white p-1.5 rounded border border-slate-200/60">
-                          <span className="text-slate-400 block">Output</span>
-                          <span className="font-bold text-slate-800">{log.structuredVitals.urineOutputMl || 0} mL</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {log.notes && (
-                      <p className="text-[11px] text-slate-600 italic">
-                        "{log.notes}"
-                      </p>
-                    )}
-
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
-                      <span>Logged By: <strong className="text-slate-700">{log.performedBy}</strong></span>
-                      <span className="font-mono">{log.performedByLicense}</span>
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto -mx-5">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-slate-50 border-y border-slate-200">
+                    <tr>
+                      {["Date / Time", "Assessment", "BP", "HR", "RR", "SpO2", "Temp", "BMI", "Intake", "Output", "Notes", "Logged By"].map(h => (
+                        <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {patientVitalsLogs.map(log => {
+                      const v = log.structuredVitals;
+                      return (
+                        <tr key={log.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 align-top">
+                          <td className="px-3 py-2 font-mono whitespace-nowrap text-slate-600">{log.timestamp}</td>
+                          <td className="px-3 py-2 font-semibold text-slate-900 min-w-[160px]">{log.treatmentName}</td>
+                          {v ? (
+                            <>
+                              <td className="px-3 py-2 font-mono whitespace-nowrap">
+                                {v.systolicBp}/{v.diastolicBp}
+                              </td>
+                              <td className="px-3 py-2 font-mono">{v.heartRate}</td>
+                              <td className="px-3 py-2 font-mono">{v.respiratoryRate}</td>
+                              <td className="px-3 py-2 font-mono">{v.spo2}%</td>
+                              <td className="px-3 py-2 font-mono whitespace-nowrap">{v.temperature}°C</td>
+                              <td className="px-3 py-2 font-mono">{v.bmi ?? "—"}</td>
+                              <td className="px-3 py-2 font-mono whitespace-nowrap">{v.fluidIntakeMl ?? log.fluidIntakeMl ?? 0} mL</td>
+                              <td className="px-3 py-2 font-mono whitespace-nowrap">{v.urineOutputMl ?? log.urineOutputMl ?? 0} mL</td>
+                            </>
+                          ) : (
+                            <td colSpan={8} className="px-3 py-2 font-mono text-slate-700">
+                              {log.vitalsAtTreatment || "Parameters recorded in bedside flow sheet"}
+                            </td>
+                          )}
+                          <td className="px-3 py-2 text-slate-600 italic min-w-[200px]">{log.notes || "—"}</td>
+                          <td className="px-3 py-2 whitespace-nowrap">
+                            <div className="font-semibold text-slate-800">{log.performedBy}</div>
+                            <div className="text-[10px] font-mono text-slate-400">{log.performedByLicense}</div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

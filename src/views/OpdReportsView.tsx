@@ -160,27 +160,35 @@ export default function OpdReportsView({
             </span>
           </div>
 
-          <div className="space-y-3.5">
-            {topDiagnoses.map(item => (
-              <div key={item.icd} className="space-y-1.5 text-xs">
-                <div className="flex justify-between items-center text-slate-700">
-                  <span className="font-semibold">
-                    <span className="font-mono font-bold text-emerald-700 mr-1.5">[{item.icd}]</span>
-                    {item.name}
-                  </span>
-                  <span className="font-mono text-slate-500 font-bold">
-                    {item.count} cases ({item.percentage}%)
-                  </span>
-                </div>
-                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
-                  <div
-                    className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500"
-                    style={{ width: `${item.percentage * 2}%` }}
-                  ></div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <table className="w-full text-left text-xs border-collapse">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">#</th>
+                <th className="px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">ICD-10</th>
+                <th className="px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Diagnosis</th>
+                <th className="px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 text-right">Cases</th>
+                <th className="px-2.5 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 w-40">Share</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topDiagnoses.map((item, i) => (
+                <tr key={item.icd} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70">
+                  <td className="px-2.5 py-2 text-slate-400 font-bold">{i + 1}</td>
+                  <td className="px-2.5 py-2 font-mono font-bold text-emerald-700">{item.icd}</td>
+                  <td className="px-2.5 py-2 font-semibold text-slate-800">{item.name}</td>
+                  <td className="px-2.5 py-2 font-mono font-bold text-slate-900 text-right">{item.count}</td>
+                  <td className="px-2.5 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${item.percentage}%` }}></div>
+                      </div>
+                      <span className="font-mono text-slate-500 w-9 text-right">{item.percentage}%</span>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         {/* Right: Hospital Financial & Demographics Summary */}

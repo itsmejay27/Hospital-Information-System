@@ -18,7 +18,7 @@ import {
 
 export const INITIAL_HOSPITAL_CONFIG: HospitalConfig = {
   name: "CarePoint Medical Center",
-  tagline: "Compassionate Care. Trusted Service. Better Health.",
+  tagline: "Quality Care. Closer to You.",
   logoText: "CarePoint Medical Center",
   phone: "(02) 8920-5000",
   emergencyHotline: "911",

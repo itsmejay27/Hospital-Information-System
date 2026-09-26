@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Patient, Role } from "../types";
 import { DEMO_USERS } from "../mockData";
+import StaffAvatar from "./StaffAvatar";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
 import {
@@ -350,9 +351,7 @@ export default function OpdTopNav({
             className="flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-xs transition-all shadow-2xs cursor-pointer group"
           >
             <div className="relative">
-              <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center justify-center border border-emerald-300 shadow-2xs">
-                {user?.avatarInitials || "DR"}
-              </div>
+              <StaffAvatar user={user} size={28} />
               <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>
             </div>
             <div className="text-left leading-tight hidden sm:block">
