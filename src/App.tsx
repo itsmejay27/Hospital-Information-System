@@ -30,6 +30,10 @@ import AdminAuditLedgerView from "./views/AdminAuditLedgerView";
 import AdminRbacView from "./views/AdminRbacView";
 import AdminComplianceView from "./views/AdminComplianceView";
 import SettingsView from "./views/SettingsView";
+import { WardDataProvider } from "./context/WardDataContext";
+import NursingStationView from "./views/NursingStationView";
+import DutyShiftsView from "./views/DutyShiftsView";
+import SystemFlowchartView from "./views/SystemFlowchartView";
 
 import { User, Role } from "./types";
 
@@ -368,6 +372,7 @@ export default function App() {
     <HashRouter>
       <AuthProvider>
         <OpdDataProvider>
+          <WardDataProvider>
           <Routes>
             {/* Public Layout and Routes */}
             <Route element={<PublicLayout />}>
@@ -416,6 +421,20 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+
+              {/* Nursing Station: care plans, doctor's orders, notes, labs, endorsement, chief complaint */}
+              <Route
+                path="/nursing"
+                element={
+                  <ProtectedRoute allowedRoles={["doctor", "nurse"]}>
+                    <NursingStationView />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Duty shifts and system flowchart: every role */}
+              <Route path="/shifts" element={<DutyShiftsView />} />
+              <Route path="/flowchart" element={<SystemFlowchartView />} />
 
               {/* Seamless Tabbed Navigation Redirects */}
               <Route path="/clinical/doctor-workbench" element={<Navigate to="/clinical?tab=workbench" replace />} />
@@ -542,6 +561,7 @@ export default function App() {
             {/* Catch-all fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </WardDataProvider>
         </OpdDataProvider>
       </AuthProvider>
     </HashRouter>

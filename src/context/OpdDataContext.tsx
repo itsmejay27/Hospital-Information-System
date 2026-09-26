@@ -178,6 +178,14 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
         setAuditLogs(state.auditLogs);
         setHospitalConfig(state.hospitalConfig);
         setUsersList(state.users);
+        hospitalDb
+          .getAll<ShiftEndorsement>("shift_endorsements")
+          .then(list => {
+            if (mounted && list.length > 0) {
+              setShiftEndorsements(list.sort((a, b) => b.timestamp.localeCompare(a.timestamp)));
+            }
+          })
+          .catch(console.error);
         if (state.patients.length > 0) {
           setSelectedPatient(state.patients[0]);
         }
@@ -423,6 +431,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
 
   const addShiftEndorsement = (newEndorsement: ShiftEndorsement) => {
     setShiftEndorsements(prev => [newEndorsement, ...prev]);
+    hospitalDb.save("shift_endorsements", newEndorsement).catch(console.error);
   };
 
   const updateHospitalConfig = (cfg: HospitalConfig) => {

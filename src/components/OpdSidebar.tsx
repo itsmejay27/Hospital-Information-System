@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
+import StaffAvatar from "./StaffAvatar";
 import { useNavigate, useLocation } from "react-router-dom";
 import { User, Role } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
+import { useWardData } from "../context/WardDataContext";
+import { DUTY_SHIFT_HOURS } from "../types";
+import { todayIso } from "../views/nursing/helpers";
 import {
   LayoutDashboard,
   Users,
@@ -26,6 +30,8 @@ import {
   Settings,
   Rocket,
   LogOut,
+  ClipboardList,
+  Clock,
 } from "./Icons";
 
 interface OpdSidebarProps {
@@ -49,7 +55,7 @@ interface NavItem {
   icon: React.ComponentType<{ size?: number; className?: string; strokeWidth?: number }>;
   badge?: number | string;
   roles?: Role[];
-  group: "clinical" | "registration" | "billing" | "management";
+  group: "clinical" | "registration" | "billing" | "management" | "general";
   subItems?: SubNavItem[];
 }
 
@@ -63,6 +69,7 @@ export default function OpdSidebar({
   const location = useLocation();
   const { user: authUser, logout } = useAuth();
   const { waitingCount } = useOpdData();
+  const { shiftSchedules } = useWardData();
 
   const user = propsUser || authUser;
   const liveWaiting = propsQueueCount !== undefined ? propsQueueCount : waitingCount;
@@ -79,6 +86,8 @@ export default function OpdSidebar({
   });
 
   const currentRole = user?.role;
+  const today = todayIso();
+  const myShiftsToday = shiftSchedules.filter(s => s.userId === user?.id && s.date === today);
 
   const navItems: NavItem[] = [
     // --- Core Workstation ---
@@ -111,6 +120,22 @@ export default function OpdSidebar({
         { id: "prescriptions", label: "e-Prescriptions & Rx", path: "/clinical?tab=prescriptions", roles: ["doctor"] },
         { id: "diagnostics", label: "Labs & Diagnostics", path: "/clinical?tab=labs", roles: ["doctor"] },
         { id: "vitals-bmi", label: "Vitals & BMI Assessment", path: "/clinical?tab=vitals", roles: ["doctor", "nurse"] },
+      ],
+    },
+    {
+      id: "nursing-station",
+      path: "/nursing",
+      label: "Nursing Station",
+      icon: ClipboardList,
+      roles: ["doctor", "nurse"],
+      group: "clinical",
+      subItems: [
+        { id: "ns-careplan", label: "Care Plan (ADPIE)", path: "/nursing?tab=careplan", roles: ["doctor", "nurse"] },
+        { id: "ns-orders", label: "Doctor's Orders", path: "/nursing?tab=orders", roles: ["doctor", "nurse"] },
+        { id: "ns-notes", label: "Nurses' Notes", path: "/nursing?tab=notes", roles: ["doctor", "nurse"] },
+        { id: "ns-labs", label: "Laboratory", path: "/nursing?tab=labs", roles: ["doctor", "nurse"] },
+        { id: "ns-endorsement", label: "Shift Endorsement", path: "/nursing?tab=endorsement", roles: ["doctor", "nurse"] },
+        { id: "ns-complaint", label: "Chief Complaint", path: "/nursing?tab=complaint", roles: ["doctor", "nurse"] },
       ],
     },
     {
@@ -157,6 +182,24 @@ export default function OpdSidebar({
       group: "billing",
     },
 
+    // --- Workforce & Help (Everyone) ---
+    {
+      id: "shifts",
+      path: "/shifts",
+      label: "Duty Shifts",
+      icon: Clock,
+      roles: ["doctor", "nurse", "staff", "admin"],
+      group: "general",
+    },
+    {
+      id: "flowchart",
+      path: "/flowchart",
+      label: "System Flowchart",
+      icon: Activity,
+      roles: ["doctor", "nurse", "staff", "admin"],
+      group: "general",
+    },
+
     // --- Governance & Admin (Admin Only) ---
     {
       id: "admin-group",
@@ -183,6 +226,7 @@ export default function OpdSidebar({
   const registrationItems = navItems.filter(i => i.group === "registration" && isItemVisible(i));
   const billingItems = navItems.filter(i => i.group === "billing" && isItemVisible(i));
   const managementItems = navItems.filter(i => i.group === "management" && isItemVisible(i));
+  const generalItems = navItems.filter(i => i.group === "general" && isItemVisible(i));
 
   // Auto-expand group if current route is inside it
   useEffect(() => {
@@ -339,16 +383,18 @@ export default function OpdSidebar({
           onClick={() => navigate("/dashboard")}
           className="flex items-center gap-3 overflow-hidden cursor-pointer group"
         >
-          <div className="w-9 h-9 rounded-xl bg-white text-emerald-700 font-extrabold flex items-center justify-center text-lg shadow-sm shrink-0 group-hover:scale-105 transition-transform">
-            m
-          </div>
+          <img
+            src="/carepoint-logo.png"
+            alt="CarePoint Medical Center"
+            className="w-9 h-9 rounded-xl bg-white p-0.5 object-contain shadow-sm shrink-0 group-hover:scale-105 transition-transform"
+          />
           {showFullSidebar && (
             <div className="min-w-0 flex-1 whitespace-nowrap">
               <h1 className="text-base font-bold text-white tracking-tight truncate leading-tight group-hover:text-emerald-400 transition-colors">
-                Medzone
+                CarePoint
               </h1>
               <p className="text-[9px] text-emerald-400 font-semibold tracking-wider uppercase truncate">
-                CarePoint Hospital
+                Medical Center
               </p>
             </div>
           )}
@@ -422,35 +468,51 @@ export default function OpdSidebar({
           </div>
         )}
 
+        {/* Workforce & Help Section */}
+        {generalItems.length > 0 && (
+          <div className="pt-2">
+            {showFullSidebar && (
+              <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
+                Workforce & Help
+              </div>
+            )}
+            <div className="space-y-1">
+              {generalItems.map(item => renderNavItem(item))}
+            </div>
+          </div>
+        )}
+
         {/* Bottom Shift Status Card (Medzone Inspired) */}
         {showFullSidebar ? (
           <div className="mt-3 pt-1">
             <div className="p-3.5 rounded-2xl bg-gradient-to-b from-teal-900/90 via-emerald-950 to-[#02211B] border border-emerald-700/40 text-center shadow-lg relative overflow-hidden group">
               <div className="w-10 h-10 mx-auto rounded-2xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center mb-2 shadow-inner group-hover:scale-110 transition-transform">
-                <Rocket size={20} className="text-emerald-400" />
+                <Clock size={20} className="text-emerald-400" />
               </div>
               <p className="text-xs font-bold text-white leading-tight">
-                OPD Shift Active
+                {myShiftsToday.length > 0 ? `My Shift Today: ${myShiftsToday.map(s => s.shift).join(", ")}` : "No Shift Today"}
               </p>
               <p className="text-[10px] text-emerald-300/80 mt-0.5 mb-2.5">
-                Live Monitoring & Triage Online
+                {myShiftsToday.length > 0
+                  ? myShiftsToday.map(s => `${DUTY_SHIFT_HOURS[s.shift]} • ${s.area}`).join(" / ")
+                  : "You are off duty today"}
               </p>
               <button
-                onClick={() => navigate("/queue")}
+                onClick={() => navigate("/shifts")}
                 className="w-full py-1.5 px-3 rounded-full bg-white hover:bg-slate-100 text-slate-900 font-bold text-[11px] shadow-sm transition-all cursor-pointer hover:shadow-md"
               >
-                View Live Queue
+                View Duty Shifts
               </button>
             </div>
           </div>
         ) : (
           <div className="my-2 flex justify-center">
             <button
-              onClick={() => navigate("/queue")}
-              title="View Live Queue"
+              onClick={() => navigate("/shifts")}
+              title="Duty Shifts"
               className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 flex items-center justify-center cursor-pointer transition-all"
             >
-              <Rocket size={17} />
+              <Clock size={17} />
             </button>
           </div>
         )}
@@ -501,9 +563,7 @@ export default function OpdSidebar({
       <div className="p-3 border-t border-slate-800/80 bg-[#070A0F] shrink-0">
         {showFullSidebar ? (
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-emerald-700/80 border border-emerald-500/40 text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
-              {user?.avatarInitials || "ST"}
-            </div>
+            <StaffAvatar user={user} size={32} />
             <div className="min-w-0 flex-1 whitespace-nowrap">
               <p className="text-xs font-semibold text-white truncate leading-tight">
                 {user?.name || "Clinician Session"}
@@ -521,11 +581,8 @@ export default function OpdSidebar({
             </div>
           </div>
         ) : (
-          <div
-            className="w-8 h-8 mx-auto rounded-full bg-emerald-700/80 border border-emerald-500/40 text-white font-bold text-xs flex items-center justify-center cursor-default shadow-xs"
-            title={`${user?.name || "Clinician"} (${user?.role || "Staff"})`}
-          >
-            {user?.avatarInitials || "ST"}
+          <div className="flex justify-center" title={`${user?.name || "Clinician"} (${user?.role || "Staff"})`}>
+            <StaffAvatar user={user} size={32} />
           </div>
         )}
       </div>

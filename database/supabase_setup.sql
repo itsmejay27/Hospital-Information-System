@@ -102,6 +102,69 @@ create policy "admin update" on public.users for update to authenticated using (
 create policy "admin delete" on public.users for delete to authenticated using ((select private.is_admin()));
 
 -- ------------------------------------------------------------------------------
+-- Nursing Station, duty shifts and profile photos
+-- ------------------------------------------------------------------------------
+create or replace function private.my_staff_id()
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select user_id from public.staff_accounts where auth_id = (select auth.uid());
+$$;
+revoke all on function private.my_staff_id() from public, anon;
+grant execute on function private.my_staff_id() to authenticated;
+
+do $$
+declare
+  t text;
+begin
+  foreach t in array array['care_plans','doctor_orders','nurse_notes','chief_complaints','shift_schedules','shift_endorsements','staff_photos'] loop
+    execute format(
+      'create table if not exists public.%I (
+         id text primary key,
+         data jsonb not null,
+         updated_at timestamptz not null default now()
+       )', t);
+    execute format('alter table public.%I enable row level security', t);
+    execute format('revoke all on public.%I from anon', t);
+    execute format('drop policy if exists "staff read" on public.%I', t);
+    execute format('create policy "staff read" on public.%I for select to authenticated using ((select private.is_staff()))', t);
+  end loop;
+
+  -- Clinical documents: any active staff member can write
+  foreach t in array array['care_plans','doctor_orders','nurse_notes','chief_complaints','shift_endorsements'] loop
+    execute format('drop policy if exists "staff insert" on public.%I', t);
+    execute format('drop policy if exists "staff update" on public.%I', t);
+    execute format('drop policy if exists "staff delete" on public.%I', t);
+    execute format('create policy "staff insert" on public.%I for insert to authenticated with check ((select private.is_staff()))', t);
+    execute format('create policy "staff update" on public.%I for update to authenticated using ((select private.is_staff())) with check ((select private.is_staff()))', t);
+    execute format('create policy "staff delete" on public.%I for delete to authenticated using ((select private.is_staff()))', t);
+  end loop;
+end $$;
+
+-- Duty shifts: everyone can read, only admins assign or remove
+drop policy if exists "admin insert" on public.shift_schedules;
+drop policy if exists "admin update" on public.shift_schedules;
+drop policy if exists "admin delete" on public.shift_schedules;
+create policy "admin insert" on public.shift_schedules for insert to authenticated with check ((select private.is_admin()));
+create policy "admin update" on public.shift_schedules for update to authenticated using ((select private.is_admin())) with check ((select private.is_admin()));
+create policy "admin delete" on public.shift_schedules for delete to authenticated using ((select private.is_admin()));
+
+-- Profile photos: each staff member manages only their own
+drop policy if exists "own insert" on public.staff_photos;
+drop policy if exists "own update" on public.staff_photos;
+drop policy if exists "own delete" on public.staff_photos;
+create policy "own insert" on public.staff_photos for insert to authenticated
+  with check ((select private.is_staff()) and id = (select private.my_staff_id()));
+create policy "own update" on public.staff_photos for update to authenticated
+  using (id = (select private.my_staff_id()))
+  with check ((select private.is_staff()) and id = (select private.my_staff_id()));
+create policy "own delete" on public.staff_photos for delete to authenticated
+  using (id = (select private.my_staff_id()));
+
+-- ------------------------------------------------------------------------------
 -- Giving a staff member access
 -- ------------------------------------------------------------------------------
 -- Normally: sign in as an administrator and use Admin -> Accounts -> Provision

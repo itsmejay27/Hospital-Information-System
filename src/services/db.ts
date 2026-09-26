@@ -37,12 +37,13 @@ import {
   INITIAL_VISITOR_LOGS,
   INITIAL_AUDIT_LOGS,
   INITIAL_HOSPITAL_CONFIG,
+  INITIAL_SHIFT_ENDORSEMENTS,
   DEMO_USERS,
 } from "../mockData";
 import { supabase } from "./supabase";
 
 const DB_NAME = "CarePointMedicalCenter_HIS_DB";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const STORES = [
   "patients",
@@ -59,7 +60,18 @@ const STORES = [
   "audit_logs",
   "hospital_config",
   "users",
+  "care_plans",
+  "doctor_orders",
+  "nurse_notes",
+  "chief_complaints",
+  "shift_schedules",
+  "shift_endorsements",
+  "staff_photos",
 ];
+
+// Staff profiles and photos are managed per-account (admin / owner only), so a
+// database reset never removes them — otherwise the admin would lock themselves out.
+const RESETTABLE_REMOTE_STORES = STORES.filter((s) => s !== "users" && s !== "staff_photos");
 
 export interface DatabaseState {
   patients: Patient[];
@@ -253,6 +265,7 @@ class CarePointDatabaseService {
         this.bulkPutInStore("visitor_logs", INITIAL_VISITOR_LOGS),
         this.bulkPutInStore("audit_logs", INITIAL_AUDIT_LOGS),
         this.putInStore("hospital_config", { id: "master-config", ...INITIAL_HOSPITAL_CONFIG }),
+        this.bulkPutInStore("shift_endorsements", INITIAL_SHIFT_ENDORSEMENTS),
         // With Supabase, staff logins and profiles are created by the administrator
         this.bulkPutInStore("users", supabase ? [] : Object.values(DEMO_USERS).map((u) => u.user)),
       ]);
@@ -312,6 +325,34 @@ class CarePointDatabaseService {
       hospitalConfig: hospitalConfig || INITIAL_HOSPITAL_CONFIG,
       users: users.length > 0 || supabase ? users : Object.values(DEMO_USERS).map((u) => u.user),
     };
+  }
+
+  // --- Generic Document APIs (Nursing Station, Duty Shifts, Staff Photos) ---
+  public async getAll<T extends { id: string }>(storeName: string): Promise<T[]> {
+    return this.getAllFromStore<T>(storeName);
+  }
+
+  public async save<T extends { id: string }>(storeName: string, item: T): Promise<void> {
+    await this.putInStore(storeName, item);
+  }
+
+  public async remove(storeName: string, id: string): Promise<void> {
+    try {
+      const db = await this.getDB();
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(storeName, "readwrite");
+        tx.objectStore(storeName).delete(id);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch {
+      const existing = await this.localGetAll<{ id: string }>(storeName);
+      localStorage.setItem(`carepoint_${storeName}`, JSON.stringify(existing.filter((i) => i.id !== id)));
+    }
+    if (supabase) {
+      const { error } = await supabase.from(storeName).delete().eq("id", id);
+      if (error) throw error;
+    }
   }
 
   // --- Specific CRUD APIs ---
@@ -406,7 +447,7 @@ class CarePointDatabaseService {
 
     if (supabase) {
       await Promise.all(
-        STORES.map(async (storeName) => {
+        RESETTABLE_REMOTE_STORES.map(async (storeName) => {
           const { error } = await supabase!.from(storeName).delete().neq("id", "");
           if (error) throw error;
         })

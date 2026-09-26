@@ -563,32 +563,35 @@ export default function DoctorWorkbenchView({
                 </button>
               </div>
             ) : (
-              <div className="space-y-2">
-                {patientMeds.map(m => (
-                  <div
-                    key={m.id}
-                    className="p-3 bg-slate-50 hover:bg-indigo-50/40 rounded-xl border border-slate-200/70 text-xs transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className="font-bold text-slate-900">{m.name}</span>{" "}
-                        <span className="text-indigo-700 font-mono font-semibold">({m.dose})</span>
-                        <div className="text-[11px] text-slate-600 mt-0.5">
-                          {m.route} • {m.freq}
-                        </div>
-                      </div>
-                      <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full shrink-0">
-                        {m.status}
-                      </span>
-                    </div>
-                    {m.notes && (
-                      <p className="text-[10px] text-slate-500 mt-1.5 pt-1.5 border-t border-slate-200/60">
-                        {m.notes}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Medication</th>
+                    <th className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Route / Frequency</th>
+                    <th className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {patientMeds.map(m => (
+                    <tr key={m.id} className="border-b border-slate-100 last:border-0 hover:bg-indigo-50/40 align-top">
+                      <td className="px-2 py-2">
+                        <div className="font-bold text-slate-900">{m.name}</div>
+                        <div className="text-indigo-700 font-mono font-semibold">{m.dose}</div>
+                        {m.notes && <div className="text-[10px] text-slate-500 mt-0.5">{m.notes}</div>}
+                      </td>
+                      <td className="px-2 py-2 text-slate-600">
+                        {m.route}
+                        <div>{m.freq}</div>
+                      </td>
+                      <td className="px-2 py-2">
+                        <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full whitespace-nowrap">
+                          {m.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
 
@@ -624,37 +627,38 @@ export default function DoctorWorkbenchView({
                 </button>
               </div>
             ) : (
-              <div className="space-y-2">
-                {patientLabs.map(l => (
-                  <div
-                    key={l.id}
-                    className="p-3 bg-slate-50 hover:bg-amber-50/40 rounded-xl border border-slate-200/70 text-xs transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Test</th>
+                    <th className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Category / Specimen</th>
+                    <th className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {patientLabs.map(l => (
+                    <tr key={l.id} className="border-b border-slate-100 last:border-0 hover:bg-amber-50/40 align-top">
+                      <td className="px-2 py-2">
                         <div className="font-bold text-slate-900">{l.test}</div>
-                        <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-                          {l.category} • {l.specimenType}
-                        </div>
-                      </div>
-                      <span
-                        className={`text-[9px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                          l.status === "Ready"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-amber-100 text-amber-800"
-                        }`}
-                      >
-                        {l.status}
-                      </span>
-                    </div>
-                    {l.summary && (
-                      <p className="text-[10px] text-slate-500 mt-1 pt-1 border-t border-slate-200/60">
-                        {l.summary}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
+                        {l.summary && <div className="text-[10px] text-slate-500 mt-0.5">{l.summary}</div>}
+                      </td>
+                      <td className="px-2 py-2 text-slate-600 font-mono text-[10px]">
+                        {l.category}
+                        <div>{l.specimenType}</div>
+                      </td>
+                      <td className="px-2 py-2">
+                        <span
+                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${
+                            l.status === "Ready" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {l.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
 
@@ -690,30 +694,36 @@ export default function DoctorWorkbenchView({
                 </button>
               </div>
             ) : (
-              <div className="space-y-2">
-                {patientClaims.map(c => (
-                  <div
-                    key={c.id}
-                    className="p-3 bg-slate-50 hover:bg-emerald-50/40 rounded-xl border border-slate-200/70 text-xs transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Diagnosis / PIN</th>
+                    <th className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 text-right">Benefit</th>
+                    <th className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {patientClaims.map(c => (
+                    <tr key={c.id} className="border-b border-slate-100 last:border-0 hover:bg-emerald-50/40 align-top">
+                      <td className="px-2 py-2">
                         <div className="font-bold text-slate-900">{c.diagnosisWithIcd}</div>
-                        <div className="text-[10px] text-slate-500 font-mono mt-0.5">
+                        <div className="text-[10px] text-slate-500 font-mono">
                           PIN: {c.pin} • {c.membershipType}
                         </div>
-                      </div>
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 shrink-0">
-                        {c.claimStatus}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-slate-200/60 text-[10px]">
-                      <span className="text-slate-500">{c.caseRateAmount}</span>
-                      <span className="font-bold text-emerald-700">Benefit: ₱{c.philhealthBenefit.toLocaleString()}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                        <div className="text-[10px] text-slate-500">{c.caseRateAmount}</div>
+                      </td>
+                      <td className="px-2 py-2 text-right font-bold text-emerald-700 whitespace-nowrap">
+                        ₱{c.philhealthBenefit.toLocaleString()}
+                      </td>
+                      <td className="px-2 py-2">
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 whitespace-nowrap">
+                          {c.claimStatus}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             )}
           </div>
         </div>

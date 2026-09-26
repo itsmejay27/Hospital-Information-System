@@ -380,3 +380,118 @@ export interface OpdDischarge {
   attendingDoctor?: string;
 }
 
+
+// ------------------------------------------------------------------------------
+// Nursing Station, Duty Shifts & Staff Profile Photos
+// ------------------------------------------------------------------------------
+
+export type CarePlanStatus = "Active" | "Goal Met" | "Partially Met" | "Not Met" | "Revised";
+
+/** Nursing Care Plan following the ADPIE process. */
+export interface NursingCarePlan {
+  id: string;
+  patientId: string;
+  patientName: string;
+  createdAt: string;
+  updatedAt: string;
+  nurse: string;
+  // A — Assessment
+  subjectiveData: string;
+  objectiveData: string;
+  // D — Nursing Diagnosis (NANDA-I)
+  nursingDiagnosis: string;
+  relatedTo: string;
+  // P — Planning
+  goal: string;
+  expectedOutcomes: string;
+  // I — Intervention
+  interventions: string;
+  rationale: string;
+  // E — Evaluation
+  evaluation: string;
+  status: CarePlanStatus;
+}
+
+export type DoctorOrderCategory =
+  | "Medication"
+  | "Laboratory"
+  | "Imaging / Diagnostics"
+  | "IV Fluids"
+  | "Diet"
+  | "Activity"
+  | "Monitoring"
+  | "Nursing Care"
+  | "Referral"
+  | "Other";
+
+export type DoctorOrderStatus = "Pending" | "Carried Out" | "Discontinued";
+
+export interface DoctorOrder {
+  id: string;
+  patientId: string;
+  patientName: string;
+  orderedAt: string;
+  orderedBy: string;
+  orderedByLicense?: string;
+  category: DoctorOrderCategory;
+  order: string;
+  priority: "Routine" | "Urgent" | "STAT";
+  status: DoctorOrderStatus;
+  carriedOutBy?: string;
+  carriedOutAt?: string;
+  remarks?: string;
+}
+
+/** Nurses' notes in FDAR format (Focus, Data, Action, Response). */
+export interface NurseNote {
+  id: string;
+  patientId: string;
+  patientName: string;
+  timestamp: string;
+  shift: DutyShift;
+  nurse: string;
+  focus: string;
+  data: string;
+  action: string;
+  response: string;
+}
+
+export interface ChiefComplaintEntry {
+  id: string;
+  patientId: string;
+  patientName: string;
+  recordedAt: string;
+  recordedBy: string;
+  complaint: string;
+  onset: string;
+  duration: string;
+  location: string;
+  severity: number; // pain / discomfort scale 0-10
+  associatedSymptoms: string;
+}
+
+export type DutyShift = "Morning" | "Afternoon" | "Night";
+
+export const DUTY_SHIFT_HOURS: Record<DutyShift, string> = {
+  Morning: "06:00 – 14:00",
+  Afternoon: "14:00 – 22:00",
+  Night: "22:00 – 06:00",
+};
+
+export interface ShiftSchedule {
+  id: string;
+  userId: string;
+  staffName: string;
+  role: Role;
+  date: string; // YYYY-MM-DD
+  shift: DutyShift;
+  area: string;
+  assignedBy: string;
+  notes?: string;
+}
+
+export interface StaffPhoto {
+  id: string; // staff user id
+  image: string; // data URL (resized JPEG)
+  updatedAt: string;
+}

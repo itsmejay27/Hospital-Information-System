@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { User, Role } from "../types";
 import { isSupabaseConfigured } from "../services/supabase";
+import StaffAvatar from "../components/StaffAvatar";
 import {
   Users,
   Plus,
@@ -188,9 +189,7 @@ export default function AdminAccountsView({
                   <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="py-3 px-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-800 text-white font-bold flex items-center justify-center text-xs shrink-0">
-                          {u.avatarInitials}
-                        </div>
+                        <StaffAvatar user={u} size={32} />
                         <div>
                           <div className="font-bold text-slate-900">{u.name}</div>
                           <div className="text-[10px] text-slate-400 font-mono">@{u.username || u.id}</div>
