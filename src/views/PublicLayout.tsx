@@ -108,11 +108,11 @@ export default function PublicLayout() {
                 }}
               />
               <div>
-                <div className="font-serif text-lg font-bold text-slate-900 leading-tight">
+                <div className="text-lg font-bold text-slate-900 leading-tight">
                   CarePoint Medical Center
                 </div>
                 <div className="text-[10px] text-teal-600 tracking-wider uppercase font-semibold">
-                  Hospital Information System (HIS)
+                  Quality Care. Closer to You.
                 </div>
               </div>
             </Link>
@@ -183,10 +183,10 @@ export default function PublicLayout() {
               ) : (
                 <button
                   onClick={() => setIsAuthModalOpen(true)}
-                  className="bg-teal-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors shadow-xs flex items-center gap-2 cursor-pointer"
+                  className="hidden sm:flex bg-teal-600 text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-teal-700 transition-colors shadow-xs items-center gap-2 cursor-pointer"
                 >
                   <LogIn size={15} strokeWidth={2} className="text-white" />
-                  <span>Staff Portal Sign In</span>
+                  <span>Staff Sign In</span>
                 </button>
               )}
 
@@ -243,6 +243,18 @@ export default function PublicLayout() {
                 <span>Enter OPD Clinical System</span>
               </Link>
             )}
+            {!isAuthenticated && (
+              <button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setIsAuthModalOpen(true);
+                }}
+                className="w-full text-left px-3 py-2 text-sm font-semibold text-teal-700 bg-teal-50 rounded-md mt-2 flex items-center gap-2 cursor-pointer"
+              >
+                <LogIn size={16} strokeWidth={2} />
+                <span>Staff Sign In</span>
+              </button>
+            )}
           </div>
         )}
       </header>
@@ -259,42 +271,37 @@ export default function PublicLayout() {
       />
 
       {/* Public Footer */}
-      <footer className="bg-slate-900 text-white mt-16 border-t border-slate-800">
+      <footer className="bg-slate-900 text-white border-t border-slate-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
             {/* Hospital Info */}
             <div>
-              <div className="font-serif text-xl font-bold mb-1 text-white">{hospitalConfig.name}</div>
-              <div className="text-xs text-teal-400 uppercase tracking-wider font-semibold mb-3">
-                Hospital Information System (HIS)
-              </div>
+              <div className="text-xl font-bold mb-1 text-white">{hospitalConfig.name}</div>
+              <div className="text-xs text-teal-400 font-semibold mb-3">{hospitalConfig.tagline}</div>
               <p className="text-xs text-slate-300 leading-relaxed">
-                {hospitalConfig.tagline}. Certified DOH Level 3 Tertiary Teaching Hospital and PhilHealth Center of Excellence.
+                DOH-licensed tertiary hospital and PhilHealth-accredited outpatient center.
               </p>
               <div className="mt-4 text-[11px] text-slate-400">
                 <span className="font-bold text-teal-400">Accreditation:</span> {hospitalConfig.accreditation}
               </div>
             </div>
 
-            {/* Clinical Workbenches */}
+            {/* Services */}
             <div>
-              <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-                Clinical Modules & Workbenches
-              </div>
-              <div className="space-y-1.5 text-xs text-slate-300">
-                <div>• Outpatient Department (OPD) Workbench</div>
-                <div>• Patient Live Queue & Priority Triage</div>
-                <div>• Inpatient Medication Administration (MAR)</div>
-                <div>• PhilHealth eClaims & Konsulta Management</div>
-                <div>• Diagnostic Laboratory & Digital Radiology</div>
-                <div>• Data Privacy & Cryptographic Audit Ledger</div>
+              <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Services</div>
+              <div className="space-y-2">
+                {DEPARTMENTS.map(d => (
+                  <Link key={d.name} to="/departments" className="block text-xs text-slate-300 hover:text-teal-400 transition-colors">
+                    {d.name}
+                  </Link>
+                ))}
               </div>
             </div>
 
             {/* Quick Navigation */}
             <div>
               <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">
-                Hospital Information
+                Quick Links
               </div>
               <div className="space-y-2">
                 {publicLinks.map(p => (
@@ -306,15 +313,6 @@ export default function PublicLayout() {
                     {p.label}
                   </Link>
                 ))}
-                <button
-                  onClick={() => {
-                    const opener = (window as any).__openAuthModal;
-                    if (opener) opener();
-                  }}
-                  className="block text-left text-xs text-teal-400 hover:text-teal-300 font-semibold transition-colors pt-1 cursor-pointer"
-                >
-                  Medical Staff Portal Login →
-                </button>
               </div>
             </div>
 
@@ -346,182 +344,167 @@ export default function PublicLayout() {
   );
 }
 
+// Medical departments shown on the home and departments pages
+const DEPARTMENTS = [
+  { name: "Internal Medicine & Cardiology", desc: "Adult specialty care, hypertension, echocardiography, cardiac monitoring.", icon: HeartPulse },
+  { name: "General & Laparoscopic Surgery", desc: "24/7 operating suites, minimally invasive appendectomy, wound debridement.", icon: Stethoscope },
+  { name: "Emergency & Trauma Center", desc: "Level 3 trauma resuscitation unit, stat triage, resuscitation beds.", icon: Siren },
+  { name: "Clinical Pathology & Laboratory", desc: "Automated hematology, clinical chemistry, microbiology, blood banking.", icon: Microscope },
+  { name: "Radiology & Diagnostic Imaging", desc: "Digital PA X-ray, multi-slice CT, ultrasound sonograms.", icon: Scan },
+  { name: "Inpatient Ward Administration", desc: "Comprehensive bedside nursing, IV therapy, SBAR shift continuity.", icon: Bed },
+];
+
 // — Public Home Page —
 export function PublicHomePage() {
   const { user, isAuthenticated } = useAuth();
   const { hospitalConfig } = useOpdData();
   const navigate = useNavigate();
 
+  const openStaffPortal = () => {
+    if (isAuthenticated && user) return navigate("/dashboard");
+    const open = (window as any).__openAuthModal;
+    if (open) open();
+  };
+
+  const quickInfo = [
+    {
+      icon: Siren,
+      title: "24/7 Emergency",
+      value: `Call ${hospitalConfig.emergencyHotline}`,
+      tone: "text-rose-600 bg-rose-50 border-rose-100",
+    },
+    { icon: Phone, title: "Appointments & Inquiries", value: hospitalConfig.phone, tone: "text-sky-700 bg-sky-50 border-sky-100" },
+    { icon: Clock, title: "Outpatient Clinic Hours", value: "Mon – Sat, 8:00 AM – 5:00 PM", tone: "text-emerald-700 bg-emerald-50 border-emerald-100" },
+    { icon: MapPin, title: "Location", value: hospitalConfig.address, tone: "text-amber-700 bg-amber-50 border-amber-100" },
+  ];
+
+  const steps = [
+    { n: "1", title: "Register", desc: "Present a valid ID and PhilHealth details at the front desk." },
+    { n: "2", title: "Triage & Vitals", desc: "A nurse takes your vital signs and chief complaint." },
+    { n: "3", title: "Consultation", desc: "See your doctor for assessment, orders and prescriptions." },
+    { n: "4", title: "Billing & Discharge", desc: "PhilHealth benefits are applied before you pay." },
+  ];
+
   return (
-    <div>
-      {/* Hero Section */}
-      <section className="relative min-h-[500px] sm:min-h-[540px] flex items-center overflow-hidden">
-        <img
-          src="https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=1600&h=750&fit=crop&auto=format"
-          alt="Healthcare professionals consulting"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-900/80 to-transparent" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-16 text-white w-full flex items-center justify-between gap-10">
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 bg-teal-500/20 text-teal-300 border border-teal-400/30 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest mb-4">
-              CarePoint Medical Center
-            </div>
-            <h1 className="font-serif text-3xl sm:text-5xl leading-tight mb-5 text-white font-bold">
-              Quality Care.<br />Closer to You.
+    <div className="bg-white">
+      {/* Hero */}
+      <section className="bg-gradient-to-b from-sky-50 to-white border-b border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-14 sm:py-20 grid lg:grid-cols-2 gap-10 items-center">
+          <div>
+            <span className="inline-block text-[11px] font-bold uppercase tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full">
+              {hospitalConfig.name}
+            </span>
+            <h1 className="mt-4 text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 leading-tight">
+              Quality Care.
+              <br />
+              <span className="text-sky-700">Closer to You.</span>
             </h1>
-            <p className="text-slate-200 text-sm sm:text-base leading-relaxed mb-8">
-              A modern hospital information system integrating physician consultation workbenches, structured MAR tables, 3-tier Priority Watch triage, bedside fluid charting, and immutable cryptographic audit ledgers.
+            <p className="mt-4 text-sm sm:text-base text-slate-600 leading-relaxed max-w-lg">
+              Outpatient consultations, emergency care, laboratory and imaging services, and inpatient wards — all in one
+              PhilHealth-accredited hospital.
             </p>
-            <div className="flex flex-wrap gap-3">
-              {isAuthenticated && user ? (
-                <button
-                  onClick={() => navigate("/dashboard")}
-                  className="bg-teal-600 text-white text-sm font-bold px-6 py-3 rounded-xl hover:bg-teal-500 transition-colors shadow-lg flex items-center gap-2 cursor-pointer"
-                >
-                  <span>Enter Clinical Workbench</span>
-                  <ArrowRight size={16} strokeWidth={2} />
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    const ctx = (window as any).__openAuthModal;
-                    if (ctx) ctx();
-                    else navigate("/dashboard");
-                  }}
-                  className="bg-teal-600 text-white text-sm font-bold px-6 py-3 rounded-xl hover:bg-teal-500 transition-colors shadow-lg flex items-center gap-2 cursor-pointer"
-                >
-                  <span>Staff Portal Sign In</span>
-                  <LogIn size={16} strokeWidth={2} />
-                </button>
-              )}
+            <div className="mt-7 flex flex-wrap gap-3">
               <Link
-                to="/about"
-                className="bg-white/10 text-white text-sm font-semibold px-6 py-3 rounded-xl hover:bg-white/20 transition-colors border border-white/20 flex items-center gap-1.5"
+                to="/departments"
+                className="px-5 py-3 rounded-xl bg-sky-700 hover:bg-sky-800 text-white text-sm font-bold flex items-center gap-2"
               >
-                About Our Hospital
+                Our Services <ArrowRight size={16} />
+              </Link>
+              <Link
+                to="/contact"
+                className="px-5 py-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 text-sm font-bold"
+              >
+                Contact Us
               </Link>
             </div>
           </div>
-          <img
-            src="/carepoint-logo-full.jpg"
-            alt="CarePoint Medical Center — Quality Care. Closer to You."
-            className="hidden lg:block w-80 h-80 rounded-3xl bg-white p-3 shadow-2xl object-contain shrink-0"
-          />
-        </div>
-      </section>
-
-      {/* Hospital Operational Pillars */}
-      <section className="py-14 bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <div className="text-teal-600 text-xs font-bold tracking-widest uppercase mb-1">
-              Standard Clinical Modules
-            </div>
-            <h2 className="font-serif text-2xl sm:text-3xl text-slate-900 font-bold">
-              Full-Spectrum Healthcare Operations
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-teal-500/30 transition-all shadow-xs">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center mb-4">
-                <Stethoscope size={24} strokeWidth={2} />
-              </div>
-              <h3 className="font-bold text-base text-slate-900 mb-1">Priority Watch & Triage</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                3-tier visual acuity categorization (Critical Care, Observation, Stable) with live count indicators and clinical filtering.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-teal-500/30 transition-all shadow-xs">
-              <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-800 flex items-center justify-center mb-4">
-                <Pill size={24} strokeWidth={2} />
-              </div>
-              <h3 className="font-bold text-base text-slate-900 mb-1">Structured MAR & Fluid Charting</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Tabular Medication Administration Record with route, schedule, nurse verification, and precise intake/output fluid balance.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-teal-500/30 transition-all shadow-xs">
-              <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center mb-4">
-                <ShieldCheck size={24} strokeWidth={2} />
-              </div>
-              <h3 className="font-bold text-base text-slate-900 mb-1">PhilHealth & Insurance</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                PhilHealth PIN verification, membership category tracking (Direct, Indirect, Senior, PWD), and case rate benefit management.
-              </p>
-            </div>
-
-            <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50/70 hover:bg-white hover:border-teal-500/30 transition-all shadow-xs">
-              <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center mb-4">
-                <FileCheck size={24} strokeWidth={2} />
-              </div>
-              <h3 className="font-bold text-base text-slate-900 mb-1">Shift Handoffs & Visitors</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                SBAR nursing endorsement handoff records and hospital-wide visitor badge logging with precision check-in/out stamps.
-              </p>
-            </div>
+          <div className="hidden lg:flex justify-center">
+            <img
+              src="/carepoint-logo-full.jpg"
+              alt={`${hospitalConfig.name} — Quality Care. Closer to You.`}
+              className="w-96 h-96 object-contain rounded-3xl bg-white p-4 shadow-xl border border-slate-100"
+            />
           </div>
         </div>
       </section>
 
-      {/* Fast Clinical Portal Access */}
-      <section className="py-12 bg-slate-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          <div className="bg-slate-900 rounded-2xl p-6 sm:p-8 text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-6 border border-slate-800">
-            <div>
-              <div className="inline-flex items-center gap-2 bg-teal-500/20 text-teal-400 text-xs px-2.5 py-1 rounded-full font-bold mb-2">
-                <Building2 size={14} strokeWidth={2} />
-                <span>Outpatient Department (OPD) System</span>
+      {/* Quick information */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 -mt-8 relative">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {quickInfo.map(q => (
+            <div key={q.title} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex items-start gap-3">
+              <div className={`w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 ${q.tone}`}>
+                <q.icon size={18} />
               </div>
-              <h3 className="text-xl font-bold text-white mb-1">Authorized Medical Staff Portal</h3>
-              <p className="text-xs text-slate-300 max-w-md">
-                Doctors, Nurses, Admissions Officers, and Hospital Administrators can authenticate to access real-time patient charts and queues.
-              </p>
+              <div className="min-w-0">
+                <div className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{q.title}</div>
+                <div className="text-sm font-semibold text-slate-900 mt-0.5">{q.value}</div>
+              </div>
             </div>
-            <button
-              onClick={() => {
-                if (isAuthenticated) {
-                  navigate("/dashboard");
-                } else {
-                  const ctx = (window as any).__openAuthModal;
-                  if (ctx) ctx();
-                  else navigate("/dashboard");
-                }
-              }}
-              className="shrink-0 px-6 py-3 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer"
-            >
-              <span>{isAuthenticated ? "Go to Dashboard" : "Access Clinical Login"}</span>
-              <ArrowRight size={16} strokeWidth={2} />
-            </button>
-          </div>
+          ))}
         </div>
       </section>
 
-      {/* Founder & Medical Director Spotlight */}
-      <section className="py-14 bg-gradient-to-b from-white to-slate-50 border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="bg-slate-900 text-white rounded-3xl p-8 sm:p-12 shadow-xl border border-slate-800 flex flex-col lg:flex-row items-center gap-8">
-            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl bg-teal-600 text-white flex items-center justify-center font-serif text-3xl sm:text-4xl font-bold shadow-lg shrink-0 border-2 border-teal-400/40">
-              MJ
-            </div>
-            <div className="space-y-3 flex-1 text-left">
-              <div className="inline-flex items-center gap-2 bg-teal-500/20 text-teal-300 border border-teal-400/30 px-3 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wider">
-                Founder & Medical Director
-              </div>
-              <h2 className="font-serif text-2xl sm:text-3xl font-bold text-white">
-                Dr. Mark Arkiel Jacobe, MD, FACP
-              </h2>
-              <div className="text-xs font-mono text-teal-300">
-                PRC Lic. #0089201 • Fellow, American College of Physicians (Internal Medicine)
-              </div>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-3xl">
-                "Our guiding philosophy at CarePoint Medical Center is simple yet resolute: modern clinical technology must always amplify compassion, never replace it. Every module of our digital Hospital Information System is engineered to protect patient safety, preserve clinical dignity, and elevate healthcare delivery across our community."
-              </p>
-            </div>
+      {/* Services */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 mb-8">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Our Services</h2>
+            <p className="text-sm text-slate-500 mt-1">Specialist departments ready to care for you and your family.</p>
           </div>
+          <Link to="/departments" className="text-sm font-bold text-sky-700 hover:text-sky-800 flex items-center gap-1">
+            View all departments <ArrowRight size={14} />
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {DEPARTMENTS.map(d => (
+            <div key={d.name} className="rounded-2xl border border-slate-200 p-5 hover:border-sky-300 hover:shadow-sm transition-all flex gap-4">
+              <div className="w-11 h-11 rounded-xl bg-sky-50 text-sky-700 border border-sky-100 flex items-center justify-center shrink-0">
+                <d.icon size={20} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">{d.name}</h3>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed">{d.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Patient visit steps */}
+      <section className="bg-slate-50 border-y border-slate-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 text-center">Your Visit, Step by Step</h2>
+          <p className="text-sm text-slate-500 mt-1 text-center">What to expect when you come for an outpatient consultation.</p>
+          <ol className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {steps.map(st => (
+              <li key={st.n} className="bg-white rounded-2xl border border-slate-200 p-5">
+                <div className="w-9 h-9 rounded-full bg-emerald-600 text-white font-extrabold flex items-center justify-center">
+                  {st.n}
+                </div>
+                <h3 className="mt-3 text-sm font-bold text-slate-900">{st.title}</h3>
+                <p className="text-xs text-slate-600 mt-1 leading-relaxed">{st.desc}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      {/* Staff portal (single, low-key entry point) */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+        <div className="rounded-2xl border border-slate-200 px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-base font-bold text-slate-900">Are you a CarePoint staff member?</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Doctors, nurses, front desk and administrators sign in to the Hospital Information System here.
+            </p>
+          </div>
+          <button
+            onClick={openStaffPortal}
+            className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold flex items-center gap-2 cursor-pointer shrink-0"
+          >
+            {isAuthenticated && user ? "Go to Dashboard" : "Staff Sign In"} <LogIn size={16} />
+          </button>
         </div>
       </section>
     </div>
@@ -541,7 +524,7 @@ export function PublicAboutPage() {
           <Building2 size={18} strokeWidth={2} className="text-teal-600" />
           <span>About Our Institution</span>
         </div>
-        <h1 className="font-serif text-3xl sm:text-4xl text-slate-900 font-bold">{hospitalConfig.name}</h1>
+        <h1 className="text-3xl sm:text-4xl text-slate-900 font-bold">{hospitalConfig.name}</h1>
         <p className="text-xs text-slate-500 mt-1">{hospitalConfig.accreditation}</p>
       </div>
 
@@ -550,14 +533,14 @@ export function PublicAboutPage() {
           {/* Founder Section */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-teal-600 text-white flex items-center justify-center font-serif text-2xl font-bold shrink-0 shadow-xs">
+              <div className="w-16 h-16 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-2xl font-bold shrink-0 shadow-xs">
                 MJ
               </div>
               <div>
                 <div className="text-[10px] uppercase font-bold text-teal-600 tracking-wider">
                   Founder & Medical Director
                 </div>
-                <h2 className="font-serif text-xl font-bold text-slate-900">
+                <h2 className="text-xl font-bold text-slate-900">
                   Dr. Mark Arkiel Jacobe, MD, FACP
                 </h2>
                 <div className="text-[11px] font-mono text-slate-500">
@@ -631,21 +614,14 @@ export function PublicAboutPage() {
 // — Public Departments Page —
 export function PublicDepartmentsPage() {
   const navigate = useNavigate();
-  const depts = [
-    { name: "Internal Medicine & Cardiology", desc: "Adult specialty care, hypertension, echocardiography, cardiac monitoring.", icon: HeartPulse },
-    { name: "General & Laparoscopic Surgery", desc: "24/7 operating suites, minimally invasive appendectomy, wound debridement.", icon: Stethoscope },
-    { name: "Emergency & Trauma Center", desc: "Level 3 trauma resuscitation unit, stat triage, resuscitation beds.", icon: Siren },
-    { name: "Clinical Pathology & Laboratory", desc: "Automated hematology, clinical chemistry, microbiology, blood banking.", icon: Microscope },
-    { name: "Radiology & Diagnostic Imaging", desc: "Digital PA X-ray, multi-slice CT, ultrasound sonograms.", icon: Scan },
-    { name: "Inpatient Ward Administration", desc: "Comprehensive bedside nursing, IV therapy, SBAR shift continuity.", icon: Bed },
-  ];
+  const depts = DEPARTMENTS;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
       <BackButton onBack={() => navigate("/")} label="Back to Home" />
       <div className="mb-8">
         <div className="text-teal-600 text-xs font-bold tracking-widest uppercase mb-1">Clinical Specialties</div>
-        <h1 className="font-serif text-3xl sm:text-4xl text-slate-900 font-bold">Medical Departments & Services</h1>
+        <h1 className="text-3xl sm:text-4xl text-slate-900 font-bold">Medical Departments & Services</h1>
         <p className="text-xs text-slate-500 mt-1">Full-service tertiary clinical departments available 24/7.</p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -674,7 +650,7 @@ export function PublicAnnouncementsPage() {
           <AlertCircle size={18} strokeWidth={2} className="text-teal-600" />
           <span>Hospital Notices</span>
         </div>
-        <h1 className="font-serif text-3xl sm:text-4xl text-slate-900 font-bold">Clinical & Operational Announcements</h1>
+        <h1 className="text-3xl sm:text-4xl text-slate-900 font-bold">Clinical & Operational Announcements</h1>
       </div>
 
       <div className="space-y-4">
@@ -727,7 +703,7 @@ export function PublicStaffPage() {
           <Users size={18} strokeWidth={2} className="text-teal-600" />
           <span>Professional Directory</span>
         </div>
-        <h1 className="font-serif text-3xl sm:text-4xl text-slate-900 font-bold">
+        <h1 className="text-3xl sm:text-4xl text-slate-900 font-bold">
           CarePoint Healthcare Team Directory
         </h1>
         <p className="text-xs text-slate-500 mt-1">
@@ -804,7 +780,7 @@ export function PublicContactPage() {
           <MapPin size={18} strokeWidth={2} className="text-teal-600" />
           <span>Hospital Directory</span>
         </div>
-        <h1 className="font-serif text-3xl sm:text-4xl text-slate-900 font-bold">Contact Information</h1>
+        <h1 className="text-3xl sm:text-4xl text-slate-900 font-bold">Contact Information</h1>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
