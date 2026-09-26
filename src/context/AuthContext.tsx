@@ -43,10 +43,7 @@ async function loadStaffProfile(authId: string): Promise<User | null> {
     .select("data")
     .eq("id", link.user_id)
     .maybeSingle();
-  if (row?.data) return row.data as User;
-
-  // Staff table not seeded yet: fall back to the built-in directory.
-  return Object.values(DEMO_USERS).find(u => u.user.id === link.user_id)?.user ?? null;
+  return (row?.data as User | undefined) ?? null;
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

@@ -35,7 +35,7 @@ import {
   INITIAL_OPD_DISCHARGES,
 } from "../mockData";
 import { hospitalDb } from "../services/db";
-import { isSupabaseConfigured } from "../services/supabase";
+import { supabase, isSupabaseConfigured } from "../services/supabase";
 import { useAuth } from "./AuthContext";
 
 interface OpdDataContextType {
@@ -83,7 +83,8 @@ interface OpdDataContextType {
   hospitalConfig: HospitalConfig;
   updateHospitalConfig: (cfg: HospitalConfig) => void;
   usersList: User[];
-  addUser: (newUser: User, password?: string) => void;
+  /** Creates the staff account; resolves to null on success, or an error message. */
+  addUser: (newUser: User, password: string, email?: string) => Promise<string | null>;
   toggleUserStatus: (userId: string) => void;
 
   // Global Search
@@ -144,7 +145,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
   const [shiftEndorsements, setShiftEndorsements] = useState<ShiftEndorsement[]>(INITIAL_SHIFT_ENDORSEMENTS);
   const [hospitalConfig, setHospitalConfig] = useState<HospitalConfig>(INITIAL_HOSPITAL_CONFIG);
   const [usersList, setUsersList] = useState<User[]>(() =>
-    Object.values(DEMO_USERS).map(u => u.user)
+    isSupabaseConfigured ? [] : Object.values(DEMO_USERS).map(u => u.user)
   );
 
   // Global search state
@@ -429,9 +430,22 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
     hospitalDb.saveHospitalConfig(cfg).catch(console.error);
   };
 
-  const addUser = (newUser: User, _password = "pass") => {
-    setUsersList(prev => [...prev, newUser]);
-    hospitalDb.saveUser(newUser).catch(console.error);
+  const addUser = async (newUser: User, password: string, email?: string): Promise<string | null> => {
+    if (supabase) {
+      // Logins can only be created server-side, and only by an administrator
+      const { data, error } = await supabase.functions.invoke("create-staff-account", {
+        body: { email, password, profile: newUser },
+      });
+      if (error) {
+        const body = await (error as { context?: Response }).context?.json?.().catch(() => null);
+        return body?.error ?? "Could not create the account.";
+      }
+      newUser = data.profile as User;
+      setUsersList(prev => [...prev, newUser]);
+    } else {
+      setUsersList(prev => [...prev, newUser]);
+      hospitalDb.saveUser(newUser).catch(console.error);
+    }
 
     const newLog: AuditLog = {
       id: `AUD-${Date.now().toString().slice(-4)}`,
@@ -447,6 +461,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
     };
     setAuditLogs(prev => [newLog, ...prev]);
     hospitalDb.saveAuditLog(newLog).catch(console.error);
+    return null;
   };
 
   const toggleUserStatus = (userId: string) => {

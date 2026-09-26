@@ -46,15 +46,11 @@ The system employs a **dual-layer database architecture**:
 The web app talks to Supabase directly when `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are set (see `.env.example`; on Vercel, add them under Project Settings → Environment Variables). Without them it runs on the browser-only IndexedDB store with the demo logins.
 
 1. In the Supabase **SQL Editor**, run `database/supabase_setup.sql`. It creates one table per app store (records kept as `jsonb`) and Row Level Security that only lets **signed-in, linked staff** read or write.
-2. Create each staff login under **Authentication → Users → Add user** (tick *Auto Confirm User*).
-3. Link the login to a staff profile id (`D-001`, `N-001`, `A-001`, … from `src/mockData.ts`):
-   ```sql
-   insert into public.staff_accounts (auth_id, user_id)
-   select id, 'D-001' from auth.users where email = 'doctor@example.com';
-   ```
+2. Deploy the Edge Function in `supabase/functions/create-staff-account` (`supabase functions deploy create-staff-account`). It is what lets an administrator create logins from the app.
+3. Create the first administrator by hand (steps at the bottom of `supabase_setup.sql`). From then on, the administrator creates every other account in **Admin → Accounts → Provision Account**; only active admins can do this, and suspending an account there cuts off its access.
 4. Recommended: turn off **Authentication → Sign In / Providers → Allow new users to sign up**. Unlinked sign-ups can't see data anyway, but there's no reason to allow them.
 
-On the first staff sign-in, empty tables are seeded with the demo data from `src/mockData.ts`.
+On the first staff sign-in, empty tables are seeded with the demo patient data from `src/mockData.ts`. The demo staff profiles are **not** seeded in this mode.
 
 > `database/full_setup.sql` is a separate, fully relational schema kept as a reference design; the web app does not use it.
 

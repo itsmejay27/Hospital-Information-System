@@ -253,7 +253,8 @@ class CarePointDatabaseService {
         this.bulkPutInStore("visitor_logs", INITIAL_VISITOR_LOGS),
         this.bulkPutInStore("audit_logs", INITIAL_AUDIT_LOGS),
         this.putInStore("hospital_config", { id: "master-config", ...INITIAL_HOSPITAL_CONFIG }),
-        this.bulkPutInStore("users", Object.values(DEMO_USERS).map((u) => u.user)),
+        // With Supabase, staff logins and profiles are created by the administrator
+        this.bulkPutInStore("users", supabase ? [] : Object.values(DEMO_USERS).map((u) => u.user)),
       ]);
     }
 
@@ -309,7 +310,7 @@ class CarePointDatabaseService {
       visitorLogs: visitorLogs.length > 0 ? visitorLogs : INITIAL_VISITOR_LOGS,
       auditLogs: auditLogs.length > 0 ? auditLogs : INITIAL_AUDIT_LOGS,
       hospitalConfig: hospitalConfig || INITIAL_HOSPITAL_CONFIG,
-      users: users.length > 0 ? users : Object.values(DEMO_USERS).map((u) => u.user),
+      users: users.length > 0 || supabase ? users : Object.values(DEMO_USERS).map((u) => u.user),
     };
   }
 

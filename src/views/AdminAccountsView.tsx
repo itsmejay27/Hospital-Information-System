@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { User, Role } from "../types";
+import { isSupabaseConfigured } from "../services/supabase";
 import {
   Users,
   Plus,
@@ -13,7 +14,7 @@ import {
 interface Props {
   user: User;
   usersList: User[];
-  onAddUser: (newUser: User, password: string) => void;
+  onAddUser: (newUser: User, password: string, email?: string) => Promise<string | null>;
   onToggleUserStatus: (userId: string) => void;
   onSignOut?: () => void;
 }
@@ -36,11 +37,15 @@ export default function AdminAccountsView({
   const [department, setDepartment] = useState("Medical Surgical Ward");
   const [license, setLicense] = useState("PRC Lic. #00");
   const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("pass");
+  const [password, setPassword] = useState(isSupabaseConfigured ? "" : "pass");
+  const [email, setEmail] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
-  const handleCreateUser = (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fullName.trim() || !username.trim()) return;
+    setCreateError(null);
 
     const initials = fullName
       .split(" ")
@@ -50,7 +55,7 @@ export default function AdminAccountsView({
       .join("");
 
     const newUserObj: User = {
-      id: `USR-${Date.now().toString().slice(-4)}`,
+      id: `USR-${Date.now().toString(36).toUpperCase()}`,
       name: fullName,
       role: role,
       title: title,
@@ -61,11 +66,18 @@ export default function AdminAccountsView({
       username: username,
     };
 
-    onAddUser(newUserObj, password);
+    setIsCreating(true);
+    const error = await onAddUser(newUserObj, password, email.trim() || undefined);
+    setIsCreating(false);
+    if (error) {
+      setCreateError(error);
+      return;
+    }
     setShowCreateModal(false);
     setFullName("");
     setUsername("");
-    setPassword("pass");
+    setEmail("");
+    setPassword(isSupabaseConfigured ? "" : "pass");
     setNotification(`Account for ${fullName} (${role.toUpperCase()}) created successfully!`);
     setTimeout(() => setNotification(null), 5000);
   };
@@ -117,7 +129,7 @@ export default function AdminAccountsView({
         </div>
 
         <button
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => { setCreateError(null); setShowCreateModal(true); }}
           className="bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer self-start sm:self-auto"
         >
           <Plus size={16} />
@@ -261,6 +273,11 @@ export default function AdminAccountsView({
             </div>
 
             <div className="space-y-3 text-xs">
+              {createError && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 font-semibold">
+                  {createError}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold uppercase text-slate-600 block mb-1">Full Legal Name *</label>
@@ -327,6 +344,20 @@ export default function AdminAccountsView({
                 />
               </div>
 
+              {isSupabaseConfigured && (
+                <div>
+                  <label className="font-bold uppercase text-slate-600 block mb-1">Login Email *</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="e.g. rmendoza@carepointmedical.ph"
+                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 font-mono focus:bg-white focus:outline-hidden"
+                    required
+                  />
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="font-bold uppercase text-slate-600 block mb-1">Username *</label>
@@ -344,6 +375,9 @@ export default function AdminAccountsView({
                   <input
                     type="password"
                     value={password}
+                    minLength={isSupabaseConfigured ? 8 : undefined}
+                    placeholder={isSupabaseConfigured ? "At least 8 characters" : undefined}
+                    autoComplete="new-password"
                     onChange={e => setPassword(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 font-mono focus:bg-white focus:outline-hidden"
                     required
@@ -362,9 +396,10 @@ export default function AdminAccountsView({
               </button>
               <button
                 type="submit"
-                className="bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs px-4 py-2 rounded-xl cursor-pointer"
+                disabled={isCreating}
+                className="bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs px-4 py-2 rounded-xl cursor-pointer disabled:opacity-60"
               >
-                Provision Account
+                {isCreating ? "Creating..." : "Provision Account"}
               </button>
             </div>
           </form>

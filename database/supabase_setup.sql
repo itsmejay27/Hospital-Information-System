@@ -23,6 +23,7 @@ create schema if not exists private;
 revoke all on schema private from public, anon;
 grant usage on schema private to authenticated;
 
+-- A signed-in login counts as staff only while its linked profile is active.
 create or replace function private.is_staff()
 returns boolean
 language sql
@@ -30,10 +31,35 @@ stable
 security definer
 set search_path = ''
 as $$
-  select exists (select 1 from public.staff_accounts where auth_id = (select auth.uid()));
+  select exists (
+    select 1
+    from public.staff_accounts s
+    join public.users u on u.id = s.user_id
+    where s.auth_id = (select auth.uid())
+      and coalesce(u.data->>'status', 'active') = 'active'
+  );
 $$;
 revoke all on function private.is_staff() from public, anon;
 grant execute on function private.is_staff() to authenticated;
+
+create or replace function private.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from public.staff_accounts s
+    join public.users u on u.id = s.user_id
+    where s.auth_id = (select auth.uid())
+      and coalesce(u.data->>'status', 'active') = 'active'
+      and u.data->>'role' = 'admin'
+  );
+$$;
+revoke all on function private.is_admin() from public, anon;
+grant execute on function private.is_admin() to authenticated;
 
 do $$
 declare
@@ -64,15 +90,29 @@ begin
   end loop;
 end $$;
 
+-- Only admins may change staff profiles (roles, suspension).
+drop policy if exists "staff insert" on public.users;
+drop policy if exists "staff update" on public.users;
+drop policy if exists "staff delete" on public.users;
+drop policy if exists "admin insert" on public.users;
+drop policy if exists "admin update" on public.users;
+drop policy if exists "admin delete" on public.users;
+create policy "admin insert" on public.users for insert to authenticated with check ((select private.is_admin()));
+create policy "admin update" on public.users for update to authenticated using ((select private.is_admin())) with check ((select private.is_admin()));
+create policy "admin delete" on public.users for delete to authenticated using ((select private.is_admin()));
+
 -- ------------------------------------------------------------------------------
 -- Giving a staff member access
 -- ------------------------------------------------------------------------------
--- 1. Supabase Dashboard -> Authentication -> Users -> Add user -> Create new user
---    (enter email + password, tick "Auto Confirm User").
--- 2. Link that login to a staff profile id from src/mockData.ts (DEMO_USERS),
---    e.g. D-001 = Dr. Jacobe, admin = the Hospital Administrator:
+-- Normally: sign in as an administrator and use Admin -> Accounts -> Provision
+-- Account. That calls the `create-staff-account` Edge Function
+-- (supabase/functions/create-staff-account), which creates the login, profile
+-- and link. Suspending a profile there removes its data access immediately.
 --
+-- Bootstrapping the first administrator by hand:
+-- 1. Dashboard -> Authentication -> Users -> Add user (tick "Auto Confirm User").
+-- 2. insert into public.users (id, data) values ('ADMIN-001', '{"id":"ADMIN-001",
+--      "name":"System Administrator","role":"admin","title":"System Administrator",
+--      "department":"Administration","avatarInitials":"SA","status":"active"}');
 --    insert into public.staff_accounts (auth_id, user_id)
---    select id, 'D-001' from auth.users where email = 'doctor@example.com';
---
--- Removing access: delete from public.staff_accounts where user_id = 'D-001';
+--    select id, 'ADMIN-001' from auth.users where email = 'admin@example.com';
