@@ -176,7 +176,7 @@ export default function DoctorWorkbenchView({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <label htmlFor="patient-select" className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
             Active Consultation
           </label>
@@ -257,11 +257,11 @@ export default function DoctorWorkbenchView({
       </div>
 
       {/* Main Clinical Workspace Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* Left Column: SOAP Clinical Encounter Workspace (7 Cols) */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="xl:col-span-7 space-y-6">
           <form onSubmit={handleSaveSoapRecord} className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <FileText size={18} className="text-teal-600" />
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
@@ -474,7 +474,7 @@ export default function DoctorWorkbenchView({
         </div>
 
         {/* Right Column: De-cluttered Clinical Overview & Modals Triggers (5 Cols) */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="xl:col-span-5 space-y-6">
           {/* Card 1: Active Regimens & e-Prescriptions */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3.5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">

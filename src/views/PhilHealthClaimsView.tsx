@@ -149,7 +149,7 @@ export default function PhilHealthClaimsView({
             <p className="text-xs text-slate-500 mt-0.5">Real-time outpatient case rates, member PIN verification, XML adjudication, and reimbursement tracking.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             onClick={() => setIsNewClaimModalOpen(true)}
             className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold border border-emerald-700 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
@@ -161,7 +161,7 @@ export default function PhilHealthClaimsView({
       </div>
 
       {/* 4 Summary Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100/90 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold text-slate-500">Total eClaims</span>

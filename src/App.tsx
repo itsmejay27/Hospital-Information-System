@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { HashRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { OpdDataProvider, useOpdData } from "./context/OpdDataContext";
@@ -343,22 +343,29 @@ function ReportsRoute() {
 function OpdAppLayout() {
   const { hospitalConfig } = useOpdData();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const closeMobileMenu = useCallback(() => setIsMobileMenuOpen(false), []);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#F4F7F6] font-sans text-slate-800 antialiased">
-      {/* Persistent Collapsible Sidebar with Dynamic Routing */}
+    <div className="flex h-dvh w-full overflow-hidden bg-[#F4F7F6] font-sans text-slate-800 antialiased">
+      {/* Sidebar: fixed column on desktop, slide-in drawer on tablet / phone */}
       <OpdSidebar
         collapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        mobileOpen={isMobileMenuOpen}
+        onCloseMobile={closeMobileMenu}
       />
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-40 bg-slate-950/50 lg:hidden" onClick={closeMobileMenu} aria-hidden="true" />
+      )}
 
       {/* Main Workspace Column */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
         {/* Dynamic Top Navigation Bar */}
-        <OpdTopNav emergencyHotline={hospitalConfig.emergencyHotline} />
+        <OpdTopNav emergencyHotline={hospitalConfig.emergencyHotline} onOpenMenu={() => setIsMobileMenuOpen(true)} />
 
         {/* Dynamic Routed Outpatient Department Workspace */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-7 min-w-0">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 lg:p-7 min-w-0">
           <Outlet />
         </main>
       </div>

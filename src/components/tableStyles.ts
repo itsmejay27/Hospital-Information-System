@@ -15,7 +15,7 @@ export const input = `w-full ${inputBase}`;
 export const inlineInput = `w-auto shrink-0 ${inputBase}`;
 export const label = "block text-[11px] font-bold uppercase tracking-wide text-slate-600 mb-1";
 export const primaryBtn =
-  "inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer disabled:opacity-60";
+  "inline-flex items-center gap-1.5 whitespace-nowrap px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer disabled:opacity-60";
 export const secondaryBtn =
-  "inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer";
+  "inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold cursor-pointer";
 export const badge = "inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border whitespace-nowrap";

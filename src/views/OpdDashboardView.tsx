@@ -311,7 +311,7 @@ export default function OpdDashboardView({
         </div>
 
         {/* 4 High-Level System Metrics */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div
             onClick={() => navigate("/admin/compliance")}
             className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs hover:border-amber-300 cursor-pointer transition-all"
@@ -557,7 +557,7 @@ export default function OpdDashboardView({
         </div>
 
         {/* 4 Nursing Stat Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div
             onClick={() => navigate("/clinical?tab=vitals")}
             className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs hover:shadow-md cursor-pointer transition-all flex items-center justify-between"
@@ -1022,7 +1022,7 @@ export default function OpdDashboardView({
         </div>
 
         {/* 4 Administrative Stat Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div
             onClick={() => navigate("/registration/directory")}
             className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs hover:shadow-md cursor-pointer transition-all flex items-center justify-between"
@@ -1456,7 +1456,7 @@ export default function OpdDashboardView({
       </div>
 
       {/* 4 Clinical Stat Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div
           onClick={() => navigate("/queue")}
           className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs hover:shadow-md cursor-pointer transition-all flex items-center justify-between"

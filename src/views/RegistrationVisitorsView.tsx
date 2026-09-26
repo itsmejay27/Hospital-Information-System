@@ -120,7 +120,7 @@ export default function RegistrationVisitorsView({
             <p className="text-xs text-slate-500 mt-0.5">Currently In-Facility: <span className="font-bold text-slate-800">{activeVisitors} Active Visitors</span> across inpatient wards.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <button
             onClick={handleOpenCheckInModal}
             className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold border border-emerald-700 shadow-sm transition-all flex items-center gap-2 cursor-pointer"

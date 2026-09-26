@@ -123,7 +123,7 @@ export default function PatientBedAllocationView({
             <p className="text-xs text-slate-500 mt-0.5">Real-time telemetry of occupied hospital units, vacant beds, and acute ward transfers.</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white text-emerald-700 border border-slate-300 text-xs font-semibold">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             {availableBeds} Beds Vacant
@@ -179,9 +179,9 @@ export default function PatientBedAllocationView({
       </div>
 
       {/* Main Grid: Bed Allocation Intake Form (Left) & Active Ward Roster Table (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* Left Column: Direct Inpatient Bed Allocation Form (5 Cols) */}
-        <div className="lg:col-span-5">
+        <div className="xl:col-span-5">
           <form onSubmit={handleAdmitSubmit} className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <div className="flex items-center gap-2">
@@ -319,7 +319,7 @@ export default function PatientBedAllocationView({
         </div>
 
         {/* Right Column: Active Inpatient Ward Allocation Table (7 Cols) */}
-        <div className="lg:col-span-7 space-y-4">
+        <div className="xl:col-span-7 space-y-4">
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div>

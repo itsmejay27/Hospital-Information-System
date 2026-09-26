@@ -32,11 +32,15 @@ import {
   LogOut,
   ClipboardList,
   Clock,
+  X,
 } from "./Icons";
 
 interface OpdSidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
+  /** Drawer state on tablet / phone widths (below lg). */
+  mobileOpen?: boolean;
+  onCloseMobile?: () => void;
   currentUser?: User | null;
   queueCount?: number;
 }
@@ -62,6 +66,8 @@ interface NavItem {
 export default function OpdSidebar({
   collapsed,
   onToggleCollapse,
+  mobileOpen = false,
+  onCloseMobile,
   currentUser: propsUser,
   queueCount: propsQueueCount,
 }: OpdSidebarProps) {
@@ -76,7 +82,23 @@ export default function OpdSidebar({
 
   // Auto-collapsible hover expansion state
   const [isHovered, setIsHovered] = useState(false);
-  const showFullSidebar = isHovered || !collapsed;
+  // Below lg the sidebar is a slide-in drawer, always shown at full width
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window === "undefined" || window.matchMedia("(min-width: 1024px)").matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  const showFullSidebar = !isDesktop || isHovered || !collapsed;
+
+  // Close the drawer after navigating
+  useEffect(() => {
+    onCloseMobile?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, location.search]);
 
   // Track expanded parent sections
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({
@@ -378,11 +400,11 @@ export default function OpdSidebar({
 
   return (
     <aside
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={() => isDesktop && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative flex flex-col bg-[#0B0F17] border-r border-slate-800/80 text-slate-300 transition-all duration-300 ease-in-out z-30 select-none overflow-hidden ${
-        !showFullSidebar ? "w-[68px]" : "w-64 shadow-2xl"
-      }`}
+      className={`fixed inset-y-0 left-0 lg:static lg:translate-x-0 flex flex-col bg-[#0B0F17] border-r border-slate-800/80 text-slate-300 transition-all duration-300 ease-in-out z-50 lg:z-30 select-none overflow-hidden shrink-0 ${
+        mobileOpen ? "translate-x-0" : "-translate-x-full"
+      } ${!showFullSidebar ? "w-[68px]" : "w-72 max-w-[85vw] lg:w-64 shadow-2xl"}`}
     >
       {/* Brand Header */}
       <div className="h-16 flex items-center justify-between px-3.5 border-b border-slate-800/80 bg-[#070A0F] shrink-0">
@@ -409,8 +431,15 @@ export default function OpdSidebar({
 
         {/* Collapse toggle button */}
         <button
+          onClick={onCloseMobile}
+          aria-label="Close menu"
+          className="lg:hidden w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center shrink-0 cursor-pointer"
+        >
+          <X size={16} />
+        </button>
+        <button
           onClick={onToggleCollapse}
-          className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+          className="hidden lg:flex w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-100 items-center justify-center transition-colors shrink-0 cursor-pointer"
           title={!showFullSidebar ? "Expand sidebar" : "Collapse sidebar"}
         >
           {!showFullSidebar ? <ChevronRight size={15} strokeWidth={2} /> : <ChevronLeft size={15} strokeWidth={2} />}

@@ -59,7 +59,7 @@ export default function OpdReportsView({
             <p className="text-xs text-slate-500 mt-0.5">Departmental clinical reporting, ICD-10 epidemiology statistics, and Universal Health Care metrics.</p>
           </div>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
           <select
             value={reportPeriod}
             onChange={e => setReportPeriod(e.target.value)}
@@ -82,7 +82,7 @@ export default function OpdReportsView({
       </div>
 
       {/* 4 High-Level Aggregate Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-100/90 shadow-xs flex items-center justify-between">
           <div>
             <span className="text-xs font-semibold text-slate-500">Total Consultations</span>
@@ -153,6 +153,7 @@ export default function OpdReportsView({
             </span>
           </div>
 
+          <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
@@ -182,6 +183,7 @@ export default function OpdReportsView({
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Right: Hospital Financial & Demographics Summary */}

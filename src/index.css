@@ -79,3 +79,11 @@ body {
 .bg-radial-glow {
   background: radial-gradient(circle at 75% 35%, rgba(16, 185, 129, 0.25), transparent 60%);
 }
+
+/* Responsive safety net: form controls never push the page wider than the screen */
+select,
+input,
+textarea {
+  max-width: 100%;
+  min-width: 0;
+}

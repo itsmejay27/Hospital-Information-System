@@ -21,6 +21,7 @@ import {
   UserPlus,
   Bell,
   Settings,
+  Menu,
 } from "./Icons";
 import AuthModal from "./AuthModal";
 
@@ -32,6 +33,8 @@ interface OpdTopNavProps {
   onSelectPatient?: (patient: Patient) => void;
   selectedPatient?: Patient | null;
   emergencyHotline?: string;
+  /** Opens the navigation drawer on tablet / phone widths. */
+  onOpenMenu?: () => void;
 }
 
 export default function OpdTopNav({
@@ -42,6 +45,7 @@ export default function OpdTopNav({
   onSelectPatient: propsSelectPatient,
   selectedPatient: propsSelectedPatient,
   emergencyHotline = "911",
+  onOpenMenu,
 }: OpdTopNavProps) {
   const navigate = useNavigate();
   const { user: authUser, switchUser: authSwitchUser, logout: authLogout, isSecureMode } = useAuth();
@@ -156,9 +160,20 @@ export default function OpdTopNav({
   };
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200/80 px-4 sm:px-6 flex items-center justify-between gap-4 z-20 shrink-0 select-none shadow-2xs">
+    <header className="h-16 bg-white border-b border-slate-200/80 px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-4 z-20 shrink-0 select-none shadow-2xs">
       {/* Left Area: CarePoint Logo, Emergency Hotline & Selected Patient Badge */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        {/* Menu button (tablet / phone) */}
+        {onOpenMenu && (
+          <button
+            onClick={onOpenMenu}
+            aria-label="Open menu"
+            className="lg:hidden w-9 h-9 -ml-1 rounded-lg flex items-center justify-center text-slate-700 hover:bg-slate-100 cursor-pointer shrink-0"
+          >
+            <Menu size={20} />
+          </button>
+        )}
+
         {/* CarePoint Hospital Logo */}
         <div
           onClick={() => navigate("/dashboard")}
@@ -194,7 +209,10 @@ export default function OpdTopNav({
             <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-600"></span>
           </span>
           <PhoneCall size={13} strokeWidth={2} className="text-rose-600 group-hover:scale-110 transition-transform" />
-          <span className="text-[11px] uppercase tracking-wider font-bold">EMERGENCY: {emergencyHotline}</span>
+          <span className="text-[11px] uppercase tracking-wider font-bold">
+            <span className="hidden sm:inline">EMERGENCY: </span>
+            {emergencyHotline}
+          </span>
         </a>
 
         {/* Public Site Link */}
