@@ -132,28 +132,21 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
       )}
 
       {/* Header Banner (Medzone Emerald Hospital Theme) */}
-      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative z-10 max-w-xl">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
-              Admissions Desk • Registration Workflow
-            </span>
-            <span className="text-xs text-emerald-200/80 font-mono">/registration/new-patient</span>
+      <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
+            <UserPlus size={20} />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
-            <UserPlus size={28} className="text-emerald-300" />
-            <span>Patient Registration & Intake</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-emerald-100/90 mt-1">
-            Intake Officer: <span className="font-semibold text-white">{user.name}</span> ({user.department || user.title})
-          </p>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 leading-tight">Patient Registration & Intake</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Intake Officer: <span className="font-semibold text-slate-800">{user.name}</span> ({user.department || user.title})</p>
+          </div>
         </div>
-
-        <div className="relative z-10 flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={() => navigate("/registration/directory")}
-            className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/30 backdrop-blur-xs transition-all cursor-pointer"
+            className="px-5 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-300 transition-all cursor-pointer"
           >
             <span>Master Directory</span>
           </button>

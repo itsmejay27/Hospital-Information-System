@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { DiagnosticResult } from "../../types";
 import { useOpdData } from "../../context/OpdDataContext";
 import Modal from "../../components/Modal";
+import LabResultsTable from "../../components/LabResultsTable";
 import { Search } from "../../components/Icons";
 import * as ui from "../../components/tableStyles";
 import { NursingTabProps } from "./helpers";
@@ -120,30 +121,9 @@ export default function NurseLabsTab({ patientId }: NursingTabProps) {
           subtitle={`${viewing.id} • ${viewing.date} • ordered by ${viewing.orderingPhysician} • released by ${viewing.releasedBy}`}
           onClose={() => setViewing(null)}
         >
-          <table className={`${ui.table} border border-slate-200`}>
-            <thead className={ui.thead}>
-              <tr>
-                <th className={ui.th}>Parameter</th>
-                <th className={ui.th}>Result</th>
-                <th className={ui.th}>Unit</th>
-                <th className={ui.th}>Reference Range</th>
-                <th className={ui.th}>Flag</th>
-              </tr>
-            </thead>
-            <tbody>
-              {viewing.items.map(i => (
-                <tr key={i.name} className={`${ui.tr} ${i.flag ? "bg-rose-50/60" : ""}`}>
-                  <td className={`${ui.td} font-semibold`}>{i.name}</td>
-                  <td className={`${ui.td} font-mono font-bold ${i.flag ? "text-rose-700" : "text-slate-900"}`}>{i.value}</td>
-                  <td className={ui.td}>{i.unit || "—"}</td>
-                  <td className={`${ui.td} font-mono`}>{i.ref}</td>
-                  <td className={ui.td}>
-                    {i.flag === "H" ? "High" : i.flag === "L" ? "Low" : <span className="text-slate-400">Normal</span>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="rounded-lg border border-slate-200 overflow-hidden">
+            <LabResultsTable items={viewing.items} />
+          </div>
           <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
             <span className="font-bold text-slate-700">Summary: </span>
             {viewing.summary}

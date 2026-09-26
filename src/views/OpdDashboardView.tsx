@@ -286,27 +286,26 @@ export default function OpdDashboardView({
     return (
       <div className="space-y-6">
         {/* Admin Welcome Hero Banner */}
-        <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-amber-950 rounded-3xl p-6 text-white shadow-md border border-amber-900/40 relative overflow-hidden">
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
-            <div className="space-y-1.5 max-w-xl">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold">
-                <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                System & Security Operations • Admin Session Active
-              </div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
-                Welcome, {user.name}!
-              </h2>
-              <p className="text-xs text-slate-300 leading-relaxed">
-                Hospital System Infrastructure & Role-Based Access Security are fully active. You are viewing high-level system health metrics, account management controls, and immutable audit ledgers.
-              </p>
-            </div>
-
+        <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 leading-tight">Welcome, {user.name}</h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              System administration: staff accounts, duty shifts, audit ledger and access control.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => navigate("/admin/accounts")}
-              className="px-5 py-2.5 rounded-full bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-2 shadow-md transition-all shrink-0 cursor-pointer hover:scale-105"
+              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer"
             >
-              <ShieldCheck size={16} strokeWidth={2} />
-              <span>Open Admin & Security Console</span>
+              <ShieldCheck size={15} strokeWidth={2} />
+              <span>Manage Accounts</span>
+            </button>
+            <button
+              onClick={() => navigate("/shifts")}
+              className="px-4 py-2 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs cursor-pointer"
+            >
+              Duty Shifts
             </button>
           </div>
         </div>
@@ -526,113 +525,35 @@ export default function OpdDashboardView({
           </div>
         )}
 
-        {/* Top Greeting Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <span>Hello, {user?.name ? user.name.split(" ")[0] : "Nurse"}</span>
-              <span>💉</span>
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Nursing Station, Hemodynamic Vitals Entry & Inpatient Bed Telemetry
-            </p>
+        {/* Page Header & Quick Actions */}
+        <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 leading-tight">Hello, {user?.name ? user.name : "Nurse"}</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Nursing Station, Hemodynamic Vitals Entry & Inpatient Bed Telemetry</p>
           </div>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-teal-50 text-teal-800 border border-teal-200 text-xs font-semibold shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
-            Nursing Station Active • {user?.licenseNumber || "PRC Registered Nurse"}
-          </span>
-        </div>
-
-        {/* Dual Hero Banners Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2 bg-gradient-to-r from-teal-800 via-emerald-800 to-teal-900 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-teal-500/40 relative overflow-hidden flex flex-col justify-between min-h-[190px]">
-            <div className="relative z-10 max-w-lg">
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-white/10 text-teal-200 px-2.5 py-0.5 rounded-full border border-white/20 mb-2">
-                Bedside Triage & Ward Care
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-snug text-white">
-                Nursing Care & Bedside Triage Station 💉
-              </h2>
-              <p className="text-xs sm:text-sm text-teal-100/90 mt-2 leading-relaxed">
-                Log patient hemodynamics (BP, HR, SpO2, Temp, BMI), triage patient acuity levels, and manage inpatient ward beds.
-              </p>
-
-              <div className="flex flex-wrap items-center gap-3 mt-5">
+          <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => navigate("/clinical?tab=vitals")}
-                  className="px-5 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <Activity size={15} />
                   <span>Triage & Vitals Assessment</span>
                 </button>
                 <button
                   onClick={() => navigate("/registration/beds")}
-                  className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/30 backdrop-blur-xs transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+                  className="px-4 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-300 transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <Bed size={15} />
                   <span>Ward Bed Telemetry</span>
                 </button>
                 <button
                   onClick={() => setIsVitalsModalOpen(true)}
-                  className="px-4 py-2.5 rounded-full bg-teal-500/30 hover:bg-teal-500/50 text-white text-xs font-bold border border-teal-300/30 transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+                  className="px-4 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-300 transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <Plus size={15} />
                   <span>Quick Log Vitals</span>
                 </button>
               </div>
-            </div>
-
-            {/* Stethoscope Tubing Accent SVG */}
-            <svg className="absolute right-2 -bottom-2 w-48 h-48 text-teal-200/20 pointer-events-none hidden sm:block" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <circle cx="50" cy="50" r="40" strokeDasharray="6,6" />
-              <path d="M20 50 Q 50 10, 80 50 T 20 50" />
-            </svg>
-          </div>
-
-          <div className="bg-gradient-to-br from-teal-950 via-slate-900 to-[#02211B] rounded-3xl p-6 text-white shadow-md border border-teal-800/50 flex flex-col justify-between min-h-[190px]">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-white tracking-tight">
-                Ward Hemodynamics
-              </h3>
-              <span className="text-[10px] bg-teal-500/20 text-teal-300 border border-teal-500/30 px-2 py-0.5 rounded-full font-bold">
-                Nursing Live
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 items-center gap-2 my-2">
-              <div className="space-y-2.5 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-xs bg-rose-400 shrink-0"></span>
-                  <span className="text-slate-300 text-[11px]">Critical Tier 1:</span>
-                  <span className="text-white font-bold text-[11px] font-mono">{criticalCount}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-xs bg-amber-400 shrink-0"></span>
-                  <span className="text-slate-300 text-[11px]">Vitals Needed:</span>
-                  <span className="text-white font-bold text-[11px] font-mono">{waitingCount}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-xs bg-emerald-400 shrink-0"></span>
-                  <span className="text-slate-300 text-[11px]">Beds In-Use:</span>
-                  <span className="text-white font-bold text-[11px] font-mono">{admissions.length}/30</span>
-                </div>
-              </div>
-
-              <div className="relative flex items-center justify-center">
-                <div className="relative w-24 h-24 flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full border-4 border-teal-500/30 animate-pulse"></div>
-                  <div className="w-14 h-14 rounded-full bg-teal-500/20 border border-teal-400/60 flex items-center justify-center text-xl shadow-inner">
-                    🩺
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-teal-800/60 flex items-center justify-between text-[11px] text-teal-300/90">
-              <span>Manchester Triage Scale</span>
-              <span className="font-semibold text-white">Station Ready</span>
-            </div>
-          </div>
         </div>
 
         {/* 4 Nursing Stat Cards */}
@@ -1069,114 +990,35 @@ export default function OpdDashboardView({
           </div>
         )}
 
-        {/* Top Greeting Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <span>Hello, {user?.name ? user.name.split(" ")[0] : "Staff"}</span>
-              <span>📋</span>
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-              Patient Admissions, Inpatient Bed Allocations, Visitor Logs & PhilHealth eClaims
-            </p>
+        {/* Page Header & Quick Actions */}
+        <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 leading-tight">Hello, {user?.name ? user.name : "Staff"}</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Patient Admissions, Inpatient Bed Allocations, Visitor Logs & PhilHealth eClaims</p>
           </div>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Admissions Desk Active • {user?.title || "Patient Services"}
-          </span>
-        </div>
-
-        {/* Dual Hero Banners Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2 bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-900 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col justify-between min-h-[190px]">
-            <div className="relative z-10 max-w-lg">
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-white/10 text-emerald-200 px-2.5 py-0.5 rounded-full border border-white/20 mb-2">
-                Patient Frontline Services
-              </span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-snug text-white">
-                Admissions Desk & Front Desk Reception 📋
-              </h2>
-              <p className="text-xs sm:text-sm text-emerald-100/90 mt-2 leading-relaxed">
-                Register new outpatients, manage ward bed assignments, issue visitor passes, and submit PhilHealth eClaims.
-              </p>
-
-              <div className="flex flex-wrap items-center gap-3 mt-5">
+          <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => navigate("/registration/new-patient")}
-                  className="px-5 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+                  className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <UserPlus size={15} />
                   <span>Register New Patient</span>
                 </button>
                 <button
                   onClick={() => navigate("/registration/beds")}
-                  className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/30 backdrop-blur-xs transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+                  className="px-4 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-300 transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <Bed size={15} />
                   <span>Allocate Ward Bed</span>
                 </button>
                 <button
                   onClick={() => navigate("/registration/visitors")}
-                  className="px-4 py-2.5 rounded-full bg-teal-500/30 hover:bg-teal-500/50 text-white text-xs font-bold border border-teal-300/30 transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+                  className="px-4 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-300 transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <Users size={15} />
                   <span>Visitor Badge Log</span>
                 </button>
               </div>
-            </div>
-
-            <svg className="absolute right-3 -bottom-3 w-44 h-44 text-emerald-200/20 pointer-events-none hidden sm:block" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <rect x="20" y="20" width="60" height="70" rx="8" />
-              <line x1="30" y1="35" x2="70" y2="35" />
-              <line x1="30" y1="50" x2="70" y2="50" />
-              <line x1="30" y1="65" x2="55" y2="65" />
-            </svg>
-          </div>
-
-          <div className="bg-gradient-to-br from-slate-900 via-emerald-950 to-[#02211B] rounded-3xl p-6 text-white shadow-md border border-emerald-800/50 flex flex-col justify-between min-h-[190px]">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-white tracking-tight">
-                Admissions Status
-              </h3>
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
-                Front Desk
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 items-center gap-2 my-2">
-              <div className="space-y-2.5 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-xs bg-emerald-400 shrink-0"></span>
-                  <span className="text-slate-300 text-[11px]">Enrolled:</span>
-                  <span className="text-white font-bold text-[11px] font-mono">{patients.length} Pat.</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-xs bg-teal-400 shrink-0"></span>
-                  <span className="text-slate-300 text-[11px]">Visitors Active:</span>
-                  <span className="text-white font-bold text-[11px] font-mono">{visitorLogs.filter(v => v.status === "Currently Visiting").length}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-xs bg-blue-400 shrink-0"></span>
-                  <span className="text-slate-300 text-[11px]">eClaims Ready:</span>
-                  <span className="text-white font-bold text-[11px] font-mono">{claims.length}</span>
-                </div>
-              </div>
-
-              <div className="relative flex items-center justify-center">
-                <div className="relative w-24 h-24 flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full border-4 border-emerald-500/30 animate-pulse"></div>
-                  <div className="w-14 h-14 rounded-full bg-emerald-500/20 border border-emerald-400/60 flex items-center justify-center text-xl shadow-inner">
-                    📋
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-2 border-t border-emerald-800/60 flex items-center justify-between text-[11px] text-emerald-300/90">
-              <span>Facility Hours: 08:00 - 20:00</span>
-              <span className="font-semibold text-white">Desk Open</span>
-            </div>
-          </div>
         </div>
 
         {/* 4 Administrative Stat Cards */}
@@ -1582,125 +1424,35 @@ export default function OpdDashboardView({
         </div>
       )}
 
-      {/* Top Greeting Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <span>Hello, {user?.name ? user.name.split(" ")[0] : "Doctor"}</span>
-            <span>👨‍⚕️</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            Physician Consultation Station • Active Outpatient Care & Diagnostic Telemetry
-          </p>
+      {/* Page Header & Quick Actions */}
+      <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 shadow-2xs flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg font-bold text-slate-900 leading-tight">Hello, {user?.name ? user.name : "Doctor"}</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Physician Consultation Station • Active Outpatient Care & Diagnostic Telemetry</p>
         </div>
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-semibold shadow-2xs">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          Physician Active • {user?.licenseNumber || "PRC Medical License"}
-        </span>
-      </div>
-
-      {/* Dual Hero Banners Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-2 bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-900 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col justify-between min-h-[190px]">
-          <div className="relative z-10 max-w-lg">
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider bg-white/10 text-emerald-200 px-2.5 py-0.5 rounded-full border border-white/20 mb-2">
-              Clinical Care & Workbench
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-snug text-white">
-              Doctor Outpatient Consultation Station 🩺
-            </h2>
-            <p className="text-xs sm:text-sm text-emerald-100/90 mt-2 leading-relaxed">
-              Conduct SOAP encounters, order laboratory panels, write electronic prescriptions, and authorize discharges.
-            </p>
-
-            <div className="flex flex-wrap items-center gap-3 mt-5">
+        <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleCallNext}
-                className="px-5 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <UserCheck size={15} />
                 <span>Call Next Patient</span>
               </button>
               <button
                 onClick={() => navigate("/clinical?tab=workbench")}
-                className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/30 backdrop-blur-xs transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+                className="px-4 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-300 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Stethoscope size={15} />
                 <span>Doctor Workbench</span>
               </button>
               <button
                 onClick={() => navigate("/clinical?tab=prescriptions")}
-                className="px-4 py-2.5 rounded-full bg-teal-500/30 hover:bg-teal-500/50 text-white text-xs font-bold border border-teal-300/30 transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+                className="px-4 py-2 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-300 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Pill size={15} />
                 <span>e-Prescriptions (Rx)</span>
               </button>
             </div>
-          </div>
-
-          <div className="absolute right-4 -bottom-4 pointer-events-none opacity-90 hidden sm:block">
-            <div className="relative w-44 h-44">
-              <div className="absolute right-6 bottom-6 w-28 h-36 bg-white/95 rounded-2xl shadow-2xl p-2.5 transform rotate-6 border border-emerald-100 flex flex-col items-center">
-                <div className="w-10 h-3 bg-emerald-700 rounded-b-md -mt-3 shadow-xs"></div>
-                <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center justify-center mt-2 shadow-inner">
-                  👨‍⚕️
-                </div>
-                <div className="w-16 h-2 bg-slate-200 rounded-full mt-2"></div>
-                <div className="w-20 h-1.5 bg-slate-100 rounded-full mt-1.5"></div>
-                <div className="mt-3 w-full flex justify-center">
-                  <span className="text-[9px] bg-emerald-100 text-emerald-800 font-extrabold px-2 py-0.5 rounded-full">
-                    Physician
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gradient-to-br from-teal-900 via-emerald-950 to-[#02211B] rounded-3xl p-6 text-white shadow-md border border-emerald-800/50 flex flex-col justify-between min-h-[190px]">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-white tracking-tight">
-              Clinical Acuity Telemetry
-            </h3>
-            <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
-              Consultation
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 items-center gap-2 my-2">
-            <div className="space-y-2.5 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-xs bg-rose-400 shrink-0"></span>
-                <span className="text-slate-300 text-[11px]">Critical Tier 1:</span>
-                <span className="text-white font-bold text-[11px] font-mono">{criticalCount}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-xs bg-emerald-400 shrink-0"></span>
-                <span className="text-slate-300 text-[11px]">In Consultation:</span>
-                <span className="text-white font-bold text-[11px] font-mono">{inConsultCount}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-xs bg-amber-400 shrink-0"></span>
-                <span className="text-slate-300 text-[11px]">Observation:</span>
-                <span className="text-white font-bold text-[11px] font-mono">{observationCount}</span>
-              </div>
-            </div>
-
-            <div className="relative flex items-center justify-center">
-              <div className="relative w-24 h-24 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-4 border-emerald-500/30 animate-pulse"></div>
-                <div className="w-14 h-14 rounded-full bg-emerald-500/20 border border-emerald-400/60 flex items-center justify-center text-xl shadow-inner">
-                  🩺
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-2 border-t border-emerald-800/60 flex items-center justify-between text-[11px] text-emerald-300/90">
-            <span>Booths 1 - 4 Operational</span>
-            <span className="font-semibold text-white">Consulting Active</span>
-          </div>
-        </div>
       </div>
 
       {/* 4 Clinical Stat Cards */}

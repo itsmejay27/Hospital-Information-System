@@ -137,29 +137,22 @@ export default function OpdQueueView({
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
       {/* Top Hero Banner (Medzone Hospital Theme) */}
-      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-5">
-        <div className="relative z-10 max-w-xl">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
-              Live Clinical Queue • Triage Lounge
-            </span>
-            <span className="text-xs text-emerald-200/80 font-mono">/queue</span>
+      <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
+            <Users size={20} />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
-            <Users size={30} className="text-emerald-300" />
-            <span>Patient Live Outpatient Queue</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-emerald-100/90 mt-1">
-            Real-time waiting room arrivals, clinic booth assignments, Manchester Triage telemetry, and physician consultations.
-          </p>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 leading-tight">Patient Live Outpatient Queue</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Real-time waiting room arrivals, clinic booth assignments, Manchester Triage telemetry, and physician consultations.</p>
+          </div>
         </div>
-
-        <div className="relative z-10 flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
           {isDoctor ? (
             <>
               <button
                 onClick={handleCallNext}
-                className="px-5 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold border border-emerald-300/40 shadow-sm transition-all flex items-center gap-2 cursor-pointer hover:scale-105"
+                className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold border border-emerald-700 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
               >
                 <UserCheck size={16} strokeWidth={2.5} />
                 <span>Call Next Waiting Patient</span>
@@ -167,7 +160,7 @@ export default function OpdQueueView({
 
               <button
                 onClick={() => navigate("/clinical?tab=workbench")}
-                className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/30 backdrop-blur-xs transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+                className="px-5 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-300 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Stethoscope size={15} />
                 <span>Doctor Workbench</span>
@@ -177,7 +170,7 @@ export default function OpdQueueView({
             <>
               <button
                 onClick={() => navigate("/clinical?tab=vitals")}
-                className="px-5 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold border border-emerald-300/40 shadow-sm transition-all flex items-center gap-2 cursor-pointer hover:scale-105"
+                className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold border border-emerald-700 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
               >
                 <Activity size={16} strokeWidth={2.5} />
                 <span>Triage & Vitals Entry</span>
@@ -185,7 +178,7 @@ export default function OpdQueueView({
 
               <button
                 onClick={() => navigate("/registration/beds")}
-                className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/30 backdrop-blur-xs transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+                className="px-5 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-300 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Bed size={15} />
                 <span>Ward Bed Telemetry</span>
@@ -195,7 +188,7 @@ export default function OpdQueueView({
             <>
               <button
                 onClick={() => navigate("/registration/new-patient")}
-                className="px-5 py-2.5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold border border-emerald-300/40 shadow-sm transition-all flex items-center gap-2 cursor-pointer hover:scale-105"
+                className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold border border-emerald-700 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
               >
                 <UserPlus size={16} strokeWidth={2.5} />
                 <span>Register New Patient</span>
@@ -203,7 +196,7 @@ export default function OpdQueueView({
 
               <button
                 onClick={() => navigate("/registration/directory")}
-                className="px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/30 backdrop-blur-xs transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+                className="px-5 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-300 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Users size={15} />
                 <span>Master Directory</span>
@@ -329,19 +322,21 @@ export default function OpdQueueView({
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="bg-slate-50/70 border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
-                <th className="py-3.5 px-4 text-center w-14">#</th>
-                <th className="py-3.5 px-4">Patient Information</th>
-                <th className="py-3.5 px-4">Triage Priority</th>
-                <th className="py-3.5 px-4">Chief Complaint</th>
-                <th className="py-3.5 px-4">Clinic Location</th>
-                <th className="py-3.5 px-4">Queue State</th>
-                <th className="py-3.5 px-4 text-right">Physician Actions</th>
+                <th className="py-3 px-3 text-center w-14">#</th>
+                <th className="py-3 px-3">Patient</th>
+                <th className="py-3 px-3">Age / Sex</th>
+                <th className="py-3 px-3">Arrival</th>
+                <th className="py-3 px-3">Triage Priority</th>
+                <th className="py-3 px-3">Chief Complaint</th>
+                <th className="py-3 px-3">Clinic Location</th>
+                <th className="py-3 px-3">Queue State</th>
+                <th className="py-3 px-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredQueue.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 italic">
+                  <td colSpan={9} className="py-12 text-center text-slate-400 italic">
                     No patients currently matching the selected queue filters.
                   </td>
                 </tr>
@@ -354,24 +349,26 @@ export default function OpdQueueView({
                     }`}
                   >
                     {/* Circular Queue Number */}
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-3 px-3 text-center">
                       <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-800 text-xs font-mono font-bold shadow-2xs">
                         #{item.queueNumber}
                       </span>
                     </td>
 
                     {/* Patient Details */}
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900 text-xs leading-tight">
+                    <td className="py-3 px-3">
+                      <div className="font-bold text-slate-900 text-xs leading-tight whitespace-nowrap">
                         {item.patientName}
                       </div>
-                      <div className="text-[10px] text-slate-500 mt-0.5 font-mono">
-                        {item.patientId} • {item.age} y/o • {item.gender} • In: {item.checkInTime}
-                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 font-mono">{item.patientId}</div>
                     </td>
+                    <td className="py-3 px-3 whitespace-nowrap text-slate-700">
+                      {item.age} / {item.gender}
+                    </td>
+                    <td className="py-3 px-3 whitespace-nowrap font-mono text-slate-600">{item.checkInTime}</td>
 
                     {/* Triage Tier */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
+                    <td className="py-3 px-3 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                           item.triageTier === "critical"
@@ -395,19 +392,19 @@ export default function OpdQueueView({
                     </td>
 
                     {/* Chief Complaint */}
-                    <td className="py-3.5 px-4 text-slate-800 font-medium max-w-xs truncate">
+                    <td className="py-3 px-3 text-slate-800 font-medium max-w-[180px] truncate" title={item.chiefComplaint}>
                       {item.chiefComplaint}
                     </td>
 
                     {/* Location / Room */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
+                    <td className="py-3 px-3 whitespace-nowrap">
                       <span className="px-2.5 py-1 rounded-full bg-slate-100 border border-slate-200/80 text-slate-700 text-[11px] font-medium">
                         {item.roomOrBooth}
                       </span>
                     </td>
 
                     {/* Queue Status Dropdown */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
+                    <td className="py-3 px-3 whitespace-nowrap">
                       {isDoctor ? (
                         <select
                           value={item.status}
@@ -444,7 +441,7 @@ export default function OpdQueueView({
                     </td>
 
                     {/* Role-Specific Actions */}
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
+                    <td className="py-3 px-3 text-right whitespace-nowrap">
                       {isDoctor ? (
                         <button
                           onClick={() => handleStartConsult(item)}

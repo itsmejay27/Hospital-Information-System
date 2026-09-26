@@ -113,7 +113,7 @@ export default function OpdSidebar({
       path: "/clinical",
       label: "Clinical Care",
       icon: Stethoscope,
-      roles: ["doctor", "nurse"],
+      roles: ["doctor"],
       group: "clinical",
       subItems: [
         { id: "doctor-workbench", label: "Doctor Workbench", path: "/clinical?tab=workbench", roles: ["doctor"] },
@@ -130,12 +130,14 @@ export default function OpdSidebar({
       roles: ["doctor", "nurse"],
       group: "clinical",
       subItems: [
+        { id: "ns-vitals", label: "Vitals & BMI", path: "/clinical?tab=vitals", roles: ["nurse"] },
+        { id: "ns-complaint-top", label: "Chief Complaint", path: "/nursing?tab=complaint", roles: ["nurse"] },
         { id: "ns-careplan", label: "Care Plan (ADPIE)", path: "/nursing?tab=careplan", roles: ["doctor", "nurse"] },
         { id: "ns-orders", label: "Doctor's Orders", path: "/nursing?tab=orders", roles: ["doctor", "nurse"] },
         { id: "ns-notes", label: "Nurses' Notes", path: "/nursing?tab=notes", roles: ["doctor", "nurse"] },
         { id: "ns-labs", label: "Laboratory", path: "/nursing?tab=labs", roles: ["doctor", "nurse"] },
         { id: "ns-endorsement", label: "Shift Endorsement", path: "/nursing?tab=endorsement", roles: ["doctor", "nurse"] },
-        { id: "ns-complaint", label: "Chief Complaint", path: "/nursing?tab=complaint", roles: ["doctor", "nurse"] },
+        { id: "ns-complaint", label: "Chief Complaint", path: "/nursing?tab=complaint", roles: ["doctor"] },
       ],
     },
     {
@@ -247,7 +249,12 @@ export default function OpdSidebar({
     const currentBase = location.pathname;
     if (currentBase === item.path) return true;
     if (currentBase === "/" && item.path === "/dashboard") return true;
-    if (item.subItems?.some(s => currentBase === s.path.split("?")[0])) return true;
+    if (
+      item.subItems?.some(
+        s => currentBase === s.path.split("?")[0] && (!s.roles || (currentRole && s.roles.includes(currentRole)))
+      )
+    )
+      return true;
     return false;
   };
 

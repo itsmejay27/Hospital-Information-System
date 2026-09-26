@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import PatientInfoBar from "../components/PatientInfoBar";
 import {
   User,
   Patient,
@@ -162,109 +163,52 @@ export default function DoctorWorkbenchView({
       )}
 
       {/* Header & Attending Doctor Strip (Emerald Hospital Theme) */}
-      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative z-10 max-w-xl">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
-              Clinical Care • Attending Physician
-            </span>
-            <span className="text-xs text-emerald-200/80 font-mono">/clinical/doctor-workbench</span>
+      <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
+            <Stethoscope size={20} />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
-            <Stethoscope size={28} className="text-emerald-300" />
-            <span>Doctor Workbench & Encounters</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-emerald-100/90 mt-1">
-            Attending Clinician: <span className="font-semibold text-white">{user.name}</span> •{" "}
-            <span className="font-mono text-emerald-200">{user.licenseNumber || "PRC Verified"}</span> ({user.department})
-          </p>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 leading-tight">Doctor Workbench & Encounters</h1>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Attending: <span className="font-semibold text-slate-800">{user.name}</span>
+              <span className="font-mono"> • {user.licenseNumber || "PRC Verified"}</span>
+            </p>
+          </div>
         </div>
-
-        {/* Patient Switcher Dropdown */}
-        <div className="relative z-10 flex items-center gap-2.5 bg-white/10 p-2.5 rounded-2xl border border-white/20 backdrop-blur-xs">
-          <UserIcon size={18} className="text-emerald-200 shrink-0" />
-          <div className="text-left">
-            <label htmlFor="patient-select" className="text-[10px] font-bold uppercase text-emerald-200/80 block leading-tight">
-              Active Consultation:
-            </label>
-            <select
-              id="patient-select"
-              value={selectedPatientId}
-              onChange={e => setSelectedPatientId(e.target.value)}
-              className="bg-transparent font-bold text-xs text-white focus:outline-hidden cursor-pointer"
-            >
-              {patients.map(p => (
-                <option key={p.id} value={p.id} className="text-slate-900 bg-white">
-                  {p.name} ({p.id}) — {p.triageTier.toUpperCase()}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <label htmlFor="patient-select" className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            Active Consultation
+          </label>
+          <select
+            id="patient-select"
+            value={selectedPatientId}
+            onChange={e => setSelectedPatientId(e.target.value)}
+            className="px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:border-emerald-500 outline-hidden cursor-pointer"
+          >
+            {patients.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.id}) — {p.triageTier.toUpperCase()}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
       {/* Active Patient Demographics Strip */}
-      <div className="bg-gradient-to-br from-teal-900 via-emerald-950 to-[#02211B] text-white rounded-3xl p-6 border border-emerald-800/50 shadow-md">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="md:col-span-2 flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-bold flex items-center justify-center text-lg shrink-0 shadow-inner">
-              {selectedPatient.name
-                .split(" ")
-                .map(n => n[0])
-                .join("")
-                .slice(0, 2)}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white">{selectedPatient.name}</h2>
-                <span className="text-[10px] font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
-                  {selectedPatient.id}
-                </span>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                    selectedPatient.triageTier === "critical"
-                      ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
-                      : selectedPatient.triageTier === "observation"
-                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                      : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                  }`}
-                >
-                  {selectedPatient.triageTier}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 mt-1">
-                {selectedPatient.age} yrs old • {selectedPatient.gender} • Blood Type:{" "}
-                <span className="text-teal-300 font-semibold">{selectedPatient.bloodType}</span> • PhilHealth PIN:{" "}
-                <span className="font-mono text-slate-200">{selectedPatient.philhealth?.pin || "Registered"}</span>
-              </p>
-              <div className="flex items-center gap-2 mt-2">
-                <button
-                  type="button"
-                  onClick={() => setShowHistoryTimeline(true)}
-                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-400/40 text-xs font-bold transition-all cursor-pointer shadow-xs hover:scale-102"
-                >
-                  <History size={14} />
-                  <span>📋 View Patient History</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Chief Complaint</span>
-            <p className="text-xs font-semibold text-slate-100 mt-1 line-clamp-2">
-              "{selectedPatient.chiefComplaint || "General checkup & clinical evaluation"}"
-            </p>
-          </div>
-
-          <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Known Allergies</span>
-            <p className="text-xs font-semibold text-rose-300 mt-1">
-              {selectedPatient.allergies?.join(", ") || "No known drug allergies (NKDA)"}
-            </p>
-          </div>
-        </div>
-      </div>
+      <PatientInfoBar
+        patient={selectedPatient}
+        actions={
+          <button
+            type="button"
+            onClick={() => setShowHistoryTimeline(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold cursor-pointer"
+          >
+            <History size={14} />
+            <span>View Patient History</span>
+          </button>
+        }
+      />
 
       {/* Prominent Clinical Action Bar */}
       <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
