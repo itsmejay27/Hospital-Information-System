@@ -8,6 +8,7 @@ import DoctorWorkbenchView from "./DoctorWorkbenchView";
 import VitalsBmiView from "./VitalsBmiView";
 import PrescriptionModal from "../components/PrescriptionModal";
 import LabOrderModal from "../components/LabOrderModal";
+import LabResultsTable from "../components/LabResultsTable";
 import {
   Stethoscope,
   Activity,
@@ -74,6 +75,7 @@ export default function ClinicalCareView() {
 
   const [labSearch, setLabSearch] = useState("");
   const [labCategoryFilter, setLabCategoryFilter] = useState<string>("All");
+  const [expandedLabId, setExpandedLabId] = useState<string | null>(null);
   const [isLabModalOpen, setIsLabModalOpen] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -194,37 +196,14 @@ export default function ClinicalCareView() {
       )}
 
       {/* Clinical Care Header with Tabbed Navigation */}
-      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative z-10 max-w-xl">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
-              CarePoint Clinical Care • Unified Service
-            </span>
-            <span className="text-xs text-emerald-200/80 font-mono">/clinical</span>
-            {isNurse && (
-              <span className="text-[10px] font-bold uppercase tracking-wider text-amber-200 bg-amber-500/20 px-2 py-0.5 rounded-full border border-amber-300/30">
-                Nurse Triaging Mode (Vitals Only)
-              </span>
-            )}
+      <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
+            <Stethoscope size={20} />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
-            <Stethoscope size={28} className="text-emerald-300" />
-            <span>Clinical Care & Diagnostics Hub</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-emerald-100/90 mt-1">
-            Integrated physician consultations, clinical prescriptions, laboratory orders, and bedside hemodynamics.
-          </p>
-        </div>
-
-        <div className="relative z-10 flex items-center gap-3 bg-white/10 p-3 rounded-2xl border border-white/20 backdrop-blur-xs">
-          <StaffAvatar user={user} size={44} />
-          <div className="text-right sm:text-left">
-            <span className="text-xs font-bold text-white block leading-tight">
-              {user?.name || "Clinician"}
-            </span>
-            <span className="text-[10px] text-emerald-300 uppercase font-semibold">
-              {user?.role || "Staff"} • {user?.licenseNumber || "PRC Certified"}
-            </span>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 leading-tight">Clinical Care & Diagnostics Hub</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Integrated physician consultations, clinical prescriptions, laboratory orders, and bedside hemodynamics.</p>
           </div>
         </div>
       </div>
@@ -504,55 +483,78 @@ export default function ClinicalCareView() {
                 No diagnostic lab results found for this patient matching your filter.
               </div>
             ) : (
-              <div className="space-y-4">
-                {patientLabs.map(lab => (
-                  <div
-                    key={lab.id}
-                    className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 text-xs space-y-2 hover:border-amber-300 transition-all shadow-xs"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/60 pb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 text-sm">{lab.test}</span>
-                        <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-200">
-                          {lab.category}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono text-slate-500">{lab.date}</span>
-                        <span
-                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                            lab.status === "Ready"
-                              ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                              : "bg-amber-100 text-amber-800 border border-amber-300"
-                          }`}
-                        >
-                          {lab.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    <p className="text-slate-600">{lab.summary}</p>
-
-                    {lab.items && lab.items.length > 0 && (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                        {lab.items.map((item, idx) => (
-                          <div key={idx} className="bg-white p-2 rounded-xl border border-slate-200 shadow-2xs">
-                            <span className="text-[10px] text-slate-400 block truncate">{item.name}</span>
-                            <span className="font-bold text-slate-800 text-xs">
-                              {item.value} {item.unit}
-                            </span>
-                            <span className="text-[9px] text-slate-400 block">Ref: {item.ref}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between pt-1 text-[10px] text-slate-400 border-t border-slate-200/40">
-                      <span>Ordering Physician: {lab.orderingPhysician}</span>
-                      <span>Released By: {lab.releasedBy}</span>
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto -mx-5 border-t border-slate-200">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      <th className="px-3.5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap w-8"></th>
+                      <th className="px-3.5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Date</th>
+                      <th className="px-3.5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Test</th>
+                      <th className="px-3.5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Category</th>
+                      <th className="px-3.5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Specimen</th>
+                      <th className="px-3.5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Ordering Physician</th>
+                      <th className="px-3.5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Abnormal</th>
+                      <th className="px-3.5 py-2.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {patientLabs.map(lab => {
+                      const open = expandedLabId === lab.id;
+                      const abnormal = lab.items.filter(i => i.flag).length;
+                      return (
+                        <React.Fragment key={lab.id}>
+                          <tr
+                            onClick={() => setExpandedLabId(open ? null : lab.id)}
+                            className={`border-b border-slate-100 cursor-pointer ${open ? "bg-emerald-50/60" : "hover:bg-slate-50"}`}
+                          >
+                            <td className="px-3.5 py-2.5 text-slate-700 text-slate-400 font-bold">{open ? "▾" : "▸"}</td>
+                            <td className="px-3.5 py-2.5 text-slate-700 font-mono whitespace-nowrap">{lab.date}</td>
+                            <td className="px-3.5 py-2.5 text-slate-700 font-bold text-slate-900">{lab.test}</td>
+                            <td className="px-3.5 py-2.5 text-slate-700 whitespace-nowrap">{lab.category}</td>
+                            <td className="px-3.5 py-2.5 text-slate-700">{lab.specimenType || "—"}</td>
+                            <td className="px-3.5 py-2.5 text-slate-700 whitespace-nowrap">{lab.orderingPhysician}</td>
+                            <td className="px-3.5 py-2.5 text-slate-700">
+                              {abnormal > 0 ? (
+                                <span className="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                  {abnormal} flagged
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">None</span>
+                              )}
+                            </td>
+                            <td className="px-3.5 py-2.5 text-slate-700">
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${
+                                  lab.status === "Ready"
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                    : "bg-amber-50 text-amber-700 border-amber-200"
+                                }`}
+                              >
+                                {lab.status}
+                              </span>
+                            </td>
+                          </tr>
+                          {open && (
+                            <tr className="bg-slate-50/60 border-b border-slate-200">
+                              <td></td>
+                              <td colSpan={7} className="px-3.5 py-3">
+                                <div className="rounded-lg border border-slate-200 overflow-hidden">
+                                  <LabResultsTable items={lab.items} />
+                                </div>
+                                <div className="flex flex-wrap justify-between gap-2 mt-2 text-[11px] text-slate-500">
+                                  <span>
+                                    <span className="font-semibold text-slate-700">Interpretation:</span> {lab.summary || "—"}
+                                  </span>
+                                  <span>Released by: {lab.releasedBy}</span>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

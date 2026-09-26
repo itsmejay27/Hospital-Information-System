@@ -183,35 +183,14 @@ export default function SettingsView() {
       )}
 
       {/* Top Banner / Hero (Medzone Emerald Hospital Theme) */}
-      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative z-10 max-w-xl">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
-              CarePoint HIS • System Preferences
-            </span>
-            <span className="text-xs text-emerald-200/80 font-mono">/settings</span>
+      <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
+            <Settings size={20} />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
-            <Settings size={28} className="text-emerald-300" />
-            <span>Clinical & System Settings</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-emerald-100/90 mt-1">
-            Configure your professional PRC credentials, clinical consultation station, triage alerts, and security options.
-          </p>
-        </div>
-
-        <div className="relative z-10 flex items-center gap-3 bg-white/10 p-3 rounded-2xl border border-white/20 backdrop-blur-xs">
-          <StaffAvatar user={user} size={48} />
-          <div>
-            <span className="text-xs font-bold text-white block leading-tight">
-              {user?.name || "Active Session"}
-            </span>
-            <span className="text-[10px] text-emerald-300 font-semibold uppercase">
-              {user?.role || "Staff"} • {user?.department || "Outpatient Clinic"}
-            </span>
-            <span className="text-[10px] text-emerald-200/80 block font-mono">
-              {user?.licenseNumber || "PRC Verified"}
-            </span>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 leading-tight">Clinical & System Settings</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Configure your professional PRC credentials, clinical consultation station, triage alerts, and security options.</p>
           </div>
         </div>
       </div>

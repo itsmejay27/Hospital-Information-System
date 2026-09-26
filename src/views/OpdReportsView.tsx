@@ -49,38 +49,31 @@ export default function OpdReportsView({
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
       {/* Top Banner (Medzone Hospital Emerald Theme) */}
-      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative z-10 max-w-xl">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
-              Departmental Analytics • DOH FHSIS
-            </span>
-            <span className="text-xs text-emerald-200/80 font-mono">/reports</span>
+      <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
+            <PieChart size={20} />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
-            <PieChart size={28} className="text-emerald-300" />
-            <span>OPD Census & Morbidity Analytics</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-emerald-100/90 mt-1">
-            Departmental clinical reporting, ICD-10 epidemiology statistics, and Universal Health Care metrics.
-          </p>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 leading-tight">OPD Census & Morbidity Analytics</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Departmental clinical reporting, ICD-10 epidemiology statistics, and Universal Health Care metrics.</p>
+          </div>
         </div>
-
-        <div className="relative z-10 flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <select
             value={reportPeriod}
             onChange={e => setReportPeriod(e.target.value)}
-            className="bg-white/10 border border-white/20 text-white font-semibold rounded-full px-4 py-2 text-xs focus:outline-hidden backdrop-blur-xs cursor-pointer"
+            className="bg-white border border-slate-300 text-slate-700 font-semibold rounded-full px-4 py-2 text-xs focus:outline-hidden cursor-pointer"
           >
-            <option value="Today" className="text-slate-900 bg-white">Today (Sep 15, 2026)</option>
-            <option value="This Week" className="text-slate-900 bg-white">This Week (Sep 10 - 15)</option>
-            <option value="This Month" className="text-slate-900 bg-white">This Month (September 2026)</option>
-            <option value="Quarterly" className="text-slate-900 bg-white">Q3 2026</option>
+            <option value="Today" className="text-slate-900 bg-white border border-slate-300">Today (Sep 15, 2026)</option>
+            <option value="This Week" className="text-slate-900 bg-white border border-slate-300">This Week (Sep 10 - 15)</option>
+            <option value="This Month" className="text-slate-900 bg-white border border-slate-300">This Month (September 2026)</option>
+            <option value="Quarterly" className="text-slate-900 bg-white border border-slate-300">Q3 2026</option>
           </select>
 
           <button
             onClick={() => window.print()}
-            className="px-5 py-2 rounded-full bg-white text-slate-900 font-bold text-xs shadow-xs hover:bg-slate-100 transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+            className="px-5 py-2 rounded-full bg-white text-slate-900 font-bold text-xs shadow-xs hover:bg-slate-100 transition-all flex items-center gap-1.5 cursor-pointer border border-slate-300"
           >
             <Printer size={15} strokeWidth={2} />
             <span>Print Report</span>

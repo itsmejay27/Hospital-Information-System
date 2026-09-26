@@ -29,21 +29,15 @@ export default function RegistrationDirectoryView({ user, patients }: Props) {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-10">
       {/* Header Banner (Medzone Hospital Emerald Theme) */}
-      <div className="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 rounded-3xl p-6 sm:p-7 text-white shadow-lg border border-emerald-500/40 relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative z-10 max-w-xl">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 bg-white/10 px-2.5 py-0.5 rounded-full border border-white/20">
-              Registration Records • Master Index
-            </span>
-            <span className="text-xs text-emerald-200/80 font-mono">/registration/directory</span>
+      <div className="bg-white rounded-2xl border border-slate-200 px-5 py-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
+            <Users size={20} />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
-            <Users size={28} className="text-emerald-300" />
-            <span>Master Patient Directory</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-emerald-100/90 mt-1">
-            Total Registered Patients: <span className="font-bold text-white">{patients.length}</span> records in hospital master database.
-          </p>
+          <div className="min-w-0">
+            <h1 className="text-lg font-bold text-slate-900 leading-tight">Master Patient Directory</h1>
+            <p className="text-xs text-slate-500 mt-0.5">Total Registered Patients: <span className="font-bold text-slate-800">{patients.length}</span> records in hospital master database.</p>
+          </div>
         </div>
       </div>
 

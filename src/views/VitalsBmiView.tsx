@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import PatientInfoBar from "../components/PatientInfoBar";
 import { User, Patient, TreatmentLog, BmiCategory } from "../types";
 import {
   Activity,
@@ -154,107 +155,53 @@ export default function VitalsBmiView({
       )}
 
       {/* Header & Clinician Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">
-              Clinical Assessment • Isolated Route
-            </span>
-            <span className="text-xs text-slate-400 font-mono">/clinical/vitals-bmi</span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <Activity size={24} className="text-teal-600" />
-            <span>Vitals & Anthropometric BMI Assessment</span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Logged by Clinician: <span className="font-semibold text-slate-800">{user.name}</span> •{" "}
-            <span className="font-mono text-slate-600">{user.licenseNumber || "PRC Certified"}</span> ({user.title})
-          </p>
+      <div className="bg-white rounded-2xl border border-slate-200 px-5 py-3 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <label htmlFor="patient-select-vitals" className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
+            Patient
+          </label>
+          <select
+            id="patient-select-vitals"
+            value={selectedPatientId}
+            onChange={e => setSelectedPatientId(e.target.value)}
+            className="px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-900 focus:border-emerald-500 outline-hidden cursor-pointer"
+          >
+            {patients.map(p => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.id}) — {p.triageTier.toUpperCase()}
+              </option>
+            ))}
+          </select>
         </div>
-
-        {/* Patient Selection Dropdown */}
-        <div className="flex items-center gap-2.5 bg-slate-50 p-2 rounded-xl border border-slate-200">
-          <UserIcon size={16} className="text-slate-500 shrink-0" />
-          <div className="text-left">
-            <label htmlFor="patient-select-vitals" className="text-[10px] font-bold uppercase text-slate-400 block leading-tight">
-              Subject Patient:
-            </label>
-            <select
-              id="patient-select-vitals"
-              value={selectedPatientId}
-              onChange={e => setSelectedPatientId(e.target.value)}
-              className="bg-transparent font-bold text-xs text-slate-900 focus:outline-hidden cursor-pointer"
-            >
-              {patients.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.id}) — {p.triageTier.toUpperCase()}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <p className="text-xs text-slate-500">
+          Recording as <span className="font-semibold text-slate-800">{user.name}</span>
+          {user.licenseNumber && <span className="font-mono text-slate-500"> • {user.licenseNumber}</span>}
+        </p>
       </div>
 
       {/* Patient Demographic Summary Strip */}
-      <div className="bg-slate-900 text-white rounded-2xl p-5 border border-slate-800 shadow-md">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="md:col-span-2 flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-teal-500/20 border border-teal-400/40 text-teal-300 font-bold flex items-center justify-center text-lg shrink-0">
-              {selectedPatient.name
-                .split(" ")
-                .map(n => n[0])
-                .join("")
-                .slice(0, 2)}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold text-white">{selectedPatient.name}</h2>
-                <span className="text-[10px] font-mono bg-slate-800 text-slate-300 px-2 py-0.5 rounded border border-slate-700">
-                  {selectedPatient.id}
-                </span>
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                    selectedPatient.triageTier === "critical"
-                      ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
-                      : selectedPatient.triageTier === "observation"
-                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                      : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                  }`}
-                >
-                  {selectedPatient.triageTier}
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 mt-1">
-                {selectedPatient.age} yrs • {selectedPatient.gender} • Blood Type:{" "}
-                <span className="text-teal-300 font-semibold">{selectedPatient.bloodType}</span> • Ward/Bed:{" "}
-                <span className="text-slate-200 font-semibold">{selectedPatient.ward || "Outpatient Desk"} / {selectedPatient.bed || "Recliner A"}</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700 flex flex-col justify-center">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Current BMI Calculated</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-white">{bmiInfo.bmi}</span>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${bmiInfo.badgeColor}`}>
-                {bmiInfo.category}
+      <PatientInfoBar
+        patient={selectedPatient}
+        extra={[
+          {
+            label: "BMI",
+            value: (
+              <span className="flex items-center gap-1.5">
+                {bmiInfo.bmi}
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${bmiInfo.badgeColor}`}>{bmiInfo.category}</span>
               </span>
-            </div>
-          </div>
-
-          <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700 flex flex-col justify-center">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Net 24h Fluid Balance</span>
-            <div className="flex items-baseline gap-2 mt-1">
-              <span className={`text-xl font-black ${netFluidBalance >= 0 ? "text-teal-300" : "text-rose-300"}`}>
-                {netFluidBalance > 0 ? `+${netFluidBalance}` : netFluidBalance} mL
+            ),
+          },
+          {
+            label: "24h Fluid Balance",
+            value: (
+              <span className={netFluidBalance >= 0 ? "text-emerald-700" : "text-rose-700"}>
+                {netFluidBalance > 0 ? `+${netFluidBalance}` : netFluidBalance} mL ({fluidIntake} in / {urineOutput} out)
               </span>
-              <span className="text-[10px] text-slate-400">
-                ({fluidIntake} in / {urineOutput} out)
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+            ),
+          },
+        ]}
+      />
 
       {/* Two Column Layout: Vitals Form (Left) & Historical Trend Table (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
