@@ -31,6 +31,7 @@ import PrescriptionModal from "../components/PrescriptionModal";
 import LabOrderModal from "../components/LabOrderModal";
 import EClaimModal from "../components/EClaimModal";
 import PatientHistoryTimeline from "../components/PatientHistoryTimeline";
+import { uid } from "../services/ids";
 
 interface Props {
   user: User;
@@ -111,7 +112,7 @@ export default function DoctorWorkbenchView({
   const handleSaveSoapRecord = (e: React.FormEvent) => {
     e.preventDefault();
     const newRecord: HealthRecord = {
-      id: `REC-2026-${Date.now().toString().slice(-4)}`,
+      id: `REC-2026-${uid()}`,
       patientId: selectedPatient.id,
       patientName: selectedPatient.name,
       date: new Date().toISOString().split("T")[0],

@@ -8,7 +8,7 @@ import DoctorWorkbenchView from "./DoctorWorkbenchView";
 import VitalsBmiView from "./VitalsBmiView";
 import PrescriptionModal from "../components/PrescriptionModal";
 import LabOrderModal from "../components/LabOrderModal";
-import LabResultsTable from "../components/LabResultsTable";
+import { DiagnosticReport, labStatusLabel } from "../components/LabResultsTable";
 import {
   Stethoscope,
   Activity,
@@ -530,7 +530,7 @@ export default function ClinicalCareView() {
                                     : "bg-amber-50 text-amber-700 border-amber-200"
                                 }`}
                               >
-                                {lab.status}
+                                {labStatusLabel(lab.status)}
                               </span>
                             </td>
                           </tr>
@@ -538,15 +538,7 @@ export default function ClinicalCareView() {
                             <tr className="bg-slate-50/60 border-b border-slate-200">
                               <td></td>
                               <td colSpan={7} className="px-3.5 py-3">
-                                <div className="rounded-lg border border-slate-200 overflow-hidden">
-                                  <LabResultsTable items={lab.items} />
-                                </div>
-                                <div className="flex flex-wrap justify-between gap-2 mt-2 text-[11px] text-slate-500">
-                                  <span>
-                                    <span className="font-semibold text-slate-700">Interpretation:</span> {lab.summary || "—"}
-                                  </span>
-                                  <span>Released by: {lab.releasedBy}</span>
-                                </div>
+                                <DiagnosticReport lab={lab} />
                               </td>
                             </tr>
                           )}

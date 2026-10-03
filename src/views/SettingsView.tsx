@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
+import { EditableProfileField, LICENSED_ROLES, PROFILE_FIELD_LABELS, ROLE_LABELS, normalizeLicense } from "../types";
 import { useOpdData } from "../context/OpdDataContext";
 import { useWardData } from "../context/WardDataContext";
 import StaffAvatar from "../components/StaffAvatar";
@@ -25,8 +26,8 @@ import {
 } from "../components/Icons";
 
 export default function SettingsView() {
-  const { user, changePassword, isSecureMode } = useAuth();
-  const { hospitalConfig } = useOpdData();
+  const { user, changePassword, isSecureMode, refreshProfile } = useAuth();
+  const { hospitalConfig, profileRequests, submitProfileRequest, cancelProfileRequest, updateUser, logAction } = useOpdData();
   const { staffPhotos, saveMyPhoto } = useWardData();
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -37,13 +38,32 @@ export default function SettingsView() {
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
   // Profile Form State
-  const [profileName, setProfileName] = useState(user?.name || "Dr. Maria Elena Santos, MD");
-  const [profileTitle, setProfileTitle] = useState(user?.title || "Attending Physician");
-  const [profileLicense, setProfileLicense] = useState(user?.licenseNumber || "PRC-0089241");
-  const [profileDepartment, setProfileDepartment] = useState(user?.department || "Outpatient Department (OPD)");
-  const [profileEmail, setProfileEmail] = useState("m.santos@carepoint.med.ph");
-  const [profilePhone, setProfilePhone] = useState("+63 917 555 0192");
-  const [profilePan, setProfilePan] = useState("PAN-2024-9182");
+  const profileFromUser = (): Record<EditableProfileField, string> => ({
+    name: user?.name || "",
+    title: user?.title || "",
+    department: user?.department || "",
+    licenseNumber: user?.licenseNumber || "",
+    credentials: user?.credentials || "",
+    contactPhone: user?.contactPhone || "",
+    contactEmail: user?.contactEmail || "",
+  });
+  const [profileForm, setProfileForm] = useState<Record<EditableProfileField, string>>(profileFromUser);
+  const [profileReason, setProfileReason] = useState("");
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileBusy, setProfileBusy] = useState(false);
+  const isAdmin = user?.role === "admin";
+  const myRequests = profileRequests.filter(r => r.userId === user?.id);
+  const pendingRequest = myRequests.find(r => r.status === "Pending");
+
+  // Pick up changes an administrator approved since this session started
+  useEffect(() => {
+    refreshProfile().catch(console.error);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    setProfileForm(profileFromUser());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.name, user?.title, user?.department, user?.licenseNumber, user?.credentials, user?.contactPhone, user?.contactEmail]);
 
   // Clinical Station Preferences
   const [stationRoom, setStationRoom] = useState("Consultation Room 1");
@@ -69,9 +89,34 @@ export default function SettingsView() {
     setTimeout(() => setSaveSuccessMsg(null), 4000);
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    notify("Medical credentials and staff profile successfully saved.");
+    if (!user) return;
+    setProfileError(null);
+    const current = profileFromUser();
+    const changes: Partial<Record<EditableProfileField, string>> = {};
+    (Object.keys(profileForm) as EditableProfileField[]).forEach(k => {
+      if (profileForm[k].trim() !== current[k]) changes[k] = profileForm[k].trim();
+    });
+    if (Object.keys(changes).length === 0) return setProfileError("You haven't changed anything.");
+    if (changes.name !== undefined && !changes.name) return setProfileError("Name cannot be empty.");
+    if (LICENSED_ROLES.includes(user.role) && changes.licenseNumber !== undefined && normalizeLicense(changes.licenseNumber).length < 5) {
+      return setProfileError("Enter a valid license number (at least 5 digits).");
+    }
+    setProfileBusy(true);
+    const error = isAdmin
+      ? await updateUser({ ...user, ...changes }, `Updated own profile: ${Object.keys(changes).join(", ")}`)
+      : await submitProfileRequest(changes, profileReason);
+    setProfileBusy(false);
+    if (error) return setProfileError(error);
+    setProfileReason("");
+    if (isAdmin) {
+      await refreshProfile();
+      notify("Profile updated.");
+    } else {
+      setProfileForm(current);
+      notify("Change request sent. Your profile will update once an administrator approves it.");
+    }
   };
 
   const handleSaveClinical = (e: React.FormEvent) => {
@@ -161,6 +206,7 @@ export default function SettingsView() {
       setPasswordError(error);
       return;
     }
+    logAction("Changed account password");
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
@@ -283,113 +329,135 @@ export default function SettingsView() {
             </div>
           </div>
 
-          <div>
-            <h3 className="text-base font-bold text-slate-900">Professional Identity & Licensure</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              These details appear on clinical SOAP signatures, PhilHealth eClaims, and electronic prescriptions.
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Professional Identity & Licensure</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {isAdmin
+                  ? "As an administrator, your changes are saved immediately."
+                  : "For security, changes are sent to an administrator for approval before they take effect."}
+              </p>
+            </div>
+            {user && (
+              <span className="self-start text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                {ROLE_LABELS[user.role]}
+              </span>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Full Legal Name (with suffix)</label>
-              <input
-                type="text"
-                value={profileName}
-                onChange={e => setProfileName(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-hidden"
-              />
-            </div>
-
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Designation / Title</label>
-              <input
-                type="text"
-                value={profileTitle}
-                onChange={e => setProfileTitle(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-hidden"
-              />
-            </div>
-
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">PRC License Number</label>
-              <input
-                type="text"
-                value={profileLicense}
-                onChange={e => setProfileLicense(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono font-semibold focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-hidden"
-              />
-            </div>
-
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">PhilHealth Accreditation No. (PAN)</label>
-              <input
-                type="text"
-                value={profilePan}
-                onChange={e => setProfilePan(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-mono font-semibold focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-hidden"
-              />
-            </div>
-
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Assigned Department / Service</label>
-              <select
-                value={profileDepartment}
-                onChange={e => setProfileDepartment(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-hidden cursor-pointer"
+          {pendingRequest && (
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span>
+                <strong>Waiting for approval:</strong> change to{" "}
+                {Object.keys(pendingRequest.changes)
+                  .map(k => PROFILE_FIELD_LABELS[k as EditableProfileField])
+                  .join(", ")}{" "}
+                (sent {pendingRequest.requestedAt}).
+              </span>
+              <button
+                type="button"
+                onClick={() => cancelProfileRequest(pendingRequest.id).catch(() => setProfileError("Could not cancel the request."))}
+                className="self-start sm:self-auto px-3 py-1.5 rounded-lg border border-amber-300 bg-white hover:bg-amber-100 font-bold cursor-pointer"
               >
-                <option value="Outpatient Department (OPD)">Outpatient Department (OPD)</option>
-                <option value="Internal Medicine">Internal Medicine</option>
-                <option value="Pediatrics Clinic">Pediatrics Clinic</option>
-                <option value="Surgery & Trauma">Surgery & Trauma</option>
-                <option value="Obstetrics & Gynecology">Obstetrics & Gynecology</option>
-                <option value="Nursing Station 3">Nursing Station 3</option>
-                <option value="Admissions & Front Desk">Admissions & Front Desk</option>
-              </select>
+                Cancel Request
+              </button>
             </div>
+          )}
 
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Institutional Email Address</label>
-              <input
-                type="email"
-                value={profileEmail}
-                onChange={e => setProfileEmail(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-hidden"
-              />
-            </div>
+          {profileError && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-semibold">{profileError}</div>
+          )}
 
-            <div>
-              <label className="font-bold text-slate-700 block mb-1">Direct Clinic Hotline / Mobile</label>
-              <input
-                type="text"
-                value={profilePhone}
-                onChange={e => setProfilePhone(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-hidden"
-              />
-            </div>
-
-            <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-emerald-50/70 border border-emerald-200">
-              <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                <CheckCircle size={18} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs">
+            {(Object.keys(PROFILE_FIELD_LABELS) as EditableProfileField[]).map(field => (
+              <div key={field}>
+                <label className="font-bold text-slate-700 block mb-1">
+                  {PROFILE_FIELD_LABELS[field]}
+                  {field === "licenseNumber" && user && LICENSED_ROLES.includes(user.role) && " *"}
+                </label>
+                <input
+                  type={field === "contactEmail" ? "email" : "text"}
+                  value={profileForm[field]}
+                  disabled={!!pendingRequest && !isAdmin}
+                  onChange={e => setProfileForm(f => ({ ...f, [field]: e.target.value }))}
+                  placeholder={field === "licenseNumber" ? "e.g. PRC Lic. #0123456" : undefined}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 font-semibold focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 outline-hidden disabled:opacity-60"
+                />
               </div>
-              <div>
-                <span className="font-bold text-slate-900 block leading-tight">Verified Hospital Credentials</span>
-                <span className="text-[11px] text-emerald-800">
-                  DOH & PhilHealth compliance verified for current hospital cycle.
-                </span>
+            ))}
+            {!isAdmin && (
+              <div className="md:col-span-2">
+                <label className="font-bold text-slate-700 block mb-1">Reason for change (optional)</label>
+                <input
+                  type="text"
+                  value={profileReason}
+                  disabled={!!pendingRequest}
+                  onChange={e => setProfileReason(e.target.value)}
+                  placeholder="e.g. Renewed PRC license, transferred department"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:bg-white focus:border-emerald-500 outline-hidden disabled:opacity-60"
+                />
               </div>
-            </div>
+            )}
           </div>
 
           <div className="pt-4 border-t border-slate-100 flex items-center justify-end">
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs hover:scale-102 transition-all cursor-pointer flex items-center gap-2"
+              disabled={profileBusy || (!!pendingRequest && !isAdmin)}
+              className="px-6 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-all cursor-pointer flex items-center gap-2 disabled:opacity-60"
             >
               <Check size={16} strokeWidth={2.5} />
-              <span>Save Profile Credentials</span>
+              <span>{profileBusy ? "Saving..." : isAdmin ? "Save Profile" : "Submit for Approval"}</span>
             </button>
           </div>
+
+          {myRequests.length > 0 && !isAdmin && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold uppercase tracking-wide text-slate-500">My Change Requests</h4>
+              <div className="overflow-x-auto border border-slate-200 rounded-xl">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200">
+                    <tr>
+                      {["Sent", "Changes", "Status", "Reviewed By", "Note"].map(h => (
+                        <th key={h} className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {myRequests.map(r => (
+                      <tr key={r.id} className="border-b border-slate-100 last:border-0 align-top">
+                        <td className="px-3 py-2 font-mono whitespace-nowrap">{r.requestedAt}</td>
+                        <td className="px-3 py-2">
+                          {Object.entries(r.changes).map(([k, v]) => (
+                            <div key={k}>
+                              <span className="text-slate-500">{PROFILE_FIELD_LABELS[k as EditableProfileField]}:</span> {v || "(blank)"}
+                            </div>
+                          ))}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                              r.status === "Approved"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : r.status === "Rejected"
+                                ? "bg-rose-50 text-rose-700 border-rose-200"
+                                : "bg-amber-50 text-amber-700 border-amber-200"
+                            }`}
+                          >
+                            {r.status}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 whitespace-nowrap">{r.reviewedBy || "—"}</td>
+                        <td className="px-3 py-2">{r.reviewNote || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </form>
       )}
 

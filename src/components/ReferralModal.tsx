@@ -16,6 +16,7 @@ import {
   Clock,
   HeartPulse,
 } from "./Icons";
+import { uid } from "../services/ids";
 
 interface ReferralModalProps {
   isOpen: boolean;
@@ -29,7 +30,7 @@ export default function ReferralModal({
   defaultPatientId,
 }: ReferralModalProps) {
   const { user } = useAuth();
-  const { patients, selectedPatient, addReferral, addAuditLog } = useOpdData();
+  const { patients, selectedPatient, addReferral } = useOpdData();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
@@ -67,7 +68,7 @@ export default function ReferralModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const referralId = `REF-2026-${Date.now().toString().slice(-4)}`;
+    const referralId = `REF-2026-${uid()}`;
     const newRef: OpdReferral = {
       id: referralId,
       patientId: currentPatient ? currentPatient.id : "P-UNKNOWN",
@@ -83,21 +84,7 @@ export default function ReferralModal({
 
     addReferral(newRef);
 
-    if (addAuditLog) {
-      addAuditLog({
-        id: `AUD-${Date.now().toString().slice(-4)}`,
-        timestamp: new Date().toISOString().replace("T", " ").slice(0, 16),
-        userName: referringDoctorName,
-        userRole: (user?.role as any) || "doctor",
-        userLicense: referringDoctorLicense,
-        action: `Issued ${priority} Specialist Referral to ${destinationFacility}`,
-        targetPatient: currentPatient?.name || "Patient",
-        patientId: currentPatient?.id || "P-UNKNOWN",
-        department: "Outpatient Department",
-        ipAddress: "192.168.10.42",
-        status: "Authorized",
-      });
-    }
+    // Logged centrally by addReferral (OpdDataContext)
 
     setSubmittedSuccessfully(true);
 

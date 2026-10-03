@@ -8,6 +8,7 @@ import {
   AlertCircle,
   Clock,
 } from "./Icons";
+import { uid, timestamp } from "../services/ids";
 
 interface LabOrderModalProps {
   isOpen: boolean;
@@ -54,28 +55,24 @@ export default function LabOrderModal({
     e.preventDefault();
     if (!testName.trim()) return;
 
+    // The order goes to the laboratory / imaging worklist; results are entered and released there
     const newLab: DiagnosticResult = {
-      id: `LAB-2026-${Date.now().toString().slice(-4)}`,
+      id: `LAB-${uid()}`,
       patientId: patient.id,
       patientName: patient.name,
       test: testName.trim(),
       category: category,
-      date: new Date().toISOString().split("T")[0],
-      status: "In-Progress",
-      specimenType: specimen.trim() || "Clinical Specimen",
+      date: timestamp().slice(0, 10),
+      orderedAt: timestamp().slice(0, 16),
+      status: "Pending Analysis",
+      priority: priority === "Stat Emergency" ? "STAT" : priority === "Urgent" ? "Urgent" : "Routine",
+      indication: clinicalIndication.trim() || undefined,
+      specimenType: specimen.trim() || (category === "Radiology" ? "Imaging study" : "Clinical specimen"),
       orderingPhysician: doctorUser.name,
-      orderingPhysicianLicense: doctorUser.licenseNumber || "PRC-MD-AUTH",
-      releasedBy: "Central Diagnostic Pathology & Imaging",
-      summary: `${clinicalIndication} • Priority: ${priority}`,
-      items: [
-        {
-          name: testName.trim(),
-          value: "Specimen Queued",
-          ref: "Standard Laboratory Range",
-          flag: null,
-          unit: "Assay Pending",
-        },
-      ],
+      orderingPhysicianLicense: doctorUser.licenseNumber,
+      releasedBy: "",
+      summary: "",
+      items: [],
     };
 
     onAddLabResult(newLab);

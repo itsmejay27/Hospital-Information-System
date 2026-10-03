@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { User, Patient, AdmissionEntry, TriageTier } from "../types";
+import { uid } from "../services/ids";
 import {
   Bed,
   UserPlus,
@@ -56,7 +57,7 @@ export default function PatientBedAllocationView({
     if (!patient) return;
 
     const newAdmission: AdmissionEntry = {
-      id: `ADM-2026-${String(admissions.length + 1).padStart(3, "0")}`,
+      id: `ADM-${uid()}`,
       patientId: patient.id,
       patientName: patient.name,
       admissionDate: new Date().toISOString().replace("T", " ").substring(0, 16),

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { DiagnosticResult } from "../../types";
 import { useOpdData } from "../../context/OpdDataContext";
 import Modal from "../../components/Modal";
-import LabResultsTable from "../../components/LabResultsTable";
+import { DiagnosticReport, labStatusLabel } from "../../components/LabResultsTable";
 import { Search } from "../../components/Icons";
 import * as ui from "../../components/tableStyles";
 import { NursingTabProps } from "./helpers";
@@ -93,7 +93,7 @@ export default function NurseLabsTab({ patientId }: NursingTabProps) {
                   <td className={ui.td}>{l.specimenType || "—"}</td>
                   <td className={`${ui.td} whitespace-nowrap`}>{l.orderingPhysician}</td>
                   <td className={ui.td}>
-                    <span className={`${ui.badge} ${statusStyle[l.status]}`}>{l.status}</span>
+                    <span className={`${ui.badge} ${statusStyle[l.status]}`}>{labStatusLabel(l.status)}</span>
                   </td>
                   <td className={ui.td}>
                     {abnormal > 0 ? (
@@ -118,16 +118,10 @@ export default function NurseLabsTab({ patientId }: NursingTabProps) {
         <Modal
           wide
           title={`${viewing.test} — ${viewing.patientName}`}
-          subtitle={`${viewing.id} • ${viewing.date} • ordered by ${viewing.orderingPhysician} • released by ${viewing.releasedBy}`}
+          subtitle={`${viewing.orderedAt || viewing.date} • ordered by ${viewing.orderingPhysician}`}
           onClose={() => setViewing(null)}
         >
-          <div className="rounded-lg border border-slate-200 overflow-hidden">
-            <LabResultsTable items={viewing.items} />
-          </div>
-          <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
-            <span className="font-bold text-slate-700">Summary: </span>
-            {viewing.summary}
-          </div>
+          <DiagnosticReport lab={viewing} />
         </Modal>
       )}
     </div>

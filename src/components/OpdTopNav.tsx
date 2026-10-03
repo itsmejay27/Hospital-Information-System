@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { User, Patient, Role } from "../types";
+import { User, Patient, Role, ROLE_LABELS } from "../types";
 import { DEMO_USERS } from "../mockData";
 import StaffAvatar from "./StaffAvatar";
 import { useAuth } from "../context/AuthContext";
@@ -226,7 +226,7 @@ export default function OpdTopNav({
         </button>
 
         {/* Currently Active Patient Context Pill (Clinical / Staff Roles Only) */}
-        {activePatient && user?.role !== "admin" ? (
+        {activePatient && user && ["doctor", "nurse", "staff"].includes(user.role) ? (
           <div
             onClick={() => {
               if (user?.role === "doctor") {
@@ -377,7 +377,7 @@ export default function OpdTopNav({
                 {user?.name || "Active Session"}
               </div>
               <div className="text-[10px] text-emerald-600 font-bold uppercase truncate max-w-[130px]">
-                {user?.role} • {user?.department || user?.title || "Clinical Staff"}
+                {user ? ROLE_LABELS[user.role] : ""} • {user?.department || user?.title || "Clinical Staff"}
               </div>
             </div>
             <ChevronDown size={14} strokeWidth={2} className="text-slate-400 ml-0.5" />

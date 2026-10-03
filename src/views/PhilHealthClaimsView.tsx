@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { PhilHealthClaim, ClaimStatus, HospitalConfig } from "../types";
+import { PhilHealthClaim, ClaimStatus, HospitalConfig, Patient } from "../types";
+import { uid } from "../services/ids";
 import {
   CreditCard,
   Search,
@@ -19,12 +20,14 @@ interface PhilHealthClaimsViewProps {
   claims: PhilHealthClaim[];
   onUpdateClaims: (updated: PhilHealthClaim[]) => void;
   hospitalConfig: HospitalConfig;
+  patients?: Patient[];
 }
 
 export default function PhilHealthClaimsView({
   claims,
   onUpdateClaims,
   hospitalConfig,
+  patients = [],
 }: PhilHealthClaimsViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
@@ -34,6 +37,7 @@ export default function PhilHealthClaimsView({
   const [isNewClaimModalOpen, setIsNewClaimModalOpen] = useState(false);
 
   // New claim form state
+  const [newPatientId, setNewPatientId] = useState("");
   const [newPin, setNewPin] = useState("");
   const [newMemberName, setNewMemberName] = useState("");
   const [newMembershipType, setNewMembershipType] = useState("Formal Economy / Private");
@@ -114,9 +118,16 @@ export default function PhilHealthClaimsView({
     e.preventDefault();
     if (!newPin || !newMemberName || !newDiagnosis) return;
 
+    // Link the claim to the registered patient: the one picked, else a PIN or exact name match
+    const pinDigits = newPin.replace(/\D/g, "");
+    const linked =
+      patients.find(p => p.id === newPatientId) ||
+      patients.find(p => pinDigits && (p.philhealth?.pin || "").replace(/\D/g, "") === pinDigits) ||
+      patients.find(p => p.name.trim().toLowerCase() === newMemberName.trim().toLowerCase());
+
     const newClaim: PhilHealthClaim = {
-      id: `CLM-2026-00${claims.length + 1}`,
-      patientId: `P-2024-00${claims.length + 1}`,
+      id: `CLM-${uid()}`,
+      patientId: linked?.id || "Unregistered",
       pin: newPin,
       memberName: newMemberName,
       membershipType: newMembershipType,
@@ -131,6 +142,7 @@ export default function PhilHealthClaimsView({
 
     onUpdateClaims([newClaim, ...claims]);
     setIsNewClaimModalOpen(false);
+    setNewPatientId("");
     setNewPin("");
     setNewMemberName("");
     setNewDiagnosis("");
@@ -584,6 +596,31 @@ export default function PhilHealthClaimsView({
             </div>
 
             <form onSubmit={handleCreateClaim} className="space-y-3 text-xs">
+              {patients.length > 0 && (
+                <div>
+                  <label className="block text-slate-700 font-medium mb-1">Registered Patient</label>
+                  <select
+                    value={newPatientId}
+                    onChange={e => {
+                      const p = patients.find(x => x.id === e.target.value);
+                      setNewPatientId(e.target.value);
+                      if (p) {
+                        setNewMemberName(p.name);
+                        if (p.philhealth?.pin) setNewPin(p.philhealth.pin);
+                        if (p.philhealth?.category) setNewMembershipType(p.philhealth.category);
+                      }
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:border-teal-500"
+                  >
+                    <option value="">— Select patient (fills name and PIN) —</option>
+                    {patients.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.id})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-slate-700 font-medium mb-1">
                   PhilHealth Identification Number (PIN) *
@@ -622,11 +659,20 @@ export default function PhilHealthClaimsView({
                     onChange={e => setNewMembershipType(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:border-teal-500"
                   >
-                    <option value="Formal Economy / Private">Formal Economy / Private</option>
-                    <option value="Direct Contributor - Government">Direct Contributor - Government</option>
-                    <option value="Direct Contributor - Self-Employed">Direct Contributor - Self-Employed</option>
-                    <option value="Senior Citizen (RA 10645)">Senior Citizen (RA 10645)</option>
-                    <option value="Indirect Contributor - Indigent">Indirect Contributor - Indigent</option>
+                    {[
+                      "Formal Economy / Private",
+                      "Direct Contributor - Private",
+                      "Direct Contributor - Government",
+                      "Direct Contributor - Self-Employed",
+                      "Indirect Contributor - Indigent",
+                      "Senior Citizen (RA 10645)",
+                      "PWD (RA 11228)",
+                      "Lifetime Member",
+                    ].map(t => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

@@ -9,6 +9,7 @@ import {
   AlertCircle,
   FileText,
 } from "./Icons";
+import { uid } from "../services/ids";
 
 interface PrescriptionModalProps {
   isOpen: boolean;
@@ -56,7 +57,7 @@ export default function PrescriptionModal({
     if (!medName.trim() || !dose.trim()) return;
 
     const newMed: MedicationOrder = {
-      id: `RX-2026-${Date.now().toString().slice(-4)}`,
+      id: `RX-2026-${uid()}`,
       patientId: patient.id,
       patientName: patient.name,
       name: medName.trim(),

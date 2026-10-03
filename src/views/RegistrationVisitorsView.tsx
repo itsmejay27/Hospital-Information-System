@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { User, Patient, VisitorLog } from "../types";
 import { Users, Search, Plus, Check, Clock } from "../components/Icons";
+import { uid } from "../services/ids";
 
 interface Props {
   user: User;
@@ -50,7 +51,7 @@ export default function RegistrationVisitorsView({
     if (!visName.trim()) return;
 
     const newVisitor: VisitorLog = {
-      id: `VIS-${Date.now().toString().slice(-4)}`,
+      id: `VIS-${uid()}`,
       patientId: patient.id,
       patientName: patient.name,
       wardBed: `${patient.ward || "Ward"}, ${patient.bed || "Bed"}`,

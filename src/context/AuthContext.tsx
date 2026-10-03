@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { User, Role } from "../types";
 import { DEMO_USERS } from "../mockData";
 import { supabase, isSupabaseConfigured } from "../services/supabase";
@@ -24,6 +24,12 @@ interface AuthContextType {
   /** Verifies the current password, then sets the new one. Resolves to null on success, or an error message. */
   changePassword: (currentPassword: string, newPassword: string) => Promise<string | null>;
   switchUser: (targetUser: User) => void;
+  /** Increments on every successful interactive sign-in (not on session restore). */
+  signInCount: number;
+  /** Registers work to finish (e.g. writing an audit entry) before the session ends. */
+  registerBeforeLogout: (fn: () => Promise<void>) => () => void;
+  /** Re-reads the signed-in staff profile (e.g. after an administrator approved changes). */
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -101,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const [isAuthReady, setIsAuthReady] = useState(!isSupabaseConfigured);
+  const [signInCount, setSignInCount] = useState(0);
 
   // Keep React state in sync with the Supabase Auth session
   useEffect(() => {
@@ -155,6 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setUser(profile);
     setToken(data.session.access_token);
+    setSignInCount(c => c + 1);
     return null;
   };
 
@@ -177,6 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(matched.user);
       setToken(generatedToken);
       saveSession(matched.user, generatedToken);
+      setSignInCount(c => c + 1);
       return true;
     }
 
@@ -196,6 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(dynamicMatched);
           setToken(generatedToken);
           saveSession(dynamicMatched, generatedToken);
+          setSignInCount(c => c + 1);
           return true;
         }
       }
@@ -226,12 +236,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return null;
   };
 
-  const logout = () => {
-    if (supabase) supabase.auth.signOut().catch(console.error);
+  const beforeLogout = useRef(new Set<() => Promise<void>>());
+  const registerBeforeLogout = useCallback((fn: () => Promise<void>) => {
+    beforeLogout.current.add(fn);
+    return () => {
+      beforeLogout.current.delete(fn);
+    };
+  }, []);
+
+  const logout = async () => {
+    // Let listeners (audit log) finish while the session is still valid, but never hang sign-out
+    const pending = Promise.all([...beforeLogout.current].map(fn => fn().catch(console.error)));
+    await Promise.race([pending, new Promise(resolve => setTimeout(resolve, 2000))]);
+    if (supabase) await supabase.auth.signOut().catch(console.error);
     setUser(null);
     setToken(null);
     saveSession(null, null);
   };
+
+  const refreshProfile = useCallback(async () => {
+    if (!supabase) return;
+    const { data } = await supabase.auth.getSession();
+    const authId = data.session?.user.id;
+    if (!authId) return;
+    const profile = await loadStaffProfile(authId);
+    if (profile) setUser(profile);
+  }, []);
 
   const switchUser = (targetUser: User) => {
     // Identity comes from the signed-in Supabase account; no impersonation.
@@ -255,6 +285,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         changePassword,
         switchUser,
+        signInCount,
+        registerBeforeLogout,
+        refreshProfile,
       }}
     >
       {children}
