@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Building2,
 } from "./Icons";
+import { uid } from "../services/ids";
 
 interface DischargeModalProps {
   isOpen: boolean;
@@ -30,7 +31,7 @@ export default function DischargeModal({
   defaultPatientId,
 }: DischargeModalProps) {
   const { user } = useAuth();
-  const { patients, selectedPatient, addDischarge, updatePatientAdmissionStatus, addAuditLog } = useOpdData();
+  const { patients, selectedPatient, addDischarge, updatePatientAdmissionStatus } = useOpdData();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
@@ -91,7 +92,7 @@ export default function DischargeModal({
       }
 
       const dischargeRecord: OpdDischarge = {
-        id: `DC-2026-${Date.now().toString().slice(-4)}`,
+        id: `DC-2026-${uid()}`,
         patientId: currentPatient.id,
         patientName: currentPatient.name,
         disposition: disposition,
@@ -108,21 +109,7 @@ export default function DischargeModal({
         addDischarge(dischargeRecord);
       }
 
-      if (addAuditLog) {
-        addAuditLog({
-          id: `AUD-${Date.now().toString().slice(-4)}`,
-          timestamp: new Date().toISOString().replace("T", " ").slice(0, 16),
-          userName: attendingDoctorName,
-          userRole: (user?.role as any) || "doctor",
-          userLicense: attendingDoctorLicense,
-          action: `Authorized Patient Discharge (${disposition}) & Released Bed`,
-          targetPatient: currentPatient.name,
-          patientId: currentPatient.id,
-          department: "Outpatient Department",
-          ipAddress: "192.168.10.42",
-          status: "Authorized",
-        });
-      }
+      // Logged centrally by addDischarge (OpdDataContext)
     }
 
     setSubmittedSuccessfully(true);

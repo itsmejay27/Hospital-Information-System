@@ -11,6 +11,7 @@ import {
   FileText,
   Plus,
 } from "../components/Icons";
+import { uid } from "../services/ids";
 
 interface Props {
   user: User;
@@ -98,7 +99,7 @@ export default function VitalsBmiView({
     const vitalsFormatted = `BP ${systolicBp}/${diastolicBp} mmHg | HR ${heartRate} bpm | RR ${respiratoryRate} cpm | SpO2 ${spo2}% | Temp ${temperature}°C | BMI ${bmiInfo.bmi} (${bmiInfo.category})`;
 
     const newTrt: TreatmentLog = {
-      id: `VIT-${Date.now().toString().slice(-4)}`,
+      id: `VIT-${uid()}`,
       patientId: selectedPatient.id,
       patientName: selectedPatient.name,
       timestamp: exactTimestamp.replace("T", " "),

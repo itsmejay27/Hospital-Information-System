@@ -43,7 +43,7 @@ import {
 import { supabase } from "./supabase";
 
 const DB_NAME = "CarePointMedicalCenter_HIS_DB";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 const STORES = [
   "patients",
@@ -67,11 +67,16 @@ const STORES = [
   "shift_schedules",
   "shift_endorsements",
   "staff_photos",
+  "profile_requests",
+  "public_directory",
 ];
 
 // Staff profiles and photos are managed per-account (admin / owner only), so a
 // database reset never removes them — otherwise the admin would lock themselves out.
-const RESETTABLE_REMOTE_STORES = STORES.filter((s) => s !== "users" && s !== "staff_photos");
+// Audit logs are append-only and account data is managed per account, so a reset never touches them.
+const RESETTABLE_REMOTE_STORES = STORES.filter(
+  (s) => !["users", "staff_photos", "audit_logs", "profile_requests", "public_directory"].includes(s)
+);
 
 export interface DatabaseState {
   patients: Patient[];
@@ -263,7 +268,8 @@ class CarePointDatabaseService {
         this.bulkPutInStore("opd_discharges", INITIAL_OPD_DISCHARGES),
         this.bulkPutInStore("philhealth_claims", INITIAL_PHILHEALTH_CLAIMS),
         this.bulkPutInStore("visitor_logs", INITIAL_VISITOR_LOGS),
-        this.bulkPutInStore("audit_logs", INITIAL_AUDIT_LOGS),
+        // Real deployments start with an empty audit trail; demo mode shows sample entries
+        this.bulkPutInStore("audit_logs", supabase ? [] : INITIAL_AUDIT_LOGS),
         this.putInStore("hospital_config", { id: "master-config", ...INITIAL_HOSPITAL_CONFIG }),
         this.bulkPutInStore("shift_endorsements", INITIAL_SHIFT_ENDORSEMENTS),
         // With Supabase, staff logins and profiles are created by the administrator
@@ -321,7 +327,10 @@ class CarePointDatabaseService {
       discharges: discharges.length > 0 ? discharges : INITIAL_OPD_DISCHARGES,
       claims: claims.length > 0 ? claims : INITIAL_PHILHEALTH_CLAIMS,
       visitorLogs: visitorLogs.length > 0 ? visitorLogs : INITIAL_VISITOR_LOGS,
-      auditLogs: auditLogs.length > 0 ? auditLogs : INITIAL_AUDIT_LOGS,
+      // Newest first; never show sample entries when connected to the real database
+      auditLogs: (auditLogs.length > 0 || supabase ? auditLogs : INITIAL_AUDIT_LOGS)
+        .slice()
+        .sort((a, b) => b.timestamp.localeCompare(a.timestamp)),
       hospitalConfig: hospitalConfig || INITIAL_HOSPITAL_CONFIG,
       users: users.length > 0 || supabase ? users : Object.values(DEMO_USERS).map((u) => u.user),
     };
@@ -334,6 +343,17 @@ class CarePointDatabaseService {
 
   public async save<T extends { id: string }>(storeName: string, item: T): Promise<void> {
     await this.putInStore(storeName, item);
+  }
+
+  /** Insert-only write (no overwrite), for append-only records such as audit logs. */
+  public async append<T extends { id: string }>(storeName: string, item: T): Promise<void> {
+    await this.localPut(storeName, item);
+    if (supabase) {
+      const { error } = await supabase
+        .from(storeName)
+        .insert({ id: item.id, data: item, updated_at: new Date().toISOString() });
+      if (error) throw error;
+    }
   }
 
   public async remove(storeName: string, id: string): Promise<void> {

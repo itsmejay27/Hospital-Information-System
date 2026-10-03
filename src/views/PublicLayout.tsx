@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import StaffAvatar from "../components/StaffAvatar";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
-import { HEALTHCARE_TEAM_DIRECTORY } from "../mockData";
+import { hospitalDb } from "../services/db";
 import BackButton from "../components/BackButton";
 import AuthModal from "../components/AuthModal";
 import {
@@ -33,7 +33,7 @@ import {
   Scan,
   Bed,
 } from "../components/Icons";
-import { User } from "../types";
+import { User, PublicDirectoryEntry, ROLE_LABELS, ALL_ROLES } from "../types";
 
 function getPortalInfo(role: User["role"]) {
   switch (role) {
@@ -169,7 +169,7 @@ export default function PublicLayout() {
                         {user.name.split(" ")[0]}
                       </div>
                       <div className="text-[10px] text-teal-600 uppercase font-semibold">
-                        {user.role}
+                        {ROLE_LABELS[user.role]}
                       </div>
                     </div>
                   </Link>
@@ -700,84 +700,90 @@ export function PublicAnnouncementsPage() {
 }
 
 // — Public Staff Page —
+// Shows only the staff an administrator chose to publish (Admin → Staff Accounts → Public Website).
 export function PublicStaffPage() {
   const navigate = useNavigate();
-  const [deptFilter, setDeptFilter] = useState<string>("All");
+  const [entries, setEntries] = useState<PublicDirectoryEntry[] | null>(null);
+  const [deptFilter, setDeptFilter] = useState("All");
 
-  const departments = ["All", ...Array.from(new Set(HEALTHCARE_TEAM_DIRECTORY.map(s => s.department)))];
+  useEffect(() => {
+    let active = true;
+    hospitalDb
+      .getAll<PublicDirectoryEntry>("public_directory")
+      .then(list => {
+        if (active) setEntries(list.sort((a, b) => ALL_ROLES.indexOf(a.role) - ALL_ROLES.indexOf(b.role) || a.name.localeCompare(b.name)));
+      })
+      .catch(() => active && setEntries([]));
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const filteredTeam = deptFilter === "All"
-    ? HEALTHCARE_TEAM_DIRECTORY
-    : HEALTHCARE_TEAM_DIRECTORY.filter(s => s.department === deptFilter);
+  const departments = ["All", ...Array.from(new Set((entries || []).map(s => s.department).filter(Boolean)))];
+  const shown = (entries || []).filter(s => deptFilter === "All" || s.department === deptFilter);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
       <BackButton onBack={() => navigate("/")} label="Back to Home" />
-      <div className="mb-8">
-        <div className="text-teal-600 text-xs font-bold tracking-widest uppercase mb-1 flex items-center gap-1.5">
-          <Users size={18} strokeWidth={2} className="text-teal-600" />
-          <span>Professional Directory</span>
-        </div>
-        <h1 className="text-3xl sm:text-4xl text-slate-900 font-bold">
-          CarePoint Healthcare Team Directory
-        </h1>
-        <p className="text-xs text-slate-500 mt-1">
-          12 verified clinical leaders, attending physicians, registered nurses, and executive administrators.
-        </p>
-
-        {/* Filter Pills */}
-        <div className="flex flex-wrap gap-1.5 mt-4">
-          {departments.map(dept => (
-            <button
-              key={dept}
-              onClick={() => setDeptFilter(dept)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                deptFilter === dept
-                  ? "bg-teal-600 text-white shadow-xs"
-                  : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              {dept}
-            </button>
-          ))}
-        </div>
+      <div className="mb-6">
+        <div className="text-teal-600 text-xs font-bold tracking-widest uppercase mb-1">Our People</div>
+        <h1 className="text-3xl sm:text-4xl text-slate-900 font-bold">Doctors & Staff</h1>
+        <p className="text-sm text-slate-500 mt-1">Meet the professionals caring for you at CarePoint Medical Center.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filteredTeam.map(s => (
-          <div
-            key={s.name}
-            className="bg-white border border-slate-200 rounded-2xl p-5 flex items-start gap-4 shadow-xs hover:border-teal-400 hover:shadow-sm transition-all"
-          >
-            <div
-              className={`w-12 h-12 rounded-2xl ${s.color} text-white flex items-center justify-center font-bold text-base shrink-0 shadow-xs`}
-            >
-              {s.name
-                .replace("Dr. ", "")
-                .replace("Nurse ", "")
-                .split(" ")
-                .map(w => w[0])
-                .slice(0, 2)
-                .join("")}
+      {entries === null ? (
+        <p className="text-sm text-slate-400 py-10 text-center">Loading…</p>
+      ) : entries.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 py-14 text-center">
+          <p className="text-sm font-semibold text-slate-700">Our staff directory is being updated.</p>
+          <p className="text-xs text-slate-500 mt-1">For appointments and inquiries, please contact the front desk.</p>
+        </div>
+      ) : (
+        <>
+          {departments.length > 2 && (
+            <div className="flex flex-wrap gap-2 mb-6">
+              {departments.map(d => (
+                <button
+                  key={d}
+                  onClick={() => setDeptFilter(d)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border cursor-pointer ${
+                    deptFilter === d ? "bg-teal-700 text-white border-teal-700" : "bg-white text-slate-600 border-slate-200 hover:border-teal-400"
+                  }`}
+                >
+                  {d}
+                </button>
+              ))}
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="font-bold text-sm text-slate-900 leading-tight">
-                {s.name}
+          )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {shown.map(s => (
+              <div key={s.id} className="bg-white border border-slate-200 rounded-2xl p-5 flex items-center gap-4">
+                {s.photo ? (
+                  <img src={s.photo} alt={s.name} className="w-16 h-16 rounded-full object-cover border border-slate-200 shrink-0" />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-teal-50 border border-teal-100 text-teal-800 font-bold text-lg flex items-center justify-center shrink-0">
+                    {s.name
+                      .replace(/^(Dr\.|Nurse|Atty\.)\s+/i, "")
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map(w => w[0])
+                      .join("")
+                      .toUpperCase()}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <h3 className="font-bold text-slate-900 leading-tight">
+                    {s.name}
+                    {s.credentials && <span className="text-slate-500 font-medium">, {s.credentials}</span>}
+                  </h3>
+                  <p className="text-sm text-teal-700 font-semibold">{s.title || ROLE_LABELS[s.role]}</p>
+                  <p className="text-xs text-slate-500">{s.department}</p>
+                </div>
               </div>
-              <div className="text-xs text-teal-700 font-semibold mt-0.5">
-                {s.position}
-              </div>
-              <div className="text-[11px] text-slate-500 mt-0.5 truncate">
-                {s.department}
-              </div>
-              <div className="text-[11px] font-mono text-slate-700 mt-2 pt-2 border-t border-slate-100">
-                <span className="font-bold text-slate-800">{s.license}</span>
-                <div className="text-[10px] text-slate-500 font-sans mt-0.5">{s.credentials}</div>
-              </div>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
   FileCheck,
   AlertCircle,
 } from "./Icons";
+import { uid } from "../services/ids";
 
 interface EClaimModalProps {
   isOpen: boolean;
@@ -55,7 +56,7 @@ export default function EClaimModal({
     e.preventDefault();
 
     const newClaim: PhilHealthClaim = {
-      id: `CLM-2026-${Date.now().toString().slice(-4)}`,
+      id: `CLM-2026-${uid()}`,
       patientId: patient.id,
       pin: pin.trim(),
       memberName: patient.name,

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
-import { Role, User } from "../types";
+import { Role, User, ALL_ROLES, ROLE_LABELS, ROLE_DEFAULTS } from "../types";
 import {
   X,
   LogIn,
@@ -16,6 +16,7 @@ import {
   Lock,
   Building2,
 } from "./Icons";
+import { uid } from "../services/ids";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -112,7 +113,7 @@ export default function AuthModal({
       .toUpperCase() || "CP";
 
     const newUser: User = {
-      id: `USR-${Date.now().toString().slice(-4)}`,
+      id: `USR-${uid()}`,
       name: signUpName.trim(),
       username: signUpUsername.trim().toLowerCase(),
       role: signUpRole,
@@ -435,26 +436,16 @@ export default function AuthModal({
                       onChange={(e) => {
                         const newRole = e.target.value as Role;
                         setSignUpRole(newRole);
-                        if (newRole === "doctor") {
-                          setSignUpTitle("Attending Physician");
-                          setSignUpDepartment("Outpatient Department");
-                        } else if (newRole === "nurse") {
-                          setSignUpTitle("Staff Nurse, RN");
-                          setSignUpDepartment("Nursing Station & MAR");
-                        } else if (newRole === "staff") {
-                          setSignUpTitle("Admissions Officer");
-                          setSignUpDepartment("Admissions & Front Desk");
-                        } else {
-                          setSignUpTitle("Hospital Administrator");
-                          setSignUpDepartment("Hospital Administration");
-                        }
+                        setSignUpTitle(ROLE_DEFAULTS[newRole].title);
+                        setSignUpDepartment(ROLE_DEFAULTS[newRole].department);
                       }}
                       className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-teal-500 outline-hidden font-semibold text-slate-800"
                     >
-                      <option value="doctor">Doctor / Attending Physician</option>
-                      <option value="nurse">Nurse / Triage Clinician</option>
-                      <option value="staff">Staff / Admissions Officer</option>
-                      <option value="admin">Admin / Security Auditor</option>
+                      {ALL_ROLES.map(r => (
+                        <option key={r} value={r}>
+                          {ROLE_LABELS[r]}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>

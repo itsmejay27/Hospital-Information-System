@@ -10,6 +10,7 @@ import {
 import { hospitalDb } from "../services/db";
 import { isSupabaseConfigured } from "../services/supabase";
 import { useAuth } from "./AuthContext";
+import { useOpdData } from "./OpdDataContext";
 
 // Nursing Station documents, duty shifts and staff profile photos.
 
@@ -76,35 +77,73 @@ export function WardDataProvider({ children }: { children: React.ReactNode }) {
     };
   }, [userId]);
 
-  const saveCarePlan = useCallback(async (plan: NursingCarePlan) => {
-    await hospitalDb.save("care_plans", plan);
-    setCarePlans(prev => upsert(prev, plan));
-  }, []);
+  const { logAction } = useOpdData();
 
-  const saveDoctorOrder = useCallback(async (order: DoctorOrder) => {
-    await hospitalDb.save("doctor_orders", order);
-    setDoctorOrders(prev => upsert(prev, order));
-  }, []);
+  const saveCarePlan = useCallback(
+    async (plan: NursingCarePlan) => {
+      const isNew = !carePlans.some(p => p.id === plan.id);
+      await hospitalDb.save("care_plans", plan);
+      setCarePlans(prev => upsert(prev, plan));
+      logAction(`${isNew ? "Created" : "Updated"} nursing care plan: ${plan.nursingDiagnosis} (${plan.status})`, {
+        patientId: plan.patientId,
+        patientName: plan.patientName,
+      });
+    },
+    [carePlans, logAction]
+  );
 
-  const saveNurseNote = useCallback(async (note: NurseNote) => {
-    await hospitalDb.save("nurse_notes", note);
-    setNurseNotes(prev => upsert(prev, note));
-  }, []);
+  const saveDoctorOrder = useCallback(
+    async (order: DoctorOrder) => {
+      const isNew = !doctorOrders.some(o => o.id === order.id);
+      await hospitalDb.save("doctor_orders", order);
+      setDoctorOrders(prev => upsert(prev, order));
+      logAction(
+        isNew ? `Doctor's order (${order.priority}): ${order.order.slice(0, 80)}` : `Doctor's order ${order.status.toLowerCase()}: ${order.order.slice(0, 80)}`,
+        { patientId: order.patientId, patientName: order.patientName }
+      );
+    },
+    [doctorOrders, logAction]
+  );
 
-  const saveChiefComplaint = useCallback(async (entry: ChiefComplaintEntry) => {
-    await hospitalDb.save("chief_complaints", entry);
-    setChiefComplaints(prev => upsert(prev, entry));
-  }, []);
+  const saveNurseNote = useCallback(
+    async (note: NurseNote) => {
+      await hospitalDb.save("nurse_notes", note);
+      setNurseNotes(prev => upsert(prev, note));
+      logAction(`Nurse's note (FDAR): ${note.focus}`, { patientId: note.patientId, patientName: note.patientName });
+    },
+    [logAction]
+  );
 
-  const saveShiftSchedule = useCallback(async (shift: ShiftSchedule) => {
-    await hospitalDb.save("shift_schedules", shift);
-    setShiftSchedules(prev => upsert(prev, shift));
-  }, []);
+  const saveChiefComplaint = useCallback(
+    async (entry: ChiefComplaintEntry) => {
+      await hospitalDb.save("chief_complaints", entry);
+      setChiefComplaints(prev => upsert(prev, entry));
+      logAction(`Recorded chief complaint: ${entry.complaint.slice(0, 80)}`, {
+        patientId: entry.patientId,
+        patientName: entry.patientName,
+      });
+    },
+    [logAction]
+  );
 
-  const removeShiftSchedule = useCallback(async (id: string) => {
-    await hospitalDb.remove("shift_schedules", id);
-    setShiftSchedules(prev => prev.filter(s => s.id !== id));
-  }, []);
+  const saveShiftSchedule = useCallback(
+    async (shift: ShiftSchedule) => {
+      await hospitalDb.save("shift_schedules", shift);
+      setShiftSchedules(prev => upsert(prev, shift));
+      logAction(`Assigned ${shift.shift} shift on ${shift.date} to ${shift.staffName} (${shift.area})`);
+    },
+    [logAction]
+  );
+
+  const removeShiftSchedule = useCallback(
+    async (id: string) => {
+      const shift = shiftSchedules.find(s => s.id === id);
+      await hospitalDb.remove("shift_schedules", id);
+      setShiftSchedules(prev => prev.filter(s => s.id !== id));
+      if (shift) logAction(`Removed ${shift.shift} shift on ${shift.date} for ${shift.staffName}`);
+    },
+    [shiftSchedules, logAction]
+  );
 
   const saveMyPhoto = useCallback(
     async (image: string | null) => {
@@ -113,12 +152,14 @@ export function WardDataProvider({ children }: { children: React.ReactNode }) {
         const photo: StaffPhoto = { id: userId, image, updatedAt: new Date().toISOString() };
         await hospitalDb.save("staff_photos", photo);
         setPhotoList(prev => upsert(prev, photo));
+        logAction("Updated profile picture");
       } else {
         await hospitalDb.remove("staff_photos", userId);
         setPhotoList(prev => prev.filter(p => p.id !== userId));
+        logAction("Removed profile picture");
       }
     },
-    [userId]
+    [userId, logAction]
   );
 
   const staffPhotos = Object.fromEntries(photoList.map(p => [p.id, p.image]));

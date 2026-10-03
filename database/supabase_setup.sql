@@ -165,6 +165,90 @@ create policy "own delete" on public.staff_photos for delete to authenticated
   using (id = (select private.my_staff_id()));
 
 -- ------------------------------------------------------------------------------
+-- Roles, append-only audit log, profile change approvals, public staff directory
+-- ------------------------------------------------------------------------------
+-- Roles: doctor, nurse, staff (front desk), admin, medtech (RMT), radtech (RRT),
+-- pharmacy, finance (CFO), legal. Stored in users.data->>'role'.
+create or replace function private.my_role()
+returns text
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select u.data->>'role'
+  from public.staff_accounts s
+  join public.users u on u.id = s.user_id
+  where s.auth_id = (select auth.uid())
+    and coalesce(u.data->>'status', 'active') = 'active';
+$$;
+revoke all on function private.my_role() from public, anon;
+grant execute on function private.my_role() to authenticated;
+
+-- Audit log: any active staff member can add an entry; nobody can edit or delete
+-- one; only administrators and legal counsel can read it.
+drop policy if exists "staff read" on public.audit_logs;
+drop policy if exists "staff update" on public.audit_logs;
+drop policy if exists "staff delete" on public.audit_logs;
+drop policy if exists "admin legal read" on public.audit_logs;
+create policy "admin legal read" on public.audit_logs for select to authenticated
+  using ((select private.my_role()) in ('admin', 'legal'));
+-- Remove the sample entries that older versions of the app wrote on first run.
+delete from public.audit_logs
+where id in ('AUD-989','AUD-990','AUD-991','AUD-992','AUD-993','AUD-994','AUD-995','AUD-996');
+
+-- Profile change requests: staff submit changes to their own profile; an
+-- administrator approves (and applies them) or rejects.
+create table if not exists public.profile_requests (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.profile_requests enable row level security;
+revoke all on public.profile_requests from anon;
+drop policy if exists "own or admin read" on public.profile_requests;
+drop policy if exists "own insert" on public.profile_requests;
+drop policy if exists "admin update" on public.profile_requests;
+drop policy if exists "own cancel" on public.profile_requests;
+create policy "own or admin read" on public.profile_requests for select to authenticated
+  using (data->>'userId' = (select private.my_staff_id()) or (select private.is_admin()));
+create policy "own insert" on public.profile_requests for insert to authenticated
+  with check ((select private.is_staff()) and data->>'userId' = (select private.my_staff_id()) and data->>'status' = 'Pending');
+create policy "admin update" on public.profile_requests for update to authenticated
+  using ((select private.is_admin())) with check ((select private.is_admin()));
+create policy "own cancel" on public.profile_requests for delete to authenticated
+  using (data->>'userId' = (select private.my_staff_id()) and data->>'status' = 'Pending');
+
+-- Public staff directory ("Doctors & Staff" page): readable by website visitors,
+-- managed only by administrators. Holds name, title, department and photo only.
+create table if not exists public.public_directory (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.public_directory enable row level security;
+grant select on public.public_directory to anon, authenticated;
+drop policy if exists "public read" on public.public_directory;
+drop policy if exists "admin insert" on public.public_directory;
+drop policy if exists "admin update" on public.public_directory;
+drop policy if exists "admin delete" on public.public_directory;
+create policy "public read" on public.public_directory for select to anon, authenticated using (true);
+create policy "admin insert" on public.public_directory for insert to authenticated with check ((select private.is_admin()));
+create policy "admin update" on public.public_directory for update to authenticated using ((select private.is_admin())) with check ((select private.is_admin()));
+create policy "admin delete" on public.public_directory for delete to authenticated using ((select private.is_admin()));
+
+-- License numbers: no two active staff may share one (compared by digits only).
+-- Placeholder values such as "PRC Lic. #00" are cleared so they can be re-entered.
+update public.users
+set data = data - 'licenseNumber'
+where data ? 'licenseNumber'
+  and regexp_replace(coalesce(data->>'licenseNumber', ''), '\D', '', 'g') ~ '^0*$';
+create unique index if not exists users_unique_license
+  on public.users ((regexp_replace(data->>'licenseNumber', '\D', '', 'g')))
+  where regexp_replace(coalesce(data->>'licenseNumber', ''), '\D', '', 'g') <> ''
+    and coalesce(data->>'status', 'active') <> 'suspended';
+
+-- ------------------------------------------------------------------------------
 -- Giving a staff member access
 -- ------------------------------------------------------------------------------
 -- Normally: sign in as an administrator and use Admin -> Accounts -> Provision

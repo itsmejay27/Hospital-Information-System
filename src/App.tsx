@@ -34,6 +34,8 @@ import { WardDataProvider } from "./context/WardDataContext";
 import NursingStationView from "./views/NursingStationView";
 import DutyShiftsView from "./views/DutyShiftsView";
 import SystemFlowchartView from "./views/SystemFlowchartView";
+import DiagnosticsWorklistView from "./views/DiagnosticsWorklistView";
+import PharmacyView from "./views/PharmacyView";
 
 import { User, Role } from "./types";
 
@@ -231,49 +233,14 @@ function RegistrationVisitorsRoute() {
 }
 
 function AdminAccountsRoute() {
-  const { user, logout } = useAuth();
-  const { usersList, addUser, toggleUserStatus } = useOpdData();
-
-  const adminUser: User =
-    user?.role === "admin"
-      ? user
-      : {
-          id: "ADM-001",
-          name: "System Administrator",
-          role: "admin",
-          title: "Hospital Administrator",
-          avatarInitials: "SA",
-          department: "Administration",
-          status: "active",
-        };
-
-  return (
-    <AdminAccountsView
-      user={adminUser}
-      usersList={usersList}
-      onAddUser={addUser}
-      onToggleUserStatus={toggleUserStatus}
-      onSignOut={logout}
-    />
-  );
+  return <AdminAccountsView />;
 }
 
 function AdminAuditLedgerRoute() {
   const { user, logout } = useAuth();
   const { auditLogs } = useOpdData();
 
-  const adminUser: User =
-    user?.role === "admin"
-      ? user
-      : {
-          id: "ADM-001",
-          name: "Security Officer",
-          role: "admin",
-          title: "DPA Compliance Auditor",
-          avatarInitials: "SO",
-          department: "Information Security",
-          status: "active",
-        };
+  const adminUser: User = user!; // ProtectedRoute guarantees a signed-in admin or legal counsel
 
   return <AdminAuditLedgerView user={adminUser} auditLogs={auditLogs} onSignOut={logout} />;
 }
@@ -281,18 +248,7 @@ function AdminAuditLedgerRoute() {
 function AdminRbacRoute() {
   const { user, logout } = useAuth();
 
-  const adminUser: User =
-    user?.role === "admin"
-      ? user
-      : {
-          id: "ADM-001",
-          name: "System Administrator",
-          role: "admin",
-          title: "Hospital Administrator",
-          avatarInitials: "SA",
-          department: "Administration",
-          status: "active",
-        };
+  const adminUser: User = user!; // ProtectedRoute guarantees a signed-in admin or legal counsel
 
   return <AdminRbacView user={adminUser} onSignOut={logout} />;
 }
@@ -301,29 +257,19 @@ function AdminComplianceRoute() {
   const { user, logout } = useAuth();
   const { hospitalConfig } = useOpdData();
 
-  const adminUser: User =
-    user?.role === "admin"
-      ? user
-      : {
-          id: "ADM-001",
-          name: "System Administrator",
-          role: "admin",
-          title: "Hospital Administrator",
-          avatarInitials: "SA",
-          department: "Administration",
-          status: "active",
-        };
+  const adminUser: User = user!; // ProtectedRoute guarantees a signed-in admin or legal counsel
 
   return <AdminComplianceView user={adminUser} hospitalConfig={hospitalConfig} onSignOut={logout} />;
 }
 
 function PhilHealthRoute() {
-  const { claims, setClaims, hospitalConfig } = useOpdData();
+  const { claims, updateClaims, hospitalConfig, patients } = useOpdData();
   return (
     <PhilHealthClaimsView
       claims={claims}
-      onUpdateClaims={setClaims}
+      onUpdateClaims={updateClaims}
       hospitalConfig={hospitalConfig}
+      patients={patients}
     />
   );
 }
@@ -439,6 +385,32 @@ export default function App() {
                 }
               />
 
+              {/* Diagnostics & pharmacy worklists (doctors can view) */}
+              <Route
+                path="/lab"
+                element={
+                  <ProtectedRoute allowedRoles={["medtech", "doctor"]}>
+                    <DiagnosticsWorklistView mode="lab" />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/imaging"
+                element={
+                  <ProtectedRoute allowedRoles={["radtech", "doctor"]}>
+                    <DiagnosticsWorklistView mode="imaging" />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/pharmacy"
+                element={
+                  <ProtectedRoute allowedRoles={["pharmacy", "doctor"]}>
+                    <PharmacyView />
+                  </ProtectedRoute>
+                }
+              />
+
               {/* Duty shifts and system flowchart: every role */}
               <Route path="/shifts" element={<DutyShiftsView />} />
               <Route path="/flowchart" element={<SystemFlowchartView />} />
@@ -507,7 +479,7 @@ export default function App() {
               <Route
                 path="/admin/audit-ledger"
                 element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
+                  <ProtectedRoute allowedRoles={["admin", "legal"]}>
                     <AdminAuditLedgerRoute />
                   </ProtectedRoute>
                 }
@@ -515,7 +487,7 @@ export default function App() {
               <Route
                 path="/admin/rbac"
                 element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
+                  <ProtectedRoute allowedRoles={["admin", "legal"]}>
                     <AdminRbacRoute />
                   </ProtectedRoute>
                 }
@@ -523,7 +495,7 @@ export default function App() {
               <Route
                 path="/admin/compliance"
                 element={
-                  <ProtectedRoute allowedRoles={["admin"]}>
+                  <ProtectedRoute allowedRoles={["admin", "legal"]}>
                     <AdminComplianceRoute />
                   </ProtectedRoute>
                 }
@@ -538,7 +510,7 @@ export default function App() {
               <Route
                 path="/philhealth"
                 element={
-                  <ProtectedRoute allowedRoles={["doctor", "staff"]}>
+                  <ProtectedRoute allowedRoles={["doctor", "staff", "finance"]}>
                     <PhilHealthRoute />
                   </ProtectedRoute>
                 }
@@ -546,7 +518,7 @@ export default function App() {
               <Route
                 path="/reports"
                 element={
-                  <ProtectedRoute allowedRoles={["doctor", "nurse", "staff"]}>
+                  <ProtectedRoute allowedRoles={["doctor", "nurse", "staff", "finance"]}>
                     <ReportsRoute />
                   </ProtectedRoute>
                 }
@@ -558,7 +530,7 @@ export default function App() {
               <Route
                 path="/settings"
                 element={
-                  <ProtectedRoute allowedRoles={["doctor", "nurse", "staff", "admin"]}>
+                  <ProtectedRoute>
                     <SettingsView />
                   </ProtectedRoute>
                 }

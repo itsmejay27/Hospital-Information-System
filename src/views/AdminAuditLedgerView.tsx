@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { User, AuditLog, Role } from "../types";
+import { User, AuditLog, Role, ROLE_LABELS, ALL_ROLES } from "../types";
 import {
   FileText,
   ShieldCheck,
@@ -222,10 +222,11 @@ export default function AdminAuditLedgerView({ user, auditLogs }: Props) {
                 className="bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs text-slate-800 font-semibold focus:outline-hidden"
               >
                 <option value="all">All Roles</option>
-                <option value="doctor">Doctors</option>
-                <option value="nurse">Nurses</option>
-                <option value="staff">Staff</option>
-                <option value="admin">Administrators</option>
+                {ALL_ROLES.map(r => (
+                  <option key={r} value={r}>
+                    {ROLE_LABELS[r]}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -304,7 +305,7 @@ export default function AdminAuditLedgerView({ user, auditLogs }: Props) {
                                 : "bg-blue-100 text-blue-800"
                             }`}
                           >
-                            {log.userRole}
+                            {ROLE_LABELS[log.userRole] || log.userRole}
                           </span>
                           {log.userLicense && (
                             <span className="text-[10px] font-mono text-slate-400">

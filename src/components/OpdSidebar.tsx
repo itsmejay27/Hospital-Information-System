@@ -5,7 +5,7 @@ import { User, Role } from "../types";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
 import { useWardData } from "../context/WardDataContext";
-import { DUTY_SHIFT_HOURS } from "../types";
+import { DUTY_SHIFT_HOURS, ALL_ROLES, ROLE_LABELS } from "../types";
 import { todayIso } from "../views/nursing/helpers";
 import {
   LayoutDashboard,
@@ -15,6 +15,7 @@ import {
   Activity,
   Pill,
   FlaskConical,
+  Scan,
   CreditCard,
   Send,
   PieChart,
@@ -74,7 +75,10 @@ export default function OpdSidebar({
   const navigate = useNavigate();
   const location = useLocation();
   const { user: authUser, logout } = useAuth();
-  const { waitingCount } = useOpdData();
+  const { waitingCount, labResults, medications } = useOpdData();
+  const pendingLabs = labResults.filter(l => l.category !== "Radiology" && l.status !== "Ready").length;
+  const pendingImaging = labResults.filter(l => l.category === "Radiology" && l.status !== "Ready").length;
+  const toDispense = medications.filter(m => m.status === "Active" && !m.dispensedAt).length;
   const { shiftSchedules } = useWardData();
 
   const user = propsUser || authUser;
@@ -116,9 +120,9 @@ export default function OpdSidebar({
     {
       id: "dashboard",
       path: "/dashboard",
-      label: currentRole === "admin" ? "System Console" : "OPD Dashboard",
+      label: currentRole === "admin" ? "System Console" : ["doctor", "nurse", "staff"].includes(currentRole || "") ? "OPD Dashboard" : "Dashboard",
       icon: LayoutDashboard,
-      roles: ["doctor", "nurse", "staff", "admin"],
+      roles: ALL_ROLES,
       group: "clinical",
     },
     {
@@ -171,6 +175,48 @@ export default function OpdSidebar({
       group: "clinical",
     },
 
+    // --- Diagnostics & Pharmacy ---
+    {
+      id: "lab-worklist",
+      path: "/lab",
+      label: "Laboratory Worklist",
+      icon: FlaskConical,
+      badge: pendingLabs > 0 ? pendingLabs : undefined,
+      roles: ["medtech"],
+      group: "clinical",
+    },
+    {
+      id: "imaging-worklist",
+      path: "/imaging",
+      label: "Imaging Worklist",
+      icon: Scan,
+      badge: pendingImaging > 0 ? pendingImaging : undefined,
+      roles: ["radtech"],
+      group: "clinical",
+    },
+    {
+      id: "pharmacy",
+      path: "/pharmacy",
+      label: "Pharmacy Dispensing",
+      icon: Pill,
+      badge: toDispense > 0 ? toDispense : undefined,
+      roles: ["pharmacy"],
+      group: "clinical",
+    },
+    {
+      id: "doctor-results",
+      path: "/lab",
+      label: "Lab, Imaging & Pharmacy",
+      icon: FlaskConical,
+      roles: ["doctor"],
+      group: "clinical",
+      subItems: [
+        { id: "dr-lab", label: "Laboratory Worklist", path: "/lab", roles: ["doctor"] },
+        { id: "dr-imaging", label: "Imaging Worklist", path: "/imaging", roles: ["doctor"] },
+        { id: "dr-pharmacy", label: "Pharmacy Dispensing", path: "/pharmacy", roles: ["doctor"] },
+      ],
+    },
+
     // --- Patient Registration (Staff Only) ---
     {
       id: "registration-group",
@@ -194,7 +240,7 @@ export default function OpdSidebar({
       label: "PhilHealth & eClaims",
       icon: CreditCard,
       badge: "eClaims",
-      roles: ["doctor", "staff"],
+      roles: ["doctor", "staff", "finance"],
       group: "billing",
     },
     {
@@ -202,8 +248,23 @@ export default function OpdSidebar({
       path: "/reports",
       label: "Census & OPD Reports",
       icon: PieChart,
-      roles: ["doctor", "nurse", "staff"],
+      roles: ["doctor", "nurse", "staff", "finance"],
       group: "billing",
+    },
+
+    // --- Legal Counsel ---
+    {
+      id: "legal-group",
+      path: "/admin/audit-ledger",
+      label: "Legal & Compliance",
+      icon: ShieldCheck,
+      roles: ["legal"],
+      group: "management",
+      subItems: [
+        { id: "legal-audit", label: "Audit Ledger", path: "/admin/audit-ledger", roles: ["legal"] },
+        { id: "legal-compliance", label: "Data Privacy & Compliance", path: "/admin/compliance", roles: ["legal"] },
+        { id: "legal-rbac", label: "Access Permissions", path: "/admin/rbac", roles: ["legal"] },
+      ],
     },
 
     // --- Workforce & Help (Everyone) ---
@@ -212,7 +273,7 @@ export default function OpdSidebar({
       path: "/shifts",
       label: "Duty Shifts",
       icon: Clock,
-      roles: ["doctor", "nurse", "staff", "admin"],
+      roles: ALL_ROLES,
       group: "general",
     },
     {
@@ -220,7 +281,7 @@ export default function OpdSidebar({
       path: "/flowchart",
       label: "System Flowchart",
       icon: Activity,
-      roles: ["doctor", "nurse", "staff", "admin"],
+      roles: ALL_ROLES,
       group: "general",
     },
 
@@ -233,10 +294,10 @@ export default function OpdSidebar({
       roles: ["admin"],
       group: "management",
       subItems: [
-        { id: "accounts", label: "Account Directory & Roles", path: "/admin/accounts", roles: ["admin"] },
-        { id: "audit-ledger", label: "Cryptographic Audit Ledger", path: "/admin/audit-ledger", roles: ["admin"] },
-        { id: "rbac", label: "RBAC Permissions Matrix", path: "/admin/rbac", roles: ["admin"] },
-        { id: "compliance", label: "Security & NPC Guidelines", path: "/admin/compliance", roles: ["admin"] },
+        { id: "accounts", label: "Staff Accounts & Approvals", path: "/admin/accounts", roles: ["admin"] },
+        { id: "audit-ledger", label: "Audit Ledger", path: "/admin/audit-ledger", roles: ["admin"] },
+        { id: "rbac", label: "Role Permissions (RBAC)", path: "/admin/rbac", roles: ["admin"] },
+        { id: "compliance", label: "Data Privacy & Compliance", path: "/admin/compliance", roles: ["admin"] },
       ],
     },
   ];
@@ -453,7 +514,21 @@ export default function OpdSidebar({
           <div>
             {showFullSidebar && (
               <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                {currentRole === "admin" ? "System Console" : currentRole === "nurse" ? "Nursing Care" : currentRole === "staff" ? "Outpatient Frontline" : "Clinical Care"}
+                {currentRole === "admin"
+                  ? "System Console"
+                  : currentRole === "nurse"
+                  ? "Nursing Care"
+                  : currentRole === "staff"
+                  ? "Outpatient Frontline"
+                  : currentRole === "medtech" || currentRole === "radtech"
+                  ? "Diagnostics"
+                  : currentRole === "pharmacy"
+                  ? "Pharmacy"
+                  : currentRole === "finance"
+                  ? "Finance"
+                  : currentRole === "legal"
+                  ? "Legal Counsel"
+                  : "Clinical Care"}
               </div>
             )}
             <div className="space-y-1">
@@ -606,7 +681,7 @@ export default function OpdSidebar({
               </p>
               <div className="flex items-center gap-1.5">
                 <span className="text-[10px] text-emerald-400 uppercase font-bold">
-                  {user?.role || "Staff"}
+                  {user ? ROLE_LABELS[user.role] : "Staff"}
                 </span>
                 {user?.licenseNumber && (
                   <span className="text-[9px] text-slate-400 font-mono truncate">
@@ -617,7 +692,7 @@ export default function OpdSidebar({
             </div>
           </div>
         ) : (
-          <div className="flex justify-center" title={`${user?.name || "Clinician"} (${user?.role || "Staff"})`}>
+          <div className="flex justify-center" title={`${user?.name || "Clinician"} (${user ? ROLE_LABELS[user.role] : "Staff"})`}>
             <StaffAvatar user={user} size={32} />
           </div>
         )}

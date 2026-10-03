@@ -1,4 +1,48 @@
-export type Role = "doctor" | "nurse" | "staff" | "admin";
+export type Role =
+  | "doctor"
+  | "nurse"
+  | "staff" // Front Desk Receptionist
+  | "admin"
+  | "medtech" // Medical Technologist (RMT)
+  | "radtech" // Radiologic Technologist (RRT)
+  | "pharmacy" // Pharmacy Technician
+  | "finance" // Chief Financial Officer
+  | "legal"; // Legal Counsel
+
+export const ALL_ROLES: Role[] = ["doctor", "nurse", "medtech", "radtech", "pharmacy", "staff", "finance", "legal", "admin"];
+
+export const ROLE_LABELS: Record<Role, string> = {
+  doctor: "Doctor",
+  nurse: "Registered Nurse",
+  medtech: "Medical Technologist (RMT)",
+  radtech: "Radiologic Technologist (RRT)",
+  pharmacy: "Pharmacy Technician",
+  staff: "Front Desk Receptionist",
+  finance: "Chief Financial Officer",
+  legal: "Legal Counsel",
+  admin: "Administrator",
+};
+
+/** Default job title and department suggested when an account is created. */
+export const ROLE_DEFAULTS: Record<Role, { title: string; department: string }> = {
+  doctor: { title: "Attending Physician", department: "Outpatient Department" },
+  nurse: { title: "Registered Nurse", department: "Nursing Service" },
+  medtech: { title: "Medical Technologist", department: "Clinical Laboratory" },
+  radtech: { title: "Radiologic Technologist", department: "Radiology & Imaging" },
+  pharmacy: { title: "Pharmacy Technician", department: "Pharmacy" },
+  staff: { title: "Front Desk Receptionist", department: "Front Desk & Admissions" },
+  finance: { title: "Chief Financial Officer", department: "Finance & Billing" },
+  legal: { title: "Legal Counsel", department: "Legal & Data Privacy" },
+  admin: { title: "System Administrator", department: "Administration" },
+};
+
+/** Roles that must have a professional license number (PRC), unique across active staff. */
+export const LICENSED_ROLES: Role[] = ["doctor", "nurse", "medtech", "radtech", "pharmacy"];
+
+/** Digits of a license number, used to detect duplicates ("PRC Lic. #0096211" -> "0096211"). */
+export function normalizeLicense(value?: string | null): string {
+  return (value || "").replace(/\D/g, "");
+}
 
 export type Page =
   | "home"
@@ -40,6 +84,47 @@ export interface User {
   username?: string;
   contactEmail?: string;
   contactPhone?: string;
+  /** Shown on the public website's staff directory (set by the administrator). */
+  showInDirectory?: boolean;
+}
+
+/** Profile fields a staff member may ask to change; an administrator approves them. */
+export type EditableProfileField = "name" | "title" | "department" | "licenseNumber" | "credentials" | "contactPhone" | "contactEmail";
+
+export const PROFILE_FIELD_LABELS: Record<EditableProfileField, string> = {
+  name: "Full Name",
+  title: "Job Title",
+  department: "Department",
+  licenseNumber: "License Number",
+  credentials: "Credentials",
+  contactPhone: "Contact Phone",
+  contactEmail: "Contact Email",
+};
+
+export interface ProfileChangeRequest {
+  id: string;
+  userId: string;
+  userName: string;
+  role: Role;
+  requestedAt: string;
+  changes: Partial<Record<EditableProfileField, string>>;
+  previous: Partial<Record<EditableProfileField, string>>;
+  reason?: string;
+  status: "Pending" | "Approved" | "Rejected";
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNote?: string;
+}
+
+/** Public-facing staff card (no private details); readable without signing in. */
+export interface PublicDirectoryEntry {
+  id: string;
+  name: string;
+  title: string;
+  role: Role;
+  department: string;
+  credentials?: string;
+  photo?: string;
 }
 
 export type TriageTier = "stable" | "observation" | "critical";
@@ -203,6 +288,14 @@ export interface DiagnosticResult {
   releasedBy: string;
   summary: string;
   items: LabTestItem[];
+  // Order & processing details (lab / imaging worklists)
+  orderedAt?: string;
+  priority?: "Routine" | "Urgent" | "STAT";
+  indication?: string;
+  performedBy?: string;
+  releasedAt?: string;
+  /** Radiology findings (imaging studies); `summary` holds the impression. */
+  findings?: string;
 }
 
 export interface MedicationOrder {
@@ -223,6 +316,11 @@ export interface MedicationOrder {
   administeredBy?: string;
   administeredByLicense?: string;
   notes?: string;
+  // Pharmacy dispensing
+  dispenseQuantity?: string;
+  dispensedBy?: string;
+  dispensedAt?: string;
+  dispenseRemarks?: string;
 }
 
 export interface TreatmentLog {

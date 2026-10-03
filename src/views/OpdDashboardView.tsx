@@ -34,6 +34,8 @@ import {
 } from "../components/Icons";
 import ReferralModal from "../components/ReferralModal";
 import DischargeModal from "../components/DischargeModal";
+import { uid, timestamp } from "../services/ids";
+import RoleDashboardView from "./RoleDashboardView";
 
 function CircularProgress({
   percentage,
@@ -129,6 +131,8 @@ export default function OpdDashboardView({
     treatments = [],
     shiftEndorsements = [],
     checkOutVisitor,
+    addTreatment,
+    profileRequests,
   } = useOpdData();
 
   const user = propsUser || authUser;
@@ -218,23 +222,24 @@ export default function OpdDashboardView({
     e.preventDefault();
     if (!newPatName.trim() || !newPatComplaint.trim()) return;
 
-    const newId = `P-2026-${Date.now().toString().slice(-4)}`;
+    const newId = `P-2026-${uid()}`;
     const newPat: Patient = {
       id: newId,
       name: newPatName,
-      dob: "1991-05-14",
+      // Quick registration: only what was entered; the front desk completes the rest
+      dob: "",
       age: newPatAge,
       gender: newPatGender,
-      civilStatus: "Married",
+      civilStatus: "Not recorded",
       contact: newPatContact,
-      address: "Pasig City, Metro Manila",
+      address: "Not recorded",
       emergencyContact: {
-        name: "Family Guardian",
-        relationship: "Spouse",
-        phone: newPatContact,
+        name: "Not recorded",
+        relationship: "",
+        phone: "",
       },
-      bloodType: "O+",
-      allergies: ["None known"],
+      bloodType: "Unknown",
+      allergies: ["Not yet assessed"],
       chiefComplaint: newPatComplaint,
       triageTier: newPatTriage,
       admissionStatus: "Outpatient",
@@ -252,8 +257,8 @@ export default function OpdDashboardView({
   const handleSaveClaim = (e: React.FormEvent) => {
     e.preventDefault();
     const newClaim: PhilHealthClaim = {
-      id: `CLM-2026-${Date.now().toString().slice(-3)}`,
-      patientId: selectedPatient?.id || "P-2024-001",
+      id: `CLM-${uid()}`,
+      patientId: selectedPatient?.id || "",
       pin: claimPin,
       memberName: claimMemberName,
       membershipType: claimType,
@@ -261,9 +266,10 @@ export default function OpdDashboardView({
       caseRateAmount: claimPackage,
       claimStatus: "Ready for Submission",
       submissionDate: new Date().toISOString().split("T")[0],
-      hospitalCharges: 12000,
-      philhealthBenefit: 6000,
-      patientPayable: 6000,
+      // Benefit comes from the case rate; Finance finalizes actual hospital charges
+      hospitalCharges: Number(claimPackage.replace(/[^0-9]/g, "")) || 0,
+      philhealthBenefit: Number(claimPackage.replace(/[^0-9]/g, "")) || 0,
+      patientPayable: 0,
     };
 
     addClaim(newClaim);
@@ -273,11 +279,30 @@ export default function OpdDashboardView({
 
   const handleSaveVitals = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedPatient || !user) return;
     const hM = quickHeight / 100;
     const bmiVal = Number((quickWeight / (hM * hM)).toFixed(1));
-    notify(`Vitals logged for ${selectedPatient?.name || "Active Patient"}: BP ${quickBpSys}/${quickBpDia}, BMI ${bmiVal} kg/m²`);
+    addTreatment({
+      id: `VIT-${uid()}`,
+      patientId: selectedPatient.id,
+      patientName: selectedPatient.name,
+      timestamp: timestamp().slice(0, 16),
+      treatmentName: "Quick Vitals Check",
+      category: "Bedside Nursing",
+      performedBy: user.name,
+      performedByLicense: user.licenseNumber,
+      role: user.title,
+      vitalsAtTreatment: `BP ${quickBpSys}/${quickBpDia} mmHg | HR ${quickHr} bpm | SpO2 ${quickSpo2}% | Temp ${quickTemp}°C | Wt ${quickWeight} kg | Ht ${quickHeight} cm | BMI ${bmiVal}`,
+      notes: "",
+    });
+    notify(`Vitals saved for ${selectedPatient.name}: BP ${quickBpSys}/${quickBpDia}, BMI ${bmiVal} kg/m²`);
     setIsVitalsModalOpen(false);
   };
+
+  // Diagnostics, pharmacy, finance and legal roles have their own focused dashboard
+  if (user && ["medtech", "radtech", "pharmacy", "finance", "legal"].includes(user.role)) {
+    return <RoleDashboardView />;
+  }
 
   // =========================================================================
   // 1. ADMIN DASHBOARD: STRICT ZERO-PHI SYSTEM CONSOLE
@@ -313,20 +338,20 @@ export default function OpdDashboardView({
         {/* 4 High-Level System Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div
-            onClick={() => navigate("/admin/compliance")}
+            onClick={() => navigate("/admin/accounts")}
             className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs hover:border-amber-300 cursor-pointer transition-all"
           >
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-                System Status
+                Pending Approvals
               </span>
               <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
                 <Activity size={16} strokeWidth={2} />
               </div>
             </div>
-            <div className="text-2xl font-bold text-slate-900 mt-2">99.98%</div>
+            <div className="text-2xl font-bold text-slate-900 mt-2">{profileRequests.filter(r => r.status === "Pending").length}</div>
             <div className="text-[11px] text-emerald-600 font-semibold mt-1">
-              Operational • DB Connected
+              Profile change requests
             </div>
           </div>
 
@@ -342,9 +367,9 @@ export default function OpdDashboardView({
                 <Users size={16} strokeWidth={2} />
               </div>
             </div>
-            <div className="text-2xl font-bold text-slate-900 mt-2">{usersList.length || 4}</div>
+            <div className="text-2xl font-bold text-slate-900 mt-2">{usersList.filter(u => u.status !== "suspended").length}</div>
             <div className="text-[11px] text-slate-500 mt-1">
-              Doctors, Nurses & Staff Users
+              Active • {usersList.filter(u => u.status === "suspended").length} suspended
             </div>
           </div>
 
@@ -360,9 +385,9 @@ export default function OpdDashboardView({
                 <FileText size={16} strokeWidth={2} />
               </div>
             </div>
-            <div className="text-2xl font-bold text-slate-900 mt-2">{auditLogs.length || 8}</div>
+            <div className="text-2xl font-bold text-slate-900 mt-2">{auditLogs.length}</div>
             <div className="text-[11px] text-blue-600 font-medium mt-1">
-              0 Security Violations Flagged
+              {auditLogs.filter(l => l.status === "Flagged").length} flagged events
             </div>
           </div>
 

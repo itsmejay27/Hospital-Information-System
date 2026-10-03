@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Patient, TriageTier } from "../types";
+import { uid } from "../services/ids";
 import {
   UserPlus,
   Check,
@@ -47,25 +48,30 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
   const [regConsentPrivacy, setRegConsentPrivacy] = useState(true);
 
   // Dynamic Age calculation
-  const calculatedAge = regDob
-    ? Math.max(0, new Date().getFullYear() - new Date(regDob).getFullYear())
-    : 30;
+  const calculatedAge = (() => {
+    if (!regDob) return 0;
+    const dob = new Date(regDob);
+    const now = new Date();
+    let age = now.getFullYear() - dob.getFullYear();
+    if (now.getMonth() < dob.getMonth() || (now.getMonth() === dob.getMonth() && now.getDate() < dob.getDate())) age--;
+    return Math.max(0, age);
+  })();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regName.trim()) return;
+    if (!regName.trim() || !regDob) return;
 
-    const newId = `P-2026-${String(patients.length + 1).padStart(3, "0")}`;
+    const newId = `P-${new Date().getFullYear()}-${uid()}`;
 
     const newPatient: Patient = {
       id: newId,
       name: regName.trim(),
-      dob: regDob || "1995-01-01",
+      dob: regDob,
       age: calculatedAge,
       gender: regGender,
       civilStatus: regCivilStatus,
-      contact: regContact || "09XX-XXX-XXXX",
-      address: regAddress || "Metro Manila, Philippines",
+      contact: regContact.trim() || "Not provided",
+      address: regAddress.trim() || "Not provided",
       bloodType: regBloodType,
       allergies: regAllergies ? regAllergies.split(",").map(a => a.trim()) : ["None reported"],
       chiefComplaint: regComplaint || "Routine clinical consultation / Outpatient intake",
@@ -186,10 +192,12 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                    Date of Birth
+                    Date of Birth <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="date"
+                    required
+                    max={new Date().toISOString().slice(0, 10)}
                     value={regDob}
                     onChange={e => setRegDob(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:border-teal-500 outline-hidden font-medium"

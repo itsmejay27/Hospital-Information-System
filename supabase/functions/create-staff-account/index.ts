@@ -13,7 +13,10 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const ROLES = ["doctor", "nurse", "staff", "admin"];
+const ROLES = ["doctor", "nurse", "medtech", "radtech", "pharmacy", "staff", "finance", "legal", "admin"];
+// Roles that must hold a professional license number, unique among active staff
+const LICENSED_ROLES = ["doctor", "nurse", "medtech", "radtech", "pharmacy"];
+const licenseDigits = (v: unknown) => String(v ?? "").replace(/\D/g, "");
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -70,6 +73,19 @@ Deno.serve(async (req) => {
   const { data: existing } = await admin.from("users").select("id").eq("id", id).maybeSingle();
   if (existing) return json({ error: "A staff profile with this ID already exists." }, 409);
 
+  const digits = licenseDigits(profile.licenseNumber);
+  if (LICENSED_ROLES.includes(String(profile.role)) && digits.length < 5) {
+    return json({ error: "A valid license number (at least 5 digits) is required for this role." }, 400);
+  }
+  if (digits) {
+    const { data: allUsers } = await admin.from("users").select("data");
+    const clash = (allUsers ?? []).find(
+      (r: { data: Record<string, unknown> }) =>
+        r.data?.status !== "suspended" && licenseDigits(r.data?.licenseNumber) === digits
+    );
+    if (clash) return json({ error: `License number is already used by ${clash.data.name}.` }, 409);
+  }
+
   // 3. Create the login, then the profile and link; undo the login if either fails
   const { data: created, error: createError } = await admin.auth.admin.createUser({
     email,
@@ -80,7 +96,7 @@ Deno.serve(async (req) => {
     return json({ error: createError?.message ?? "Could not create the login." }, 400);
   }
 
-  const newProfile = { ...profile, id, status: "active", contactEmail: email };
+  const newProfile = { ...profile, id, status: "active", contactEmail: email, showInDirectory: false };
   const { error: profileError } = await admin
     .from("users")
     .insert({ id, data: newProfile, updated_at: new Date().toISOString() });

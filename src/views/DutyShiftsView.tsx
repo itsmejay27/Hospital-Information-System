@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
 import { useWardData } from "../context/WardDataContext";
-import { DutyShift, DUTY_SHIFT_HOURS, ShiftSchedule } from "../types";
+import { DutyShift, DUTY_SHIFT_HOURS, ShiftSchedule, ROLE_LABELS, ALL_ROLES, Role } from "../types";
 import PageHeader from "../components/PageHeader";
 import Modal from "../components/Modal";
 import StaffAvatar from "../components/StaffAvatar";
@@ -41,7 +41,7 @@ export default function DutyShiftsView() {
 
   const today = todayIso();
   const [weekStart, setWeekStart] = useState(startOfWeek(today));
-  const [roleFilter, setRoleFilter] = useState<"all" | "doctor" | "nurse" | "staff" | "admin">("all");
+  const [roleFilter, setRoleFilter] = useState<"all" | Role>("all");
   const [draft, setDraft] = useState<{ userId: string; date: string; shift: DutyShift; area: string; notes: string; repeatDays: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -180,7 +180,7 @@ export default function DutyShiftsView() {
               {onDutyNow.map(s => (
                 <tr key={s.id} className={ui.tr}>
                   <td className={`${ui.td} font-semibold text-slate-900`}>{s.staffName}</td>
-                  <td className={`${ui.td} capitalize`}>{s.role}</td>
+                  <td className={ui.td}>{ROLE_LABELS[s.role]}</td>
                   <td className={ui.td}>{s.area}</td>
                 </tr>
               ))}
@@ -200,10 +200,11 @@ export default function DutyShiftsView() {
               className={ui.inlineInput}
             >
               <option value="all">All roles</option>
-              <option value="doctor">Doctors</option>
-              <option value="nurse">Nurses</option>
-              <option value="staff">Staff</option>
-              <option value="admin">Admins</option>
+              {ALL_ROLES.map(r => (
+                <option key={r} value={r}>
+                  {ROLE_LABELS[r]}
+                </option>
+              ))}
             </select>
           </div>
           <div className="flex items-center gap-1.5">
@@ -248,7 +249,7 @@ export default function DutyShiftsView() {
                       <StaffAvatar user={u} size={26} />
                       <div>
                         <div className="font-bold text-slate-900 leading-tight">{u.name}</div>
-                        <div className="text-[10px] text-slate-400 capitalize">{u.role}</div>
+                        <div className="text-[10px] text-slate-400">{ROLE_LABELS[u.role]}</div>
                       </div>
                     </div>
                   </td>
@@ -310,7 +311,7 @@ export default function DutyShiftsView() {
                   .filter(u => u.status !== "suspended")
                   .map(u => (
                     <option key={u.id} value={u.id}>
-                      {u.name} — {u.role}
+                      {u.name} — {ROLE_LABELS[u.role]}
                     </option>
                   ))}
               </select>

@@ -1,164 +1,165 @@
 import React from "react";
-import { User } from "../types";
-import {
-  KeyRound,
-  CheckCircle2,
-  XCircle,
-  Eye,
-  ShieldCheck,
-} from "../components/Icons";
+import { User, Role, ALL_ROLES, ROLE_LABELS } from "../types";
+import PageHeader from "../components/PageHeader";
+import * as ui from "../components/tableStyles";
+import { KeyRound } from "../components/Icons";
 
 interface Props {
   user: User;
   onSignOut?: () => void;
 }
 
-interface RbacRow {
-  feature: string;
-  doctor: { status: "denied" | "allowed" | "read" | "audit"; text: string };
-  nurse: { status: "denied" | "allowed" | "read" | "audit"; text: string };
-  staff: { status: "denied" | "allowed" | "read" | "audit"; text: string };
-  admin: { status: "denied" | "allowed" | "read" | "audit"; text: string };
+type Level = "full" | "limited" | "view";
+interface ModuleAccess {
+  module: string;
+  description: string;
+  access: Partial<Record<Role, { level: Level; note?: string }>>;
 }
 
-function RbacBadge({ entry }: { entry: { status: "denied" | "allowed" | "read" | "audit"; text: string } }) {
-  if (entry.status === "denied") {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-rose-600 font-medium">
-        <XCircle size={14} className="text-rose-600 shrink-0" strokeWidth={2} />
-        <span>{entry.text}</span>
-      </span>
-    );
-  }
-  if (entry.status === "allowed") {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-emerald-600 font-medium">
-        <CheckCircle2 size={14} className="text-emerald-600 shrink-0" strokeWidth={2} />
-        <span>{entry.text}</span>
-      </span>
-    );
-  }
-  if (entry.status === "read") {
-    return (
-      <span className="inline-flex items-center gap-1.5 text-slate-700 font-medium">
-        <Eye size={14} className="text-slate-500 shrink-0" strokeWidth={2} />
-        <span>{entry.text}</span>
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1.5 text-amber-700 font-medium">
-      <ShieldCheck size={14} className="text-amber-600 shrink-0" strokeWidth={2} />
-      <span>{entry.text}</span>
-    </span>
-  );
-}
+// Mirrors the route guards in App.tsx and the sidebar in OpdSidebar.tsx.
+const MATRIX: ModuleAccess[] = [
+  {
+    module: "Patient Registration & Directory",
+    description: "Register patients, master patient list, visitor log",
+    access: { staff: { level: "full" } },
+  },
+  {
+    module: "Patient Live Queue",
+    description: "Waiting list, call next patient, queue status",
+    access: { doctor: { level: "full" }, nurse: { level: "full" }, staff: { level: "full" } },
+  },
+  {
+    module: "Clinical Care (SOAP, e-Prescriptions, Lab Orders)",
+    description: "Consultations, diagnoses, prescriptions, diagnostic requests",
+    access: { doctor: { level: "full" }, nurse: { level: "limited", note: "Vitals & BMI only" } },
+  },
+  {
+    module: "Nursing Station",
+    description: "ADPIE care plans, nurses' notes, endorsements, chief complaints",
+    access: { nurse: { level: "full" }, doctor: { level: "limited", note: "Writes doctor's orders; reads nursing records" } },
+  },
+  {
+    module: "Ward & Bed Allocation",
+    description: "Admit patients to wards and beds",
+    access: { staff: { level: "full" }, nurse: { level: "full" } },
+  },
+  {
+    module: "Laboratory Worklist",
+    description: "Receive specimens, enter and release lab results",
+    access: { medtech: { level: "full" }, doctor: { level: "view" } },
+  },
+  {
+    module: "Imaging Worklist",
+    description: "Perform studies, write and release imaging reports",
+    access: { radtech: { level: "full" }, doctor: { level: "view" } },
+  },
+  {
+    module: "Pharmacy Dispensing",
+    description: "Dispense prescriptions and record quantities",
+    access: { pharmacy: { level: "full" }, doctor: { level: "view" } },
+  },
+  {
+    module: "PhilHealth & eClaims",
+    description: "File claims, update claim status",
+    access: { finance: { level: "full" }, staff: { level: "full" }, doctor: { level: "full" } },
+  },
+  {
+    module: "Census & Reports",
+    description: "Morbidity, census and financial summaries",
+    access: { finance: { level: "view" }, doctor: { level: "view" }, nurse: { level: "view" }, staff: { level: "view" } },
+  },
+  {
+    module: "Staff Accounts & Approvals",
+    description: "Create logins, assign roles, approve profile changes, public directory",
+    access: { admin: { level: "full" } },
+  },
+  {
+    module: "Audit Ledger",
+    description: "Append-only record of every action (who, what, when)",
+    access: { admin: { level: "view" }, legal: { level: "view" } },
+  },
+  {
+    module: "Data Privacy & Compliance",
+    description: "RA 10173 safeguards and access permissions",
+    access: { admin: { level: "view" }, legal: { level: "view" } },
+  },
+  {
+    module: "Duty Shifts",
+    description: "Morning / Afternoon / Night schedules",
+    access: Object.fromEntries(
+      ALL_ROLES.map(r => [r, r === "admin" ? { level: "full" as Level, note: "Assigns shifts" } : { level: "view" as Level, note: "Own & roster" }])
+    ),
+  },
+  {
+    module: "My Settings",
+    description: "Password, profile picture, profile change requests",
+    access: Object.fromEntries(
+      ALL_ROLES.map(r => [r, r === "admin" ? { level: "full" as Level } : { level: "limited" as Level, note: "Changes need approval" }])
+    ),
+  },
+];
+
+const cellStyle: Record<Level, string> = {
+  full: "bg-emerald-50 text-emerald-800 border-emerald-200",
+  limited: "bg-amber-50 text-amber-800 border-amber-200",
+  view: "bg-sky-50 text-sky-800 border-sky-200",
+};
+const cellText: Record<Level, string> = { full: "Full", limited: "Limited", view: "View" };
 
 export default function AdminRbacView({ user }: Props) {
-  const rbacMatrix: RbacRow[] = [
-    {
-      feature: "1. Patient Registration & Inpatient Bed Allocation",
-      doctor: { status: "read", text: "Read-only Roster" },
-      nurse: { status: "allowed", text: "Bed Management & MAR" },
-      staff: { status: "allowed", text: "Full Intake Authority" },
-      admin: { status: "audit", text: "Audit Ledger Only" },
-    },
-    {
-      feature: "2. Clinical Encounters, SOAP Notes & Prescriptions",
-      doctor: { status: "allowed", text: "Primary Prescriber" },
-      nurse: { status: "denied", text: "Denied (Read-only)" },
-      staff: { status: "denied", text: "Denied" },
-      admin: { status: "audit", text: "Audit Trail Access" },
-    },
-    {
-      feature: "3. Bedside Vitals, BMI & Medication Administration (MAR)",
-      doctor: { status: "read", text: "Review Flowsheet" },
-      nurse: { status: "allowed", text: "Full Logging Authority" },
-      staff: { status: "denied", text: "Denied" },
-      admin: { status: "audit", text: "Audit Trail Access" },
-    },
-    {
-      feature: "4. Healthcare Worker Account Provisioning",
-      doctor: { status: "denied", text: "Denied" },
-      nurse: { status: "denied", text: "Denied" },
-      staff: { status: "denied", text: "Denied" },
-      admin: { status: "allowed", text: "Exclusive Authority" },
-    },
-    {
-      feature: "5. Laboratory & Diagnostic Results Release",
-      doctor: { status: "allowed", text: "Order & Interpret" },
-      nurse: { status: "allowed", text: "View for Ward Care" },
-      staff: { status: "read", text: "Status Only" },
-      admin: { status: "audit", text: "Audit Trail Access" },
-    },
-    {
-      feature: "6. Hospital Branding & Master System Configuration",
-      doctor: { status: "denied", text: "Denied" },
-      nurse: { status: "denied", text: "Denied" },
-      staff: { status: "denied", text: "Denied" },
-      admin: { status: "allowed", text: "Master Config Control" },
-    },
-    {
-      feature: "7. PhilHealth eClaims Adjudication & Transmission",
-      doctor: { status: "allowed", text: "Clinical Certification" },
-      nurse: { status: "denied", text: "Denied" },
-      staff: { status: "allowed", text: "Claims Processing" },
-      admin: { status: "audit", text: "Audit Trail Access" },
-    },
-  ];
-
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-              Access Governance • Isolated Route
-            </span>
-            <span className="text-xs text-slate-400 font-mono">/admin/rbac</span>
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2.5">
-            <KeyRound size={24} className="text-amber-600" />
-            <span>Role-Based Access Control (RBAC) Permissions Matrix</span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Enforced by Policy Guard • Principle of Least Privilege across Doctor, Nurse, Staff & Admin Roles
-          </p>
-        </div>
+    <div className="space-y-4 max-w-7xl mx-auto pb-10">
+      <PageHeader
+        icon={<KeyRound size={20} />}
+        title="Role Permissions (RBAC)"
+        description={`What each of the ${ALL_ROLES.length} roles can open and do. Viewing as ${user.name} (${ROLE_LABELS[user.role]}).`}
+      />
+
+      <div className="bg-white rounded-2xl border border-slate-200 px-4 py-3 flex flex-wrap items-center gap-3 text-[11px] font-semibold">
+        <span className="text-slate-500 uppercase tracking-wide font-bold">Legend:</span>
+        {(Object.keys(cellText) as Level[]).map(l => (
+          <span key={l} className={`px-2 py-0.5 rounded border ${cellStyle[l]}`}>
+            {cellText[l]}
+          </span>
+        ))}
+        <span className="text-slate-400">— = no access</span>
       </div>
 
-      {/* Matrix Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-[10px] uppercase font-bold text-slate-500">
-                <th className="py-3 px-4 min-w-[240px]">Hospital System Module / Capability</th>
-                <th className="py-3 px-4 min-w-[150px]">Doctor (Clinician)</th>
-                <th className="py-3 px-4 min-w-[150px]">Nurse (Ward Care)</th>
-                <th className="py-3 px-4 min-w-[150px]">Staff (Admissions)</th>
-                <th className="py-3 px-4 min-w-[150px]">Admin (Security)</th>
+      <div className={ui.tableWrap}>
+        <div className={ui.tableScroll}>
+          <table className={ui.table}>
+            <thead className={ui.thead}>
+              <tr>
+                <th className={`${ui.th} sticky left-0 bg-slate-50 min-w-[220px]`}>Module</th>
+                {ALL_ROLES.map(r => (
+                  <th key={r} className={`${ui.th} text-center`}>
+                    {ROLE_LABELS[r].replace(/ \(.*\)$/, "")}
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rbacMatrix.map((row, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3.5 px-4 font-bold text-slate-900">
-                    {row.feature}
+            <tbody>
+              {MATRIX.map(m => (
+                <tr key={m.module} className={ui.tr}>
+                  <td className={`${ui.td} sticky left-0 bg-white`}>
+                    <div className="font-bold text-slate-900">{m.module}</div>
+                    <div className="text-[10px] text-slate-500">{m.description}</div>
                   </td>
-                  <td className="py-3.5 px-4">
-                    <RbacBadge entry={row.doctor} />
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <RbacBadge entry={row.nurse} />
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <RbacBadge entry={row.staff} />
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <RbacBadge entry={row.admin} />
-                  </td>
+                  {ALL_ROLES.map(r => {
+                    const a = m.access[r];
+                    return (
+                      <td key={r} className={`${ui.td} text-center`}>
+                        {a ? (
+                          <span className={`inline-block px-2 py-0.5 rounded border text-[10px] font-bold ${cellStyle[a.level]}`} title={a.note}>
+                            {cellText[a.level]}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300">—</span>
+                        )}
+                        {a?.note && <div className="text-[9px] text-slate-500 mt-0.5 leading-tight">{a.note}</div>}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>

@@ -1,5 +1,5 @@
 import React from "react";
-import { LabTestItem } from "../types";
+import { DiagnosticResult, LabTestItem } from "../types";
 
 /** Some stored values already include the unit ("13.8 g/dL"); avoid printing it twice. */
 export function splitValue(item: LabTestItem): { value: string; unit: string } {
@@ -52,5 +52,45 @@ export default function LabResultsTable({ items }: { items: LabTestItem[] }) {
         })}
       </tbody>
     </table>
+  );
+}
+
+export const labStatusLabel = (status: DiagnosticResult["status"]) =>
+  status === "Pending Analysis" ? "Ordered" : status === "In-Progress" ? "In Progress" : "Released";
+
+/** Full result body for one lab test or imaging study, as released by the MedTech / RadTech. */
+export function DiagnosticReport({ lab }: { lab: DiagnosticResult }) {
+  if (lab.status !== "Ready") {
+    return (
+      <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
+        <span className="font-bold">{labStatusLabel(lab.status)}:</span> results are not released yet.
+        {lab.indication && <span> Indication: {lab.indication}</span>}
+      </div>
+    );
+  }
+  const imaging = !!lab.findings || lab.category === "Radiology";
+  return (
+    <div className="space-y-2 text-xs">
+      {lab.findings && (
+        <div className="p-3 rounded-lg bg-white border border-slate-200">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Findings</div>
+          <p className="whitespace-pre-line text-slate-800">{lab.findings}</p>
+        </div>
+      )}
+      {(!imaging || lab.items.length > 0) && (
+        <div className="rounded-lg border border-slate-200 overflow-hidden">
+          <LabResultsTable items={lab.items} />
+        </div>
+      )}
+      <div className="flex flex-wrap justify-between gap-2 text-[11px] text-slate-500">
+        <span>
+          <span className="font-semibold text-slate-700">{imaging ? "Impression" : "Interpretation"}:</span> {lab.summary || "—"}
+        </span>
+        <span>
+          Released by: {lab.releasedBy || "—"}
+          {lab.releasedAt ? ` • ${lab.releasedAt}` : ""}
+        </span>
+      </div>
+    </div>
   );
 }
