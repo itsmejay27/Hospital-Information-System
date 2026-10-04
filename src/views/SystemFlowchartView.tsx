@@ -86,11 +86,13 @@ const LANES: { role: Role; title: string; tone: Tone; steps: Step[] }[] = [
     title: "Front Desk Receptionist",
     tone: "staff",
     steps: [
+      { title: "Appointments", detail: "Book; Check In sends the patient to the doctor's queue", tone: "staff", path: "/appointments", roles: ["staff", "doctor"] },
       { title: "Patient Registration", detail: "Demographics, PhilHealth, consent", tone: "staff", path: "/registration/new-patient", roles: ["staff"] },
       { title: "Live Queue", detail: "Assign queue number & doctor", tone: "staff", path: "/queue", roles: ["doctor", "nurse", "staff"] },
       { title: "Visitor Log", detail: "Visitor check-in / check-out", tone: "staff", path: "/registration/visitors", roles: ["staff"] },
       { title: "Bed Allocation", detail: "Admit to ward / bed", tone: "staff", path: "/registration/beds", roles: ["staff", "nurse"] },
-      { title: "PhilHealth eClaims", detail: "Benefit claims & billing", tone: "staff", path: "/philhealth", roles: ["doctor", "staff", "finance"] },
+      { title: "PhilHealth eClaims", detail: "Benefit claims", tone: "staff", path: "/philhealth", roles: ["doctor", "staff", "finance"] },
+      { title: "Billing & Cashier", detail: "Bill, collect payment, issue OR", tone: "staff", path: "/billing", roles: ["finance", "staff"] },
     ],
   },
   {
@@ -124,7 +126,7 @@ const LANES: { role: Role; title: string; tone: Tone; steps: Step[] }[] = [
     steps: [
       { title: "Laboratory Worklist", detail: "New lab requests from doctors", tone: "ancillary", path: "/lab", roles: ["medtech", "doctor"] },
       { title: "Receive Specimen", detail: "Status: In Progress", tone: "ancillary", path: "/lab", roles: ["medtech", "doctor"] },
-      { title: "Enter Results", detail: "Values, units, reference ranges, flags", tone: "ancillary", path: "/lab", roles: ["medtech", "doctor"] },
+      { title: "Enter Results", detail: "Values, ranges, flags; mark critical values", tone: "ancillary", path: "/lab", roles: ["medtech", "doctor"] },
       { title: "Release to Doctor", detail: "Signed with license number", tone: "ancillary", path: "/lab", roles: ["medtech", "doctor"] },
     ],
   },
@@ -156,8 +158,9 @@ const LANES: { role: Role; title: string; tone: Tone; steps: Step[] }[] = [
     tone: "ancillary",
     steps: [
       { title: "Prescriptions to Dispense", detail: "Doctors' e-prescriptions", tone: "ancillary", path: "/pharmacy", roles: ["pharmacy", "doctor"] },
-      { title: "Check Order", detail: "Dose, route, frequency, instructions", tone: "ancillary", path: "/pharmacy", roles: ["pharmacy", "doctor"] },
-      { title: "Dispense & Record Quantity", detail: "Signed with license number", tone: "ancillary", path: "/pharmacy", roles: ["pharmacy", "doctor"] },
+      { title: "Check Order & Allergies", detail: "Allergy warning before dispensing", tone: "ancillary", path: "/pharmacy", roles: ["pharmacy", "doctor"] },
+      { title: "Dispense from Stock", detail: "Full or partial; stock deducted", tone: "ancillary", path: "/pharmacy", roles: ["pharmacy", "doctor"] },
+      { title: "Medicine Stock", detail: "Receive deliveries; low-stock & expiry alerts", tone: "ancillary", path: "/pharmacy", roles: ["pharmacy", "doctor"] },
     ],
   },
   {
@@ -166,6 +169,8 @@ const LANES: { role: Role; title: string; tone: Tone; steps: Step[] }[] = [
     tone: "finance",
     steps: [
       { title: "Finance Dashboard", detail: "Charges, PhilHealth benefit, payables", tone: "finance", path: "/dashboard", roles: ["finance"] },
+      { title: "Billing & Payments", detail: "Bills, OR payments, statements", tone: "finance", path: "/billing", roles: ["finance", "staff"] },
+      { title: "Revenue Report", detail: "By date, method and service; CSV export", tone: "finance", path: "/billing", roles: ["finance", "staff"] },
       { title: "PhilHealth & eClaims", detail: "Track and update claim status", tone: "finance", path: "/philhealth", roles: ["doctor", "staff", "finance"] },
       { title: "Census & Reports", detail: "Financial and census summaries", tone: "finance", path: "/reports", roles: ["doctor", "nurse", "staff", "finance"] },
     ],
@@ -176,7 +181,9 @@ const LANES: { role: Role; title: string; tone: Tone; steps: Step[] }[] = [
     tone: "legal",
     steps: [
       { title: "Compliance Dashboard", detail: "Flagged events, account changes", tone: "legal", path: "/dashboard", roles: ["legal"] },
-      { title: "Audit Ledger", detail: "Who did what, and when (read-only)", tone: "legal", path: "/admin/audit-ledger", roles: ["admin", "legal"] },
+      { title: "Incident Reports", detail: "Investigate and close", tone: "legal", path: "/legal", roles: ["admin", "legal"] },
+      { title: "Data Privacy Requests", detail: "Access / correction / erasure, 30-day due date", tone: "legal", path: "/legal", roles: ["admin", "legal"] },
+      { title: "Audit Ledger", detail: "Read-only; export CSV or print", tone: "legal", path: "/admin/audit-ledger", roles: ["admin", "legal"] },
       { title: "Data Privacy & Compliance", detail: "RA 10173 safeguards", tone: "legal", path: "/admin/compliance", roles: ["admin", "legal"] },
     ],
   },
@@ -192,7 +199,7 @@ const PATIENT_JOURNEY: Step[] = [
   { title: "7. Nursing Care", detail: "ADPIE care plan, notes", tone: "nurse" },
   { title: "8. Admission (if needed)", detail: "Ward & bed allocation", tone: "staff" },
   { title: "9. Discharge / Referral", detail: "Doctor clearance", tone: "doctor" },
-  { title: "10. PhilHealth Claim & Billing", detail: "Front desk & CFO", tone: "finance" },
+  { title: "10. PhilHealth Claim, Billing & Payment", detail: "Front desk & CFO", tone: "finance" },
 ];
 
 export default function SystemFlowchartView() {

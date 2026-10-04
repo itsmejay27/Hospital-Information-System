@@ -44,7 +44,7 @@ import {
 import { supabase } from "./supabase";
 
 const DB_NAME = "CarePointMedicalCenter_HIS_DB";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 const STORES = [
   "patients",
@@ -71,6 +71,11 @@ const STORES = [
   "profile_requests",
   "public_directory",
   "imaging_files",
+  "pharmacy_stock",
+  "bills",
+  "incident_reports",
+  "privacy_requests",
+  "appointments",
 ];
 
 // Staff profiles and photos are managed per-account (admin / owner only), so a

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
 import { ROLE_LABELS } from "../types";
+import { isToDispense } from "../services/pharmacy";
 import * as ui from "../components/tableStyles";
 import { imagingStage } from "./ImagingWorklistView";
 
@@ -101,7 +102,7 @@ export default function RoleDashboardView() {
     ]);
     emptyText = "No pending requests.";
   } else if (user.role === "pharmacy") {
-    const pending = medications.filter(m => m.status === "Active" && !m.dispensedAt);
+    const pending = medications.filter(isToDispense);
     kpis = [
       { label: "To Dispense", value: pending.length, hint: "Prescriptions waiting", tone: "text-sky-700" },
       { label: "Dispensed Today", value: medications.filter(m => (m.dispensedAt || "").startsWith(today)).length, hint: "Given to patients", tone: "text-emerald-700" },
@@ -109,6 +110,7 @@ export default function RoleDashboardView() {
       { label: "Discontinued", value: medications.filter(m => m.status === "Discontinued").length, hint: "Do not dispense", tone: "text-rose-600" },
     ];
     actions = [{ label: "Open Pharmacy Dispensing", to: "/pharmacy", primary: true }];
+    kpis[3] = { label: "Partially Dispensed", value: medications.filter(m => isToDispense(m) && (m.dispenses?.length ?? 0) > 0).length, hint: "Patient returns for the rest", tone: "text-amber-700" };
     tableTitle = "Prescriptions to dispense";
     head = ["Prescribed", "Patient", "Medicine", "Dose", "Prescriber"];
     body = pending.slice(0, 8).map(m => [
@@ -131,7 +133,8 @@ export default function RoleDashboardView() {
       { label: "Open Claims", value: open.length, hint: "Not yet reimbursed", tone: "text-amber-700" },
     ];
     actions = [
-      { label: "PhilHealth & eClaims", to: "/philhealth", primary: true },
+      { label: "Billing & Payments", to: "/billing", primary: true },
+      { label: "PhilHealth & eClaims", to: "/philhealth" },
       { label: "Census & Reports", to: "/reports" },
     ];
     tableTitle = "Claims not yet reimbursed";
@@ -152,7 +155,8 @@ export default function RoleDashboardView() {
       { label: "Sign-ins Today", value: auditLogs.filter(l => l.action === "Signed in" && l.timestamp.startsWith(today)).length, hint: "Staff sessions", tone: "text-sky-700" },
     ];
     actions = [
-      { label: "Open Audit Ledger", to: "/admin/audit-ledger", primary: true },
+      { label: "Incidents & Privacy Requests", to: "/legal", primary: true },
+      { label: "Open Audit Ledger", to: "/admin/audit-ledger" },
       { label: "Data Privacy & Compliance", to: "/admin/compliance" },
     ];
     tableTitle = "Latest activity";

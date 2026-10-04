@@ -1,6 +1,7 @@
 import React from "react";
 import { DiagnosticResult, LabTestItem } from "../types";
 import ImagingGallery from "./ImagingGallery";
+import { printDiagnosticReport } from "../services/reports";
 
 /** Some stored values already include the unit ("13.8 g/dL"); avoid printing it twice. */
 export function splitValue(item: LabTestItem): { value: string; unit: string } {
@@ -40,7 +41,11 @@ export default function LabResultsTable({ items }: { items: LabTestItem[] }) {
               <td className={`${cell} text-slate-600`}>{unit || "—"}</td>
               <td className={`${cell} font-mono text-slate-600`}>{item.ref}</td>
               <td className={cell}>
-                {item.flag === "H" ? (
+                {item.flag === "HH" || item.flag === "LL" ? (
+                  <span className="text-[10px] font-bold text-white bg-rose-600 border border-rose-700 px-1.5 py-0.5 rounded">
+                    CRITICAL {item.flag === "HH" ? "HIGH" : "LOW"}
+                  </span>
+                ) : item.flag === "H" ? (
                   <span className="text-[10px] font-bold text-rose-700 bg-rose-100 border border-rose-200 px-1.5 py-0.5 rounded">HIGH</span>
                 ) : item.flag === "L" ? (
                   <span className="text-[10px] font-bold text-sky-700 bg-sky-100 border border-sky-200 px-1.5 py-0.5 rounded">LOW</span>
@@ -100,11 +105,32 @@ export function DiagnosticReport({ lab }: { lab: DiagnosticResult }) {
         <span>
           <span className="font-semibold text-slate-700">{imaging ? "Impression" : "Interpretation"}:</span> {lab.summary || "—"}
         </span>
-        <span>
-          Released by: {lab.releasedBy || "—"}
-          {lab.releasedAt ? ` • ${lab.releasedAt}` : ""}
+        <span className="flex items-center gap-3">
+          <span>
+            Released by: {lab.releasedBy || "—"}
+            {lab.releasedAt ? ` • ${lab.releasedAt}` : ""}
+          </span>
+          <PrintReportButton lab={lab} />
         </span>
       </div>
     </div>
+  );
+}
+
+export function PrintReportButton({ lab }: { lab: DiagnosticResult }) {
+  const [state, setState] = React.useState<"idle" | "busy" | "blocked">("idle");
+  return (
+    <button
+      type="button"
+      onClick={async e => {
+        e.stopPropagation();
+        setState("busy");
+        const ok = await printDiagnosticReport(lab);
+        setState(ok ? "idle" : "blocked");
+      }}
+      className="font-bold text-emerald-700 hover:underline cursor-pointer whitespace-nowrap"
+    >
+      {state === "busy" ? "Preparing…" : state === "blocked" ? "Allow pop-ups to print" : "Print report"}
+    </button>
   );
 }

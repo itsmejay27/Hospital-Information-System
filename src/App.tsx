@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { OpdDataProvider, useOpdData } from "./context/OpdDataContext";
 import OpdSidebar from "./components/OpdSidebar";
 import OpdTopNav from "./components/OpdTopNav";
+import CriticalResultsAlert from "./components/CriticalResultsAlert";
 import PublicLayout, {
   PublicHomePage,
   PublicAboutPage,
@@ -36,6 +37,10 @@ import DutyShiftsView from "./views/DutyShiftsView";
 import SystemFlowchartView from "./views/SystemFlowchartView";
 import DiagnosticsWorklistView from "./views/DiagnosticsWorklistView";
 import ImagingWorklistView from "./views/ImagingWorklistView";
+import BillingView from "./views/BillingView";
+import AppointmentsView from "./views/AppointmentsView";
+import LegalView from "./views/LegalView";
+import IncidentsView from "./views/IncidentsView";
 import PharmacyView from "./views/PharmacyView";
 
 import { User, Role } from "./types";
@@ -313,6 +318,7 @@ function OpdAppLayout() {
 
         {/* Dynamic Routed Outpatient Department Workspace */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 lg:p-7 min-w-0">
+          <CriticalResultsAlert />
           <Outlet />
         </main>
       </div>
@@ -508,6 +514,38 @@ export default function App() {
               {/* ============================================================ */}
               {/* BILLING & REPORTS */}
               {/* ============================================================ */}
+              <Route
+                path="/billing"
+                element={
+                  <ProtectedRoute allowedRoles={["finance", "staff"]}>
+                    <BillingView />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/appointments"
+                element={
+                  <ProtectedRoute allowedRoles={["staff", "doctor"]}>
+                    <AppointmentsView />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/legal"
+                element={
+                  <ProtectedRoute allowedRoles={["legal", "admin"]}>
+                    <LegalView />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/incidents"
+                element={
+                  <ProtectedRoute>
+                    <IncidentsView />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/philhealth"
                 element={

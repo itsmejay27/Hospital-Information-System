@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import StaffAvatar from "./StaffAvatar";
+import { isToDispense } from "../services/pharmacy";
 import { useNavigate, useLocation } from "react-router-dom";
 import { User, Role } from "../types";
 import { useAuth } from "../context/AuthContext";
@@ -9,6 +10,8 @@ import { DUTY_SHIFT_HOURS, ALL_ROLES, ROLE_LABELS } from "../types";
 import { todayIso } from "../views/nursing/helpers";
 import {
   LayoutDashboard,
+  Calendar,
+  AlertTriangle,
   Users,
   UserPlus,
   Stethoscope,
@@ -80,7 +83,7 @@ export default function OpdSidebar({
   const pendingImaging = labResults.filter(l =>
     l.category === "Radiology" && l.status !== "Ready" && ((propsUser || authUser)?.role === "radiologist" ? !!l.acquiredAt : !l.acquiredAt)
   ).length;
-  const toDispense = medications.filter(m => m.status === "Active" && !m.dispensedAt).length;
+  const toDispense = medications.filter(isToDispense).length;
   const { shiftSchedules } = useWardData();
 
   const user = propsUser || authUser;
@@ -234,8 +237,24 @@ export default function OpdSidebar({
         { id: "visitors", label: "Front Desk Visitor Log", path: "/registration/visitors", roles: ["staff"] },
       ],
     },
+    {
+      id: "appointments",
+      path: "/appointments",
+      label: currentRole === "doctor" ? "My Appointments" : "Appointments",
+      icon: Calendar,
+      roles: ["staff", "doctor"],
+      group: "registration",
+    },
 
     // --- Billing & Discharges ---
+    {
+      id: "billing",
+      path: "/billing",
+      label: "Billing & Payments",
+      icon: FileText,
+      roles: ["finance", "staff"],
+      group: "billing",
+    },
     {
       id: "philhealth",
       path: "/philhealth",
@@ -263,6 +282,7 @@ export default function OpdSidebar({
       roles: ["legal"],
       group: "management",
       subItems: [
+        { id: "legal-cases", label: "Incidents & Privacy Requests", path: "/legal", roles: ["legal"] },
         { id: "legal-audit", label: "Audit Ledger", path: "/admin/audit-ledger", roles: ["legal"] },
         { id: "legal-compliance", label: "Data Privacy & Compliance", path: "/admin/compliance", roles: ["legal"] },
         { id: "legal-rbac", label: "Access Permissions", path: "/admin/rbac", roles: ["legal"] },
@@ -276,6 +296,14 @@ export default function OpdSidebar({
       label: "Duty Shifts",
       icon: Clock,
       roles: ALL_ROLES,
+      group: "general",
+    },
+    {
+      id: "incidents",
+      path: "/incidents",
+      label: "Report an Incident",
+      icon: AlertTriangle,
+      roles: ALL_ROLES.filter(r => r !== "legal"),
       group: "general",
     },
     {
@@ -300,6 +328,7 @@ export default function OpdSidebar({
         { id: "audit-ledger", label: "Audit Ledger", path: "/admin/audit-ledger", roles: ["admin"] },
         { id: "rbac", label: "Role Permissions (RBAC)", path: "/admin/rbac", roles: ["admin"] },
         { id: "compliance", label: "Data Privacy & Compliance", path: "/admin/compliance", roles: ["admin"] },
+        { id: "admin-legal", label: "Incidents & Privacy Requests", path: "/legal", roles: ["admin"] },
       ],
     },
   ];

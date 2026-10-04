@@ -1,6 +1,8 @@
 import React, { useState } from "react";
+import { downloadCsv, esc, printDocument } from "../services/print";
 import { User, AuditLog, Role, ROLE_LABELS, ALL_ROLES } from "../types";
 import {
+  Printer,
   FileText,
   ShieldCheck,
   Search,
@@ -43,26 +45,38 @@ export default function AdminAuditLedgerView({ user, auditLogs }: Props) {
   const flaggedLogs = auditLogs.filter(l => l.status === "Flagged").length;
 
   const handleExportLedger = () => {
-    const csvContent =
-      "data:text/csv;charset=utf-8," +
-      ["ID,Timestamp,User,Role,License,Action,Patient,MRN,Department,IP,Status,CryptographicDigest"]
-        .concat(
-          auditLogs.map(
-            l =>
-              `"${l.id}","${l.timestamp}","${l.userName}","${l.userRole}","${l.userLicense || "N/A"}","${l.action}","${l.targetPatient}","${l.patientId}","${l.department}","${l.ipAddress}","${l.status}","${generateDigest(l)}"`
-          )
-        )
-        .join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `CarePoint_Cryptographic_Audit_Ledger_${selectedDate || new Date().toISOString().split("T")[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    setNotification("Cryptographic Audit Ledger exported successfully with SHA-256 tamper-evident checksums.");
+    // Exports what is on screen (current search, role, status and date filters)
+    downloadCsv(`CarePoint_Audit_Log_${selectedDate || new Date().toISOString().split("T")[0]}.csv`, [
+      ["ID", "Timestamp", "User", "Role", "License", "Action", "Patient", "Patient ID", "Department", "Device", "Status", "Digest"],
+      ...filteredLogs.map(l => [
+        l.id, l.timestamp, l.userName, ROLE_LABELS[l.userRole] || l.userRole, l.userLicense || "", l.action, l.targetPatient, l.patientId,
+        l.department, l.ipAddress, l.status, generateDigest(l),
+      ]),
+    ]);
+    setNotification(`Exported ${filteredLogs.length} audit entries (CSV).`);
     setTimeout(() => setNotification(null), 5000);
+  };
+
+  const handlePrintLedger = () => {
+    const rows = filteredLogs
+      .map(
+        l =>
+          `<tr><td>${esc(l.timestamp)}</td><td>${esc(l.userName)}<br><span class="muted">${esc(ROLE_LABELS[l.userRole] || l.userRole)}</span></td><td>${esc(l.action)}</td><td>${esc(l.targetPatient)}</td><td class="${l.status === "Flagged" ? "flag" : ""}">${esc(l.status)}</td></tr>`
+      )
+      .join("");
+    const filters = [searchTerm && `search "${searchTerm}"`, roleFilter !== "all" && `role ${roleFilter}`, statusFilter !== "all" && `status ${statusFilter}`, selectedDate && `date ${selectedDate}`]
+      .filter(Boolean)
+      .join(", ");
+    const ok = printDocument(
+      "Audit Log Report",
+      `<p><b>Prepared by:</b> ${esc(user.name)} (${esc(ROLE_LABELS[user.role])})<br><b>Entries:</b> ${filteredLogs.length}${filters ? ` &nbsp; <b>Filters:</b> ${esc(filters)}` : ""}</p>
+<table><tr><th>Time</th><th>Staff</th><th>Action</th><th>Patient</th><th>Status</th></tr>${rows}</table>
+<div class="sign"><div>${esc(user.name)}</div></div>`
+    );
+    if (!ok) {
+      setNotification("Allow pop-ups for this site to print.");
+      setTimeout(() => setNotification(null), 5000);
+    }
   };
 
   const filteredLogs = auditLogs.filter(log => {
@@ -119,13 +133,22 @@ export default function AdminAuditLedgerView({ user, auditLogs }: Props) {
           </p>
         </div>
 
+        <div className="flex flex-wrap gap-2">
         <button
           onClick={handleExportLedger}
           className="bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer self-start sm:self-auto"
         >
           <Download size={16} />
-          <span>Export Certified CSV Ledger</span>
+          <span>Export CSV</span>
         </button>
+        <button
+          onClick={handlePrintLedger}
+          className="bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer self-start sm:self-auto"
+        >
+          <Printer size={16} />
+          <span>Print / Save as PDF</span>
+        </button>
+        </div>
       </div>
 
       {/* Cryptographic Integrity & Compliance Metric Cards */}

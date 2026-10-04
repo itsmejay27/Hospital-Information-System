@@ -263,6 +263,65 @@ create policy "staff read" on public.imaging_files for select to authenticated u
 create policy "radtech insert" on public.imaging_files for insert to authenticated
   with check ((select private.my_role()) = 'radtech');
 
+-- Pharmacy stock, billing, incident reports, data privacy requests, appointments
+do $$
+declare t text;
+begin
+  foreach t in array array['pharmacy_stock','bills','incident_reports','privacy_requests','appointments'] loop
+    execute format('create table if not exists public.%I (id text primary key, data jsonb not null, updated_at timestamptz not null default now())', t);
+    execute format('alter table public.%I enable row level security', t);
+    execute format('revoke all on public.%I from anon', t);
+  end loop;
+end $$;
+
+-- Medicine stock: all staff can see it; only pharmacy changes it
+drop policy if exists "staff read" on public.pharmacy_stock;
+drop policy if exists "pharmacy insert" on public.pharmacy_stock;
+drop policy if exists "pharmacy update" on public.pharmacy_stock;
+create policy "staff read" on public.pharmacy_stock for select to authenticated using ((select private.is_staff()));
+create policy "pharmacy insert" on public.pharmacy_stock for insert to authenticated with check ((select private.my_role()) = 'pharmacy');
+create policy "pharmacy update" on public.pharmacy_stock for update to authenticated
+  using ((select private.my_role()) = 'pharmacy') with check ((select private.my_role()) = 'pharmacy');
+
+-- Bills: finance and front desk (cashier) work on them; admin and legal can read
+drop policy if exists "billing read" on public.bills;
+drop policy if exists "billing insert" on public.bills;
+drop policy if exists "billing update" on public.bills;
+create policy "billing read" on public.bills for select to authenticated
+  using ((select private.my_role()) in ('finance','staff','admin','legal'));
+create policy "billing insert" on public.bills for insert to authenticated with check ((select private.my_role()) in ('finance','staff'));
+create policy "billing update" on public.bills for update to authenticated
+  using ((select private.my_role()) in ('finance','staff')) with check ((select private.my_role()) in ('finance','staff'));
+
+-- Incident reports: anyone files (as themselves) and sees their own; legal/admin see and update all
+drop policy if exists "own or legal read" on public.incident_reports;
+drop policy if exists "staff file" on public.incident_reports;
+drop policy if exists "legal update" on public.incident_reports;
+create policy "own or legal read" on public.incident_reports for select to authenticated
+  using (data->>'reporterId' = (select private.my_staff_id()) or (select private.my_role()) in ('legal','admin'));
+create policy "staff file" on public.incident_reports for insert to authenticated
+  with check ((select private.is_staff()) and data->>'reporterId' = (select private.my_staff_id()) and data->>'status' = 'Open');
+create policy "legal update" on public.incident_reports for update to authenticated
+  using ((select private.my_role()) in ('legal','admin')) with check ((select private.my_role()) in ('legal','admin'));
+
+-- Data privacy requests: legal counsel and admin only
+drop policy if exists "legal read" on public.privacy_requests;
+drop policy if exists "legal insert" on public.privacy_requests;
+drop policy if exists "legal update" on public.privacy_requests;
+create policy "legal read" on public.privacy_requests for select to authenticated using ((select private.my_role()) in ('legal','admin'));
+create policy "legal insert" on public.privacy_requests for insert to authenticated with check ((select private.my_role()) in ('legal','admin'));
+create policy "legal update" on public.privacy_requests for update to authenticated
+  using ((select private.my_role()) in ('legal','admin')) with check ((select private.my_role()) in ('legal','admin'));
+
+-- Appointments: all staff can see; front desk books; doctors can mark their visits completed
+drop policy if exists "staff read" on public.appointments;
+drop policy if exists "desk insert" on public.appointments;
+drop policy if exists "desk update" on public.appointments;
+create policy "staff read" on public.appointments for select to authenticated using ((select private.is_staff()));
+create policy "desk insert" on public.appointments for insert to authenticated with check ((select private.my_role()) in ('staff','doctor'));
+create policy "desk update" on public.appointments for update to authenticated
+  using ((select private.my_role()) in ('staff','doctor')) with check ((select private.my_role()) in ('staff','doctor'));
+
 -- ------------------------------------------------------------------------------
 -- Giving a staff member access
 -- ------------------------------------------------------------------------------

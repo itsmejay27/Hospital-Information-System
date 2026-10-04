@@ -121,6 +121,7 @@ interface OpdDataContextType {
   ) => void;
 
   // Activity log (audit trail)
+  checkInPatient: (patientId: string, doctorName: string, complaint: string) => string | null;
   logAction: (action: string, opts?: { patientId?: string; patientName?: string; status?: AuditLog["status"] }) => void;
 
   // Diagnostics & pharmacy updates
@@ -398,33 +399,48 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
     return targetPatient;
   };
 
+  const enqueue = (patient: Patient, doctorName: string, complaint: string) => {
+    const newQueueItem: OpdQueueItem = {
+      id: `Q-${uid()}`,
+      queueNumber: queue.reduce((max, q) => Math.max(max, q.queueNumber || 0), 0) + 1,
+      patientId: patient.id,
+      patientName: patient.name,
+      age: patient.age,
+      gender: patient.gender,
+      triageTier: patient.triageTier,
+      checkInTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      chiefComplaint: complaint || patient.chiefComplaint,
+      assignedDoctor: doctorName,
+      status: "Waiting",
+      roomOrBooth: "Waiting Lounge A",
+    };
+    setQueue(prev => {
+      const updated = [...prev, newQueueItem];
+      hospitalDb.saveQueue(updated).catch(reportSaveError);
+      return updated;
+    });
+    return newQueueItem;
+  };
+
+  /** Puts an already-registered patient in the OPD queue (e.g. arriving for an appointment). */
+  const checkInPatient = (patientId: string, doctorName: string, complaint: string): string | null => {
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient) return "Patient not found. Register the patient first.";
+    if (queue.some(q => q.patientId === patientId && (q.status === "Waiting" || q.status === "In-Consultation"))) {
+      return `${patient.name} is already in the queue.`;
+    }
+    const item = enqueue(patient, doctorName, complaint);
+    logAction(`Checked in for consultation (queue #${item.queueNumber}, ${doctorName})`, { patientId, patientName: patient.name });
+    return null;
+  };
+
   const addPatient = (newPatient: Patient) => {
     setPatients(prev => [newPatient, ...prev]);
     hospitalDb.savePatient(newPatient).catch(reportSaveError);
     logAction("Registered new patient", { patientId: newPatient.id, patientName: newPatient.name });
 
     // Also automatically add to OPD queue if outpatient
-    const newQueueItem: OpdQueueItem = {
-      id: `Q-${uid()}`,
-      queueNumber: queue.reduce((max, q) => Math.max(max, q.queueNumber || 0), 0) + 1,
-      patientId: newPatient.id,
-      patientName: newPatient.name,
-      age: newPatient.age,
-      gender: newPatient.gender,
-      triageTier: newPatient.triageTier,
-      checkInTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      chiefComplaint: newPatient.chiefComplaint,
-      assignedDoctor: newPatient.attendingPhysician || "Attending Physician",
-      status: "Waiting",
-      roomOrBooth: "Waiting Lounge A",
-    };
-
-    setQueue(prev => {
-      const updated = [...prev, newQueueItem];
-      hospitalDb.saveQueue(updated).catch(reportSaveError);
-      return updated;
-    });
-
+    enqueue(newPatient, newPatient.attendingPhysician || "Attending Physician", newPatient.chiefComplaint);
     setSelectedPatient(newPatient);
   };
 
@@ -801,6 +817,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
         setClaims,
         addClaim,
         updateClaims,
+        checkInPatient,
         records,
         addRecord,
         medications,
