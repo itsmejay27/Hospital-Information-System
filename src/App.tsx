@@ -35,6 +35,7 @@ import NursingStationView from "./views/NursingStationView";
 import DutyShiftsView from "./views/DutyShiftsView";
 import SystemFlowchartView from "./views/SystemFlowchartView";
 import DiagnosticsWorklistView from "./views/DiagnosticsWorklistView";
+import ImagingWorklistView from "./views/ImagingWorklistView";
 import PharmacyView from "./views/PharmacyView";
 
 import { User, Role } from "./types";
@@ -397,8 +398,8 @@ export default function App() {
               <Route
                 path="/imaging"
                 element={
-                  <ProtectedRoute allowedRoles={["radtech", "doctor"]}>
-                    <DiagnosticsWorklistView mode="imaging" />
+                  <ProtectedRoute allowedRoles={["radtech", "radiologist", "doctor"]}>
+                    <ImagingWorklistView />
                   </ProtectedRoute>
                 }
               />

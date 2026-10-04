@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
 import { ROLE_LABELS } from "../types";
 import * as ui from "../components/tableStyles";
+import { imagingStage } from "./ImagingWorklistView";
 
 interface Kpi {
   label: string;
@@ -28,7 +29,7 @@ function KpiGrid({ items }: { items: Kpi[] }) {
   );
 }
 
-/** Home dashboard for Medical/Radiologic Technologists, Pharmacy, Finance (CFO) and Legal Counsel. */
+/** Home dashboard for Medical/Radiologic Technologists, Radiologists, Pharmacy, Finance (CFO) and Legal Counsel. */
 export default function RoleDashboardView() {
   const { user } = useAuth();
   const { labResults, medications, claims, auditLogs } = useOpdData();
@@ -43,9 +44,42 @@ export default function RoleDashboardView() {
   let body: React.ReactNode[][] = [];
   let emptyText = "";
 
-  if (user.role === "medtech" || user.role === "radtech") {
-    const imaging = user.role === "radtech";
-    const list = labResults.filter(l => (imaging ? l.category === "Radiology" : l.category !== "Radiology"));
+  if (user.role === "radtech" || user.role === "radiologist") {
+    const reader = user.role === "radiologist";
+    const studies = labResults.filter(l => l.category === "Radiology");
+    const stage = (l: (typeof studies)[number]) => imagingStage(l);
+    const ordered = studies.filter(l => stage(l) === "todo");
+    const imaging = studies.filter(l => stage(l) === "imaging");
+    const reading = studies.filter(l => stage(l) === "reading");
+    const urgent = (list: typeof studies) => list.filter(l => l.priority && l.priority !== "Routine").length;
+    kpis = reader
+      ? [
+          { label: "For Reading", value: reading.length, hint: "Images ready for your report", tone: "text-violet-700" },
+          { label: "STAT / Urgent", value: urgent(reading), hint: "Read these first", tone: "text-rose-600" },
+          { label: "Being Imaged", value: ordered.length + imaging.length, hint: "Coming to you soon", tone: "text-amber-700" },
+          { label: "Reported Today", value: studies.filter(l => l.status === "Ready" && (l.releasedAt || "").startsWith(today)).length, hint: "Released to doctors", tone: "text-emerald-700" },
+        ]
+      : [
+          { label: "New Requests", value: ordered.length, hint: "Patients to image", tone: "text-sky-700" },
+          { label: "Imaging", value: imaging.length, hint: "Upload images & send", tone: "text-amber-700" },
+          { label: "STAT / Urgent", value: urgent([...ordered, ...imaging]), hint: "Do these first", tone: "text-rose-600" },
+          { label: "Waiting for Radiologist", value: reading.length, hint: "Sent for reading", tone: "text-violet-700" },
+        ];
+    actions = [{ label: reader ? "Open Reading List" : "Open Imaging Worklist", to: "/imaging", primary: true }];
+    tableTitle = reader ? "Studies waiting for your report" : "Waiting for you";
+    head = ["Ordered", "Priority", "Patient", "Study", "Doctor", reader ? "Images" : "Status"];
+    const list = reader ? reading : [...ordered, ...imaging];
+    body = list.slice(0, 8).map(l => [
+      <span className="font-mono">{l.orderedAt || l.date}</span>,
+      l.priority || "Routine",
+      <span className="font-bold text-slate-900">{l.patientName}</span>,
+      l.test,
+      l.orderingPhysician,
+      reader ? String(l.images?.length ?? 0) : stage(l) === "todo" ? "Ordered" : "Imaging",
+    ]);
+    emptyText = reader ? "No studies waiting to be read." : "No pending imaging requests.";
+  } else if (user.role === "medtech") {
+    const list = labResults.filter(l => l.category !== "Radiology");
     const pending = list.filter(l => l.status === "Pending Analysis");
     const progress = list.filter(l => l.status === "In-Progress");
     kpis = [
@@ -54,9 +88,9 @@ export default function RoleDashboardView() {
       { label: "STAT / Urgent", value: [...pending, ...progress].filter(l => l.priority && l.priority !== "Routine").length, hint: "Do these first", tone: "text-rose-600" },
       { label: "Released Today", value: list.filter(l => l.status === "Ready" && (l.releasedAt || "").startsWith(today)).length, hint: "Sent to doctors", tone: "text-emerald-700" },
     ];
-    actions = [{ label: imaging ? "Open Imaging Worklist" : "Open Laboratory Worklist", to: imaging ? "/imaging" : "/lab", primary: true }];
+    actions = [{ label: "Open Laboratory Worklist", to: "/lab", primary: true }];
     tableTitle = "Waiting for you";
-    head = ["Ordered", "Priority", "Patient", imaging ? "Study" : "Test", "Doctor", "Status"];
+    head = ["Ordered", "Priority", "Patient", "Test", "Doctor", "Status"];
     body = [...pending, ...progress].slice(0, 8).map(l => [
       <span className="font-mono">{l.orderedAt || l.date}</span>,
       l.priority || "Routine",

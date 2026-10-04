@@ -11,6 +11,7 @@ import {
   OpdQueueItem,
   HealthRecord,
   DiagnosticResult,
+  ImagingFile,
   MedicationOrder,
   TreatmentLog,
   AdmissionEntry,
@@ -43,7 +44,7 @@ import {
 import { supabase } from "./supabase";
 
 const DB_NAME = "CarePointMedicalCenter_HIS_DB";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 const STORES = [
   "patients",
@@ -69,6 +70,7 @@ const STORES = [
   "staff_photos",
   "profile_requests",
   "public_directory",
+  "imaging_files",
 ];
 
 // Staff profiles and photos are managed per-account (admin / owner only), so a
@@ -390,6 +392,28 @@ class CarePointDatabaseService {
       const { error } = await supabase.from(storeName).delete().eq("id", id);
       if (error) throw error;
     }
+  }
+
+  // --- Imaging files (loaded on demand: they are large) ---
+  public async addImagingFile(file: ImagingFile): Promise<void> {
+    await this.append("imaging_files", file);
+  }
+
+  public async getImagingFiles(ids: string[]): Promise<ImagingFile[]> {
+    if (ids.length === 0) return [];
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from("imaging_files").select("data").in("id", ids);
+        if (error) throw error;
+        const files = (data ?? []).map((row: { data: ImagingFile }) => row.data);
+        files.forEach(f => this.localPut("imaging_files", f).catch(console.error));
+        return files;
+      } catch (err) {
+        console.warn("Supabase read failed for imaging files, using local cache:", err);
+      }
+    }
+    const local = await this.localGetAll<ImagingFile>("imaging_files");
+    return local.filter(f => ids.includes(f.id));
   }
 
   // --- Specific CRUD APIs ---

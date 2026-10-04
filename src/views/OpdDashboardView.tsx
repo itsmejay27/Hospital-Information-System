@@ -300,7 +300,7 @@ export default function OpdDashboardView({
   };
 
   // Diagnostics, pharmacy, finance and legal roles have their own focused dashboard
-  if (user && ["medtech", "radtech", "pharmacy", "finance", "legal"].includes(user.role)) {
+  if (user && ["medtech", "radtech", "radiologist", "pharmacy", "finance", "legal"].includes(user.role)) {
     return <RoleDashboardView />;
   }
 

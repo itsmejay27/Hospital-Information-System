@@ -50,8 +50,12 @@ const MATRIX: ModuleAccess[] = [
   },
   {
     module: "Imaging Worklist",
-    description: "Perform studies, write and release imaging reports",
-    access: { radtech: { level: "full" }, doctor: { level: "view" } },
+    description: "Perform studies and upload images; read images and release reports",
+    access: {
+      radtech: { level: "limited", note: "Performs study, uploads images" },
+      radiologist: { level: "full", note: "Reads images, signs reports" },
+      doctor: { level: "view" },
+    },
   },
   {
     module: "Pharmacy Dispensing",
