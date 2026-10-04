@@ -7,6 +7,7 @@ import { hospitalDb } from "../services/db";
 import PageHeader from "../components/PageHeader";
 import Modal from "../components/Modal";
 import ImagingGallery from "../components/ImagingGallery";
+import { PrintReportButton } from "../components/LabResultsTable";
 import * as ui from "../components/tableStyles";
 import { Scan, Search, X } from "../components/Icons";
 
@@ -478,6 +479,7 @@ export default function ImagingWorklistView() {
             <div className={ui.label}>Images ({reporting.images?.length ?? 0}) — click to enlarge</div>
             <ImagingGallery images={reporting.images || []} />
           </div>
+          <PriorStudies current={reporting} studies={studies} />
           {reporting.techNotes && (
             <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
               <span className="font-bold">Technologist notes ({reporting.acquiredBy}):</span> {reporting.techNotes}
@@ -529,8 +531,11 @@ export default function ImagingWorklistView() {
                 <span className="font-bold text-slate-700">Impression: </span>
                 {viewing.summary || "—"}
               </div>
-              <p className="text-slate-500">
-                Reported by {viewing.releasedBy} • {viewing.releasedAt}
+              <p className="text-slate-500 flex justify-between gap-2">
+                <span>
+                  Reported by {viewing.releasedBy} • {viewing.releasedAt}
+                </span>
+                <PrintReportButton lab={viewing} />
               </p>
             </>
           ) : (
@@ -540,6 +545,42 @@ export default function ImagingWorklistView() {
           )}
         </Modal>
       )}
+    </div>
+  );
+}
+
+/** Earlier released imaging of the same patient, so the radiologist can compare. */
+function PriorStudies({ current, studies }: { current: DiagnosticResult; studies: DiagnosticResult[] }) {
+  const [open, setOpen] = useState<string | null>(null);
+  const prior = studies
+    .filter(s => s.patientId === current.patientId && s.id !== current.id && s.status === "Ready")
+    .sort((a, b) => (b.releasedAt || b.date).localeCompare(a.releasedAt || a.date));
+  if (prior.length === 0) return <p className="text-slate-400 italic">No prior imaging for this patient.</p>;
+  return (
+    <div>
+      <div className={ui.label}>Prior studies ({prior.length}) — compare</div>
+      <div className="space-y-1.5">
+        {prior.map(p => (
+          <div key={p.id} className="rounded-lg border border-slate-200">
+            <button
+              type="button"
+              onClick={() => setOpen(o => (o === p.id ? null : p.id))}
+              className="w-full text-left px-3 py-2 flex justify-between gap-2 cursor-pointer hover:bg-slate-50"
+            >
+              <span>
+                <span className="font-mono">{p.releasedAt || p.date}</span> • <b>{p.test}</b> — {p.summary || "no impression"}
+              </span>
+              <span className="text-emerald-700 font-bold shrink-0">{open === p.id ? "Hide" : "Show"}</span>
+            </button>
+            {open === p.id && (
+              <div className="px-3 pb-3 space-y-2">
+                <ImagingGallery images={p.images || []} />
+                {p.findings && <p className="whitespace-pre-line text-slate-700">{p.findings}</p>}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

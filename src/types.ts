@@ -273,7 +273,8 @@ export interface LabTestItem {
   name: string;
   value: string;
   ref: string;
-  flag: "H" | "L" | null;
+  /** H/L = outside the reference range; HH/LL = critical (doctor is alerted immediately). */
+  flag: "H" | "L" | "HH" | "LL" | null;
   unit?: string;
 }
 
@@ -305,6 +306,10 @@ export interface DiagnosticResult {
   acquiredBy?: string;
   acquiredAt?: string;
   techNotes?: string;
+  /** Lab: released with at least one critical (HH/LL) value; cleared from alerts once acknowledged. */
+  critical?: boolean;
+  criticalAckBy?: string;
+  criticalAckAt?: string;
 }
 
 export interface ImagingFileMeta {
@@ -346,6 +351,10 @@ export interface MedicationOrder {
   dispensedBy?: string;
   dispensedAt?: string;
   dispenseRemarks?: string;
+  /** Every dispensing event; a prescription can be dispensed in parts. */
+  dispenses?: DispenseEvent[];
+  /** False while only part of the prescription has been given. */
+  fullyDispensed?: boolean;
 }
 
 export interface TreatmentLog {
@@ -617,4 +626,115 @@ export interface StaffPhoto {
   id: string; // staff user id
   image: string; // data URL (resized JPEG)
   updatedAt: string;
+}
+
+// ------------------------------------------------------------------------------
+// Pharmacy stock, billing, legal, appointments
+// ------------------------------------------------------------------------------
+
+export interface DispenseEvent {
+  quantity: number;
+  stockId?: string;
+  stockLabel?: string;
+  remarks?: string;
+  by: string;
+  at: string;
+}
+
+export interface StockItem {
+  id: string;
+  name: string; // generic name, e.g. "Amoxicillin"
+  strength: string; // "500 mg"
+  form: string; // "Capsule"
+  unit: string; // "capsules"
+  quantity: number;
+  reorderLevel: number;
+  lotNumber?: string;
+  expiryDate?: string; // YYYY-MM-DD
+  unitPrice?: number;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface BillItem {
+  description: string;
+  category: "Consultation" | "Laboratory" | "Imaging" | "Medicines" | "Room" | "Procedure" | "Other";
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface Payment {
+  id: string;
+  amount: number;
+  method: "Cash" | "Card" | "GCash / E-wallet" | "Bank Transfer" | "HMO";
+  orNumber: string;
+  at: string;
+  by: string;
+}
+
+export interface Bill {
+  id: string;
+  patientId: string;
+  patientName: string;
+  createdAt: string;
+  createdBy: string;
+  items: BillItem[];
+  /** PhilHealth case-rate deduction (peso amount). */
+  philhealthDeduction: number;
+  discountType: "None" | "Senior Citizen (20%)" | "PWD (20%)" | "Other";
+  discountAmount: number;
+  payments: Payment[];
+  status: "Open" | "Paid" | "Cancelled";
+  notes?: string;
+}
+
+export interface IncidentReport {
+  id: string;
+  reportedAt: string;
+  reportedBy: string;
+  reporterId: string;
+  reporterRole: Role;
+  occurredAt: string;
+  location: string;
+  category: "Patient Safety" | "Medication Error" | "Fall / Injury" | "Data Privacy Breach" | "Equipment" | "Staff Conduct" | "Other";
+  severity: "Low" | "Moderate" | "High" | "Sentinel";
+  patientId?: string;
+  patientName?: string;
+  description: string;
+  immediateAction?: string;
+  status: "Open" | "Under Investigation" | "Closed";
+  assignedTo?: string;
+  resolution?: string;
+  closedAt?: string;
+}
+
+export interface PrivacyRequest {
+  id: string;
+  receivedAt: string;
+  requesterName: string;
+  relationship: "Patient" | "Parent / Guardian" | "Authorized Representative" | "Other";
+  patientId?: string;
+  patientName?: string;
+  type: "Access to records" | "Correction" | "Erasure / Blocking" | "Objection to processing" | "Data portability" | "Complaint";
+  details: string;
+  dueDate: string;
+  status: "Received" | "In Review" | "Completed" | "Denied";
+  handledBy?: string;
+  response?: string;
+  closedAt?: string;
+}
+
+export interface Appointment {
+  id: string;
+  patientId?: string;
+  patientName: string;
+  contact?: string;
+  doctorId: string;
+  doctorName: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+  reason: string;
+  status: "Scheduled" | "Checked In" | "Completed" | "Cancelled" | "No-show";
+  createdBy: string;
+  createdAt: string;
 }

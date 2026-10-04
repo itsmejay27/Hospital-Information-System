@@ -58,9 +58,31 @@ const MATRIX: ModuleAccess[] = [
     },
   },
   {
-    module: "Pharmacy Dispensing",
-    description: "Dispense prescriptions and record quantities",
+    module: "Pharmacy Dispensing & Stock",
+    description: "Allergy check, dispense (full or partial), medicine inventory and expiry",
     access: { pharmacy: { level: "full" }, doctor: { level: "view" } },
+  },
+  {
+    module: "Appointments",
+    description: "Book, reschedule and check in patients",
+    access: { staff: { level: "full" }, doctor: { level: "view", note: "Own schedule; mark completed" } },
+  },
+  {
+    module: "Billing & Payments",
+    description: "Patient bills, OR payments, statements, revenue reports",
+    access: { finance: { level: "full" }, staff: { level: "full", note: "Cashiering" } },
+  },
+  {
+    module: "Incident Reports",
+    description: "File patient-safety / privacy incidents; investigate and close",
+    access: Object.fromEntries(
+      ALL_ROLES.map(r => [r, r === "legal" || r === "admin" ? { level: "full" as Level, note: "Investigate & close" } : { level: "limited" as Level, note: "File & view own" }])
+    ),
+  },
+  {
+    module: "Data Privacy Requests (RA 10173)",
+    description: "Access, correction and erasure requests from patients",
+    access: { legal: { level: "full" }, admin: { level: "full" } },
   },
   {
     module: "PhilHealth & eClaims",

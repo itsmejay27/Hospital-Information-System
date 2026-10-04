@@ -5,7 +5,7 @@ import { DiagnosticResult, LabTestItem } from "../types";
 import { timestamp } from "../services/ids";
 import PageHeader from "../components/PageHeader";
 import Modal from "../components/Modal";
-import LabResultsTable from "../components/LabResultsTable";
+import LabResultsTable, { PrintReportButton } from "../components/LabResultsTable";
 import * as ui from "../components/tableStyles";
 import { FlaskConical, Scan, Search, Plus, X } from "../components/Icons";
 
@@ -126,6 +126,7 @@ export default function DiagnosticsWorklistView({ mode }: { mode: Mode }) {
       findings: isImaging ? findings.trim() : editing.findings,
       summary: interpretation.trim(),
       status: release ? "Ready" : "In-Progress",
+      critical: !isImaging && items.some(r => r.flag === "HH" || r.flag === "LL"),
       performedBy: editing.performedBy || signature,
       ...(release ? { releasedBy: signature, releasedAt: timestamp().slice(0, 16) } : {}),
     };
@@ -146,7 +147,7 @@ export default function DiagnosticsWorklistView({ mode }: { mode: Mode }) {
         if (idx !== i) return r;
         const next = { ...r, ...patch };
         // Re-flag automatically when the value or reference range changes; the flag can still be changed by hand
-        if ("value" in patch || "ref" in patch) {
+        if (("value" in patch || "ref" in patch) && r.flag !== "HH" && r.flag !== "LL") {
           const f = autoFlag(next.value, next.ref);
           if (f !== undefined) next.flag = f;
         }
@@ -368,6 +369,8 @@ export default function DiagnosticsWorklistView({ mode }: { mode: Mode }) {
                             <option value="">Normal</option>
                             <option value="H">High</option>
                             <option value="L">Low</option>
+                            <option value="HH">Critical High</option>
+                            <option value="LL">Critical Low</option>
                           </select>
                         </td>
                         <td className="p-1.5 text-right">
@@ -424,6 +427,11 @@ export default function DiagnosticsWorklistView({ mode }: { mode: Mode }) {
             <span className="font-bold text-slate-700">{viewing.findings ? "Impression" : "Interpretation"}: </span>
             {viewing.summary || "—"}
           </div>
+          {viewing.status === "Ready" && (
+            <div className="text-right">
+              <PrintReportButton lab={viewing} />
+            </div>
+          )}
         </Modal>
       )}
     </div>
