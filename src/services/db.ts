@@ -345,6 +345,23 @@ class CarePointDatabaseService {
     await this.putInStore(storeName, item);
   }
 
+  /**
+   * Update-only write for a record that already exists. Unlike save() (an upsert), this does not
+   * need INSERT permission, so an administrator can review rows other staff created.
+   */
+  public async update<T extends { id: string }>(storeName: string, item: T): Promise<void> {
+    if (supabase) {
+      const { data, error } = await supabase
+        .from(storeName)
+        .update({ data: item, updated_at: new Date().toISOString() })
+        .eq("id", item.id)
+        .select("id");
+      if (error) throw error;
+      if (!data || data.length === 0) throw new Error("The record was not found or you do not have permission to change it.");
+    }
+    await this.localPut(storeName, item);
+  }
+
   /** Insert-only write (no overwrite), for append-only records such as audit logs. */
   public async append<T extends { id: string }>(storeName: string, item: T): Promise<void> {
     await this.localPut(storeName, item);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Patient, Role, ROLE_LABELS } from "../types";
 import { DEMO_USERS } from "../mockData";
@@ -65,6 +65,30 @@ export default function OpdTopNav({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const roleMenuRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Close the account menu and search results on a click outside them, or on Escape
+  useEffect(() => {
+    if (!isRoleMenuOpen && !isSearchOpen) return;
+    const onPointer = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (isRoleMenuOpen && roleMenuRef.current && !roleMenuRef.current.contains(t)) setIsRoleMenuOpen(false);
+      if (isSearchOpen && searchRef.current && !searchRef.current.contains(t)) setIsSearchOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsRoleMenuOpen(false);
+        setIsSearchOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [isRoleMenuOpen, isSearchOpen]);
 
   // Live real-time clock
   useEffect(() => {
@@ -260,7 +284,7 @@ export default function OpdTopNav({
       </div>
 
       {/* Middle Area: Global Search (Restricted for Admin) */}
-      <div className="relative flex-1 max-w-md hidden md:block">
+      <div ref={searchRef} className="relative flex-1 max-w-md hidden md:block">
         {user?.role === "admin" ? (
           <div className="px-4 py-2 bg-slate-100 border border-slate-200 rounded-full text-slate-500 text-xs flex items-center justify-between font-mono">
             <span>System Console Mode (Zero PHI Access)</span>
@@ -363,7 +387,7 @@ export default function OpdTopNav({
         </div>
 
         {/* Quick Role Switcher Dropdown */}
-        <div className="relative">
+        <div ref={roleMenuRef} className="relative">
           <button
             onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
             className="flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 text-xs transition-all shadow-2xs cursor-pointer group"
@@ -440,6 +464,7 @@ export default function OpdTopNav({
                   <span>Clinical & System Settings</span>
                 </button>
 
+                {!isSecureMode && (
                 <button
                   onClick={() => {
                     setIsRoleMenuOpen(false);
@@ -450,6 +475,7 @@ export default function OpdTopNav({
                   <UserPlus size={14} strokeWidth={2} />
                   <span>Switch / Register New Account</span>
                 </button>
+                )}
 
                 <button
                   onClick={handleLogoutSession}

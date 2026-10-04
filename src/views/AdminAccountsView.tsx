@@ -248,13 +248,16 @@ export default function AdminAccountsView() {
 
   const confirmReview = async () => {
     if (!reviewing) return;
+    const { req, approve } = reviewing;
     setBusy(true);
-    const error = await reviewProfileRequest(reviewing.req.id, reviewing.approve, reviewNote);
+    const error = await reviewProfileRequest(req.id, approve, reviewNote);
     setBusy(false);
-    if (error) return setRowError(error);
-    flash(`${reviewing.approve ? "Approved" : "Rejected"} ${reviewing.req.userName}'s change request.`);
+    // Close the dialog either way; the result is shown on the page
     setReviewing(null);
     setReviewNote("");
+    if (error) return setRowError(`Could not ${approve ? "approve" : "reject"} ${req.userName}'s request: ${error}`);
+    setRowError(null);
+    flash(`${approve ? "Approved" : "Rejected"} ${req.userName}'s change request.`);
   };
 
   const licensed = form ? LICENSED_ROLES.includes(form.role) : false;

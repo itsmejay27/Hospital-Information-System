@@ -150,6 +150,17 @@ const OpdDataContext = createContext<OpdDataContextType | undefined>(undefined);
 export function OpdDataProvider({ children }: { children: React.ReactNode }) {
   // Database status
   const [isDbReady, setIsDbReady] = useState(false);
+  // Background saves used to fail silently (the screen showed data the database never got)
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const reportSaveError = useCallback((err: unknown) => {
+    console.error(err);
+    const msg = (err as { message?: string })?.message || "Unknown error";
+    setSaveError(
+      msg.includes("row-level security")
+        ? "A change was not saved: your account is not allowed to make it."
+        : `A change was not saved to the hospital database (${msg}). Check your connection and refresh the page before continuing.`
+    );
+  }, []);
 
   // Queue & Patient state
   const [queue, setQueue] = useState<OpdQueueItem[]>(INITIAL_OPD_QUEUE);
@@ -206,7 +217,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
         status: opts.status || "Authorized",
       };
       setAuditLogs(prev => [entry, ...prev]);
-      hospitalDb.append("audit_logs", entry).catch(console.error);
+      hospitalDb.append("audit_logs", entry).catch(reportSaveError);
     },
     []
   );
@@ -267,13 +278,13 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
               setShiftEndorsements(list.sort((a, b) => b.timestamp.localeCompare(a.timestamp)));
             }
           })
-          .catch(console.error);
+          .catch(reportSaveError);
         hospitalDb
           .getAll<ProfileChangeRequest>("profile_requests")
           .then(list => {
             if (mounted) setProfileRequests(list.sort((a, b) => b.requestedAt.localeCompare(a.requestedAt)));
           })
-          .catch(console.error);
+          .catch(reportSaveError);
         if (state.patients.length > 0) {
           setSelectedPatient(state.patients[0]);
         }
@@ -339,7 +350,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
         }
         return item;
       });
-      hospitalDb.saveQueue(updated).catch(console.error);
+      hospitalDb.saveQueue(updated).catch(reportSaveError);
       return updated;
     });
   };
@@ -354,7 +365,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
             ? { ...q, status: "In-Consultation" as QueueStatus, roomOrBooth: "Consultation Room 1" }
             : q
         );
-        hospitalDb.saveQueue(updated).catch(console.error);
+        hospitalDb.saveQueue(updated).catch(reportSaveError);
         return updated;
       });
 
@@ -376,7 +387,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
           ? { ...q, status: "In-Consultation" as QueueStatus, roomOrBooth: "Consultation Room 1" }
           : q
       );
-      hospitalDb.saveQueue(updated).catch(console.error);
+      hospitalDb.saveQueue(updated).catch(reportSaveError);
       return updated;
     });
 
@@ -389,7 +400,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
 
   const addPatient = (newPatient: Patient) => {
     setPatients(prev => [newPatient, ...prev]);
-    hospitalDb.savePatient(newPatient).catch(console.error);
+    hospitalDb.savePatient(newPatient).catch(reportSaveError);
     logAction("Registered new patient", { patientId: newPatient.id, patientName: newPatient.name });
 
     // Also automatically add to OPD queue if outpatient
@@ -410,7 +421,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
 
     setQueue(prev => {
       const updated = [...prev, newQueueItem];
-      hospitalDb.saveQueue(updated).catch(console.error);
+      hospitalDb.saveQueue(updated).catch(reportSaveError);
       return updated;
     });
 
@@ -437,7 +448,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
             ward: ward !== undefined ? ward : p.ward,
             bed: bed !== undefined ? bed : p.bed,
           };
-          hospitalDb.savePatient(updated).catch(console.error);
+          hospitalDb.savePatient(updated).catch(reportSaveError);
           return updated;
         }
         return p;
@@ -447,7 +458,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
 
   const addClaim = (newClaim: PhilHealthClaim) => {
     setClaims(prev => [newClaim, ...prev]);
-    hospitalDb.saveClaim(newClaim).catch(console.error);
+    hospitalDb.saveClaim(newClaim).catch(reportSaveError);
     logAction(`Filed PhilHealth claim ${newClaim.id}`, { patientId: newClaim.patientId, patientName: newClaim.memberName });
   };
 
@@ -456,10 +467,10 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
     next.forEach(c => {
       const old = before.get(c.id);
       if (!old) {
-        hospitalDb.saveClaim(c).catch(console.error);
+        hospitalDb.saveClaim(c).catch(reportSaveError);
         logAction(`Filed PhilHealth claim ${c.id}`, { patientId: c.patientId, patientName: c.memberName });
       } else if (JSON.stringify(old) !== JSON.stringify(c)) {
-        hospitalDb.saveClaim(c).catch(console.error);
+        hospitalDb.saveClaim(c).catch(reportSaveError);
         logAction(
           old.claimStatus !== c.claimStatus ? `Claim ${c.id} status: ${old.claimStatus} → ${c.claimStatus}` : `Updated claim ${c.id}`,
           { patientId: c.patientId, patientName: c.memberName }
@@ -471,13 +482,13 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
 
   const addRecord = (newRecord: HealthRecord) => {
     setRecords(prev => [newRecord, ...prev]);
-    hospitalDb.saveRecord(newRecord).catch(console.error);
+    hospitalDb.saveRecord(newRecord).catch(reportSaveError);
     logAction(`Signed clinical note (${newRecord.type})`, { patientId: newRecord.patientId, patientName: newRecord.patientName });
   };
 
   const addMedication = (newMed: MedicationOrder) => {
     setMedications(prev => [newMed, ...prev]);
-    hospitalDb.saveMedication(newMed).catch(console.error);
+    hospitalDb.saveMedication(newMed).catch(reportSaveError);
     logAction(`Prescribed ${newMed.name} ${newMed.dose}`, { patientId: newMed.patientId, patientName: newMed.patientName });
   };
 
@@ -494,7 +505,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
             administeredBy: nurseName,
             administeredByLicense: nurseLicense || "PRC Lic. Registered Nurse",
           };
-          hospitalDb.saveMedication(updated).catch(console.error);
+          hospitalDb.saveMedication(updated).catch(reportSaveError);
           return updated;
         }
         return m;
@@ -504,7 +515,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
 
   const addLabResult = (newLab: DiagnosticResult) => {
     setLabResults(prev => [newLab, ...prev]);
-    hospitalDb.saveLabResult(newLab).catch(console.error);
+    hospitalDb.saveLabResult(newLab).catch(reportSaveError);
     logAction(`Ordered ${newLab.category} test: ${newLab.test}`, { patientId: newLab.patientId, patientName: newLab.patientName });
   };
 
@@ -522,36 +533,36 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
 
   const addTreatment = (newTreatment: TreatmentLog) => {
     setTreatments(prev => [newTreatment, ...prev]);
-    hospitalDb.saveTreatment(newTreatment).catch(console.error);
+    hospitalDb.saveTreatment(newTreatment).catch(reportSaveError);
     logAction(`Recorded ${newTreatment.treatmentName}`, { patientId: newTreatment.patientId, patientName: newTreatment.patientName });
   };
 
   const addReferral = (newRef: OpdReferral) => {
     setReferrals(prev => [newRef, ...prev]);
-    hospitalDb.saveReferral(newRef).catch(console.error);
+    hospitalDb.saveReferral(newRef).catch(reportSaveError);
     logAction(`Referred patient to ${newRef.referredTo}`, { patientId: newRef.patientId, patientName: newRef.patientName });
   };
 
   const addDischarge = (newDis: OpdDischarge) => {
     setDischarges(prev => [newDis, ...prev]);
-    hospitalDb.saveDischarge(newDis).catch(console.error);
+    hospitalDb.saveDischarge(newDis).catch(reportSaveError);
     logAction(`Discharged patient (${newDis.disposition})`, { patientId: newDis.patientId, patientName: newDis.patientName });
   };
 
   const addAdmission = (newAdm: AdmissionEntry) => {
     setAdmissions(prev => [newAdm, ...prev]);
-    hospitalDb.saveAdmission(newAdm).catch(console.error);
+    hospitalDb.saveAdmission(newAdm).catch(reportSaveError);
     logAction(`Admitted to ${newAdm.ward} / ${newAdm.bed}`, { patientId: newAdm.patientId, patientName: newAdm.patientName });
   };
 
   const addAuditLog = (newLog: AuditLog) => {
     setAuditLogs(prev => [newLog, ...prev]);
-    hospitalDb.append("audit_logs", newLog).catch(console.error);
+    hospitalDb.append("audit_logs", newLog).catch(reportSaveError);
   };
 
   const addVisitorLog = (newVisitor: VisitorLog) => {
     setVisitorLogs(prev => [newVisitor, ...prev]);
-    hospitalDb.saveVisitorLog(newVisitor).catch(console.error);
+    hospitalDb.saveVisitorLog(newVisitor).catch(reportSaveError);
     logAction(`Registered visitor ${newVisitor.visitorName}`, { patientId: newVisitor.patientId, patientName: newVisitor.patientName });
   };
 
@@ -563,7 +574,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
       prev.map(v => {
         if (v.id === visitorId) {
           const updated: VisitorLog = { ...v, timeOut: timeNow, status: "Departed" };
-          hospitalDb.saveVisitorLog(updated).catch(console.error);
+          hospitalDb.saveVisitorLog(updated).catch(reportSaveError);
           return updated;
         }
         return v;
@@ -573,13 +584,13 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
 
   const addShiftEndorsement = (newEndorsement: ShiftEndorsement) => {
     setShiftEndorsements(prev => [newEndorsement, ...prev]);
-    hospitalDb.save("shift_endorsements", newEndorsement).catch(console.error);
+    hospitalDb.save("shift_endorsements", newEndorsement).catch(reportSaveError);
     logAction(`Shift endorsement to ${newEndorsement.incomingNurse} (${newEndorsement.ward})`);
   };
 
   const updateHospitalConfig = (cfg: HospitalConfig) => {
     setHospitalConfig(cfg);
-    hospitalDb.saveHospitalConfig(cfg).catch(console.error);
+    hospitalDb.saveHospitalConfig(cfg).catch(reportSaveError);
     logAction("Updated hospital settings");
   };
 
@@ -620,7 +631,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
       setUsersList(prev => [...prev, newUser]);
     } else {
       setUsersList(prev => [...prev, newUser]);
-      hospitalDb.saveUser(newUser).catch(console.error);
+      hospitalDb.saveUser(newUser).catch(reportSaveError);
     }
     logAction(`Created staff account: ${newUser.name} (${ROLE_LABELS[newUser.role]}${newUser.licenseNumber ? `, ${newUser.licenseNumber}` : ""})`);
     return null;
@@ -641,9 +652,9 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
       const existing = await hospitalDb.getAll<PublicDirectoryEntry>("public_directory").catch(() => []);
       const card = existing.find(e => e.id === updated.id);
       if (updated.status === "suspended") {
-        await hospitalDb.remove("public_directory", updated.id).catch(console.error);
+        await hospitalDb.remove("public_directory", updated.id).catch(reportSaveError);
       } else {
-        await hospitalDb.save("public_directory", toDirectoryEntry(updated, card?.photo)).catch(console.error);
+        await hospitalDb.save("public_directory", toDirectoryEntry(updated, card?.photo)).catch(reportSaveError);
       }
     }
     return null;
@@ -744,7 +755,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
       reviewNote: note.trim() || undefined,
     };
     try {
-      await hospitalDb.save("profile_requests", reviewed);
+      await hospitalDb.update("profile_requests", reviewed);
     } catch (err) {
       return describeError(err, "Could not save the review.");
     }
@@ -847,6 +858,17 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
+      {saveError && (
+        <div
+          role="alert"
+          className="fixed bottom-4 right-4 left-4 sm:left-auto sm:max-w-md z-[100] p-3 rounded-xl bg-rose-50 border border-rose-200 shadow-lg text-xs text-rose-800 flex items-start gap-3"
+        >
+          <span className="flex-1 font-semibold">{saveError}</span>
+          <button onClick={() => setSaveError(null)} className="font-bold text-rose-700 hover:underline cursor-pointer shrink-0">
+            Dismiss
+          </button>
+        </div>
+      )}
     </OpdDataContext.Provider>
   );
 }
