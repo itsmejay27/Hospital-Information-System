@@ -182,7 +182,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
 
   // Supabase data is only readable once a staff member has signed in, so
   // (re)load whenever the signed-in account changes.
-  const { user: authUser, signInCount, registerBeforeLogout } = useAuth();
+  const { user: authUser, signInCount, registerBeforeLogout, verifySession } = useAuth();
   const authUserId = authUser?.id ?? null;
   const actorRef = useRef<User | null>(authUser);
   actorRef.current = authUser;
@@ -608,7 +608,12 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
         body: { email, password, profile: newUser },
       });
       if (error) {
-        const body = await (error as { context?: Response }).context?.json?.().catch(() => null);
+        const res = (error as { context?: Response }).context;
+        // 401: the auth server no longer accepts this sign-in (e.g. signed out on another device)
+        if (res?.status === 401 && !(await verifySession())) {
+          return "Your session has ended. Please sign in again, then create the account.";
+        }
+        const body = await res?.json?.().catch(() => null);
         return body?.error ?? "Could not create the account.";
       }
       newUser = data.profile as User;
