@@ -93,7 +93,7 @@ export default function NurseLabsTab({ patientId }: NursingTabProps) {
                   <td className={ui.td}>{l.specimenType || "—"}</td>
                   <td className={`${ui.td} whitespace-nowrap`}>{l.orderingPhysician}</td>
                   <td className={ui.td}>
-                    <span className={`${ui.badge} ${statusStyle[l.status]}`}>{labStatusLabel(l.status)}</span>
+                    <span className={`${ui.badge} ${statusStyle[l.status]}`}>{labStatusLabel(l.status, l)}</span>
                   </td>
                   <td className={ui.td}>
                     {abnormal > 0 ? (

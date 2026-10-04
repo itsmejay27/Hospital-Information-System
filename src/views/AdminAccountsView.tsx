@@ -597,7 +597,7 @@ export default function AdminAccountsView() {
                 <input
                   value={form.credentials}
                   onChange={e => setForm({ ...form, credentials: e.target.value })}
-                  placeholder={form.role === "doctor" ? "e.g. MD, FPCP" : form.role === "nurse" ? "e.g. RN" : form.role === "medtech" ? "e.g. RMT" : "e.g. CPA, MBA"}
+                  placeholder={form.role === "doctor" ? "e.g. MD, FPCP" : form.role === "nurse" ? "e.g. RN" : form.role === "medtech" ? "e.g. RMT" : form.role === "radiologist" ? "e.g. MD, FPCR" : "e.g. CPA, MBA"}
                   className={ui.input}
                 />
               </div>

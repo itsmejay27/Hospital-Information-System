@@ -530,7 +530,7 @@ export default function ClinicalCareView() {
                                     : "bg-amber-50 text-amber-700 border-amber-200"
                                 }`}
                               >
-                                {labStatusLabel(lab.status)}
+                                {labStatusLabel(lab.status, lab)}
                               </span>
                             </td>
                           </tr>

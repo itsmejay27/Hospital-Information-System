@@ -77,7 +77,9 @@ export default function OpdSidebar({
   const { user: authUser, logout } = useAuth();
   const { waitingCount, labResults, medications } = useOpdData();
   const pendingLabs = labResults.filter(l => l.category !== "Radiology" && l.status !== "Ready").length;
-  const pendingImaging = labResults.filter(l => l.category === "Radiology" && l.status !== "Ready").length;
+  const pendingImaging = labResults.filter(l =>
+    l.category === "Radiology" && l.status !== "Ready" && ((propsUser || authUser)?.role === "radiologist" ? !!l.acquiredAt : !l.acquiredAt)
+  ).length;
   const toDispense = medications.filter(m => m.status === "Active" && !m.dispensedAt).length;
   const { shiftSchedules } = useWardData();
 
@@ -188,10 +190,10 @@ export default function OpdSidebar({
     {
       id: "imaging-worklist",
       path: "/imaging",
-      label: "Imaging Worklist",
+      label: currentRole === "radiologist" ? "Imaging Reading List" : "Imaging Worklist",
       icon: Scan,
       badge: pendingImaging > 0 ? pendingImaging : undefined,
-      roles: ["radtech"],
+      roles: ["radtech", "radiologist"],
       group: "clinical",
     },
     {
@@ -520,7 +522,7 @@ export default function OpdSidebar({
                   ? "Nursing Care"
                   : currentRole === "staff"
                   ? "Outpatient Frontline"
-                  : currentRole === "medtech" || currentRole === "radtech"
+                  : currentRole === "medtech" || currentRole === "radtech" || currentRole === "radiologist"
                   ? "Diagnostics"
                   : currentRole === "pharmacy"
                   ? "Pharmacy"

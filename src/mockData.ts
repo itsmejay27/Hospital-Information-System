@@ -196,6 +196,21 @@ export const DEMO_USERS: Record<string, { password: string; user: User }> = {
       status: "active",
     },
   },
+  "radiologist.dela": {
+    password: "pass",
+    user: {
+      id: "RD-001",
+      name: "Dr. Carmela Dela Rosa",
+      username: "radiologist.dela",
+      role: "radiologist",
+      title: "Radiologist",
+      department: "Radiology & Imaging",
+      avatarInitials: "CD",
+      licenseNumber: "PRC Lic. #0074512",
+      credentials: "MD, FPCR",
+      status: "active",
+    },
+  },
   "radtech.ivan": {
     password: "pass",
     user: {

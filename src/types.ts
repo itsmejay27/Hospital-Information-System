@@ -5,17 +5,19 @@ export type Role =
   | "admin"
   | "medtech" // Medical Technologist (RMT)
   | "radtech" // Radiologic Technologist (RRT)
+  | "radiologist" // Radiologist (physician who reads imaging studies)
   | "pharmacy" // Pharmacy Technician
   | "finance" // Chief Financial Officer
   | "legal"; // Legal Counsel
 
-export const ALL_ROLES: Role[] = ["doctor", "nurse", "medtech", "radtech", "pharmacy", "staff", "finance", "legal", "admin"];
+export const ALL_ROLES: Role[] = ["doctor", "nurse", "medtech", "radtech", "radiologist", "pharmacy", "staff", "finance", "legal", "admin"];
 
 export const ROLE_LABELS: Record<Role, string> = {
   doctor: "Doctor",
   nurse: "Registered Nurse",
   medtech: "Medical Technologist (RMT)",
   radtech: "Radiologic Technologist (RRT)",
+  radiologist: "Radiologist",
   pharmacy: "Pharmacy Technician",
   staff: "Front Desk Receptionist",
   finance: "Chief Financial Officer",
@@ -29,6 +31,7 @@ export const ROLE_DEFAULTS: Record<Role, { title: string; department: string }> 
   nurse: { title: "Registered Nurse", department: "Nursing Service" },
   medtech: { title: "Medical Technologist", department: "Clinical Laboratory" },
   radtech: { title: "Radiologic Technologist", department: "Radiology & Imaging" },
+  radiologist: { title: "Radiologist", department: "Radiology & Imaging" },
   pharmacy: { title: "Pharmacy Technician", department: "Pharmacy" },
   staff: { title: "Front Desk Receptionist", department: "Front Desk & Admissions" },
   finance: { title: "Chief Financial Officer", department: "Finance & Billing" },
@@ -37,7 +40,7 @@ export const ROLE_DEFAULTS: Record<Role, { title: string; department: string }> 
 };
 
 /** Roles that must have a professional license number (PRC), unique across active staff. */
-export const LICENSED_ROLES: Role[] = ["doctor", "nurse", "medtech", "radtech", "pharmacy"];
+export const LICENSED_ROLES: Role[] = ["doctor", "nurse", "medtech", "radtech", "radiologist", "pharmacy"];
 
 /** Digits of a license number, used to detect duplicates ("PRC Lic. #0096211" -> "0096211"). */
 export function normalizeLicense(value?: string | null): string {
@@ -296,6 +299,28 @@ export interface DiagnosticResult {
   releasedAt?: string;
   /** Radiology findings (imaging studies); `summary` holds the impression. */
   findings?: string;
+  /** Imaging: images uploaded by the Radiologic Technologist (file contents live in `imaging_files`). */
+  images?: ImagingFileMeta[];
+  /** Imaging: set when the technologist sends the study to the radiologist for reading. */
+  acquiredBy?: string;
+  acquiredAt?: string;
+  techNotes?: string;
+}
+
+export interface ImagingFileMeta {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+}
+
+/** One uploaded imaging file (JPEG/PNG/PDF), stored separately from the result to keep lists light. */
+export interface ImagingFile extends ImagingFileMeta {
+  resultId: string;
+  patientId: string;
+  dataUrl: string;
+  uploadedBy: string;
+  uploadedAt: string;
 }
 
 export interface MedicationOrder {

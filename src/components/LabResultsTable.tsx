@@ -1,5 +1,6 @@
 import React from "react";
 import { DiagnosticResult, LabTestItem } from "../types";
+import ImagingGallery from "./ImagingGallery";
 
 /** Some stored values already include the unit ("13.8 g/dL"); avoid printing it twice. */
 export function splitValue(item: LabTestItem): { value: string; unit: string } {
@@ -55,15 +56,22 @@ export default function LabResultsTable({ items }: { items: LabTestItem[] }) {
   );
 }
 
-export const labStatusLabel = (status: DiagnosticResult["status"]) =>
-  status === "Pending Analysis" ? "Ordered" : status === "In-Progress" ? "In Progress" : "Released";
+export const labStatusLabel = (status: DiagnosticResult["status"], lab?: DiagnosticResult) =>
+  status === "Pending Analysis"
+    ? "Ordered"
+    : status === "In-Progress"
+    ? lab?.acquiredAt
+      ? "For Reading"
+      : "In Progress"
+    : "Released";
 
 /** Full result body for one lab test or imaging study, as released by the MedTech / RadTech. */
 export function DiagnosticReport({ lab }: { lab: DiagnosticResult }) {
   if (lab.status !== "Ready") {
     return (
       <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-800">
-        <span className="font-bold">{labStatusLabel(lab.status)}:</span> results are not released yet.
+        <span className="font-bold">{labStatusLabel(lab.status, lab)}:</span>{" "}
+        {lab.acquiredAt ? "images taken; waiting for the radiologist's report." : "results are not released yet."}
         {lab.indication && <span> Indication: {lab.indication}</span>}
       </div>
     );
@@ -71,6 +79,12 @@ export function DiagnosticReport({ lab }: { lab: DiagnosticResult }) {
   const imaging = !!lab.findings || lab.category === "Radiology";
   return (
     <div className="space-y-2 text-xs">
+      {!!lab.images?.length && (
+        <div className="p-3 rounded-lg bg-white border border-slate-200">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">Images ({lab.images.length})</div>
+          <ImagingGallery images={lab.images} />
+        </div>
+      )}
       {lab.findings && (
         <div className="p-3 rounded-lg bg-white border border-slate-200">
           <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Findings</div>

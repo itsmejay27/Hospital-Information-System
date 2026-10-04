@@ -13,9 +13,9 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const ROLES = ["doctor", "nurse", "medtech", "radtech", "pharmacy", "staff", "finance", "legal", "admin"];
+const ROLES = ["doctor", "nurse", "medtech", "radtech", "radiologist", "pharmacy", "staff", "finance", "legal", "admin"];
 // Roles that must hold a professional license number, unique among active staff
-const LICENSED_ROLES = ["doctor", "nurse", "medtech", "radtech", "pharmacy"];
+const LICENSED_ROLES = ["doctor", "nurse", "medtech", "radtech", "radiologist", "pharmacy"];
 const licenseDigits = (v: unknown) => String(v ?? "").replace(/\D/g, "");
 
 function json(body: unknown, status = 200) {

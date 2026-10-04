@@ -167,7 +167,7 @@ create policy "own delete" on public.staff_photos for delete to authenticated
 -- ------------------------------------------------------------------------------
 -- Roles, append-only audit log, profile change approvals, public staff directory
 -- ------------------------------------------------------------------------------
--- Roles: doctor, nurse, staff (front desk), admin, medtech (RMT), radtech (RRT),
+-- Roles: doctor, nurse, staff (front desk), admin, medtech (RMT), radtech (RRT), radiologist,
 -- pharmacy, finance (CFO), legal. Stored in users.data->>'role'.
 create or replace function private.my_role()
 returns text
@@ -247,6 +247,21 @@ create unique index if not exists users_unique_license
   on public.users ((regexp_replace(data->>'licenseNumber', '\D', '', 'g')))
   where regexp_replace(coalesce(data->>'licenseNumber', ''), '\D', '', 'g') <> ''
     and coalesce(data->>'status', 'active') <> 'suspended';
+
+-- Imaging files (X-ray / CT / ultrasound images uploaded by Radiologic Technologists).
+-- Every active staff member can view them; only technologists can add; nobody edits or deletes.
+create table if not exists public.imaging_files (
+  id text primary key,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.imaging_files enable row level security;
+revoke all on public.imaging_files from anon;
+drop policy if exists "staff read" on public.imaging_files;
+drop policy if exists "radtech insert" on public.imaging_files;
+create policy "staff read" on public.imaging_files for select to authenticated using ((select private.is_staff()));
+create policy "radtech insert" on public.imaging_files for insert to authenticated
+  with check ((select private.my_role()) = 'radtech');
 
 -- ------------------------------------------------------------------------------
 -- Giving a staff member access
