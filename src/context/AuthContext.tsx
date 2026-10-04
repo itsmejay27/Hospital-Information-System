@@ -30,6 +30,15 @@ interface AuthContextType {
   registerBeforeLogout: (fn: () => Promise<void>) => () => void;
   /** Re-reads the signed-in staff profile (e.g. after an administrator approved changes). */
   refreshProfile: () => Promise<void>;
+  /**
+   * Asks the auth server whether this sign-in is still valid. If it was ended elsewhere
+   * (signed out on another device, password reset, account removed) the user is signed
+   * out here and `sessionNotice` explains why. Resolves to false in that case.
+   */
+  verifySession: () => Promise<boolean>;
+  /** Why the user was signed out automatically, shown on the sign-in form. */
+  sessionNotice: string | null;
+  dismissSessionNotice: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -108,6 +117,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const [isAuthReady, setIsAuthReady] = useState(!isSupabaseConfigured);
   const [signInCount, setSignInCount] = useState(0);
+  const [sessionNotice, setSessionNotice] = useState<string | null>(null);
+  const dismissSessionNotice = useCallback(() => setSessionNotice(null), []);
+  // True while this tab is signing out on purpose, so SIGNED_OUT is not reported as an expired session
+  const signingOut = useRef(false);
+  const lastVerified = useRef(0);
+  const userRef = useRef(user);
+  userRef.current = user;
+
+  const SESSION_ENDED =
+    "Your session has ended because this account was signed out on another device or its password was changed. Please sign in again.";
+
+  const verifySession = useCallback(async (): Promise<boolean> => {
+    if (!supabase) return true;
+    const { data } = await supabase.auth.getSession();
+    if (!data.session) return false;
+    lastVerified.current = Date.now();
+    // getUser() checks the session with the auth server; getSession() only reads local storage
+    const { error } = await supabase.auth.getUser();
+    if (!error) return true;
+    // The session was revoked ("Auth session missing"), or the token / user is no longer accepted.
+    // Anything else (offline, server trouble) keeps the user signed in until the next check.
+    const ended = error.name === "AuthSessionMissingError" || error.status === 401 || error.status === 403;
+    if (!ended) return true;
+    signingOut.current = true;
+    await supabase.auth.signOut({ scope: "local" }).catch(console.error);
+    signingOut.current = false;
+    setUser(null);
+    setToken(null);
+    setSessionNotice(SESSION_ENDED);
+    return false;
+  }, []);
 
   // Keep React state in sync with the Supabase Auth session
   useEffect(() => {
@@ -122,12 +162,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsAuthReady(true);
     };
 
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
+      // A stored session may have been ended elsewhere since this tab last ran; check before restoring it
+      if (data.session && !(await verifySession())) {
+        if (active) setIsAuthReady(true);
+        return;
+      }
       applySession(data.session?.user.id ?? null, data.session?.access_token ?? null);
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "SIGNED_OUT") {
+        // Signed out without pressing Log Out here (e.g. the refresh token was revoked)
+        if (userRef.current && !signingOut.current) setSessionNotice(SESSION_ENDED);
         setUser(null);
         setToken(null);
       } else if (event === "TOKEN_REFRESHED") {
@@ -135,11 +182,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
+    // Re-check when staff come back to the tab, at most once a minute
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && Date.now() - lastVerified.current > 60_000) verifySession();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
       active = false;
       listener.subscription.unsubscribe();
+      document.removeEventListener("visibilitychange", onVisible);
     };
-  }, []);
+  }, [verifySession]);
 
   const loginWithSupabase = async (email: string, password: string): Promise<string | null> => {
     const { data, error } = await supabase!.auth.signInWithPassword({
@@ -152,16 +206,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const profile = await loadStaffProfile(data.session.user.id);
     if (!profile) {
-      await supabase!.auth.signOut();
+      await supabase!.auth.signOut({ scope: "local" });
       return "This account is not linked to a CarePoint staff profile. Contact the system administrator.";
     }
     if (profile.status && profile.status !== "active") {
-      await supabase!.auth.signOut();
+      await supabase!.auth.signOut({ scope: "local" });
       return "This staff account is suspended or inactive.";
     }
 
     setUser(profile);
     setToken(data.session.access_token);
+    setSessionNotice(null);
+    lastVerified.current = Date.now();
     setSignInCount(c => c + 1);
     return null;
   };
@@ -248,7 +304,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Let listeners (audit log) finish while the session is still valid, but never hang sign-out
     const pending = Promise.all([...beforeLogout.current].map(fn => fn().catch(console.error)));
     await Promise.race([pending, new Promise(resolve => setTimeout(resolve, 2000))]);
-    if (supabase) await supabase.auth.signOut().catch(console.error);
+    // Only end this browser's session; other devices signed in to the same account stay signed in
+    signingOut.current = true;
+    if (supabase) await supabase.auth.signOut({ scope: "local" }).catch(console.error);
+    signingOut.current = false;
     setUser(null);
     setToken(null);
     saveSession(null, null);
@@ -288,6 +347,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInCount,
         registerBeforeLogout,
         refreshProfile,
+        verifySession,
+        sessionNotice,
+        dismissSessionNotice,
       }}
     >
       {children}

@@ -30,7 +30,7 @@ export default function AuthModal({
   initialTab = "signin",
 }: AuthModalProps) {
   const navigate = useNavigate();
-  const { login, switchUser, isSecureMode } = useAuth();
+  const { login, switchUser, isSecureMode, sessionNotice } = useAuth();
   const { addUser } = useOpdData();
 
   // Active tab state
@@ -268,6 +268,12 @@ export default function AuthModal({
                 </span>
               </div>
 
+              {sessionNotice && !signInError && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex items-start gap-2">
+                  <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                  <div className="flex-1">{sessionNotice}</div>
+                </div>
+              )}
               {signInError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-start gap-2 animate-fadeIn">
                   <AlertCircle size={16} className="text-rose-600 shrink-0 mt-0.5" />

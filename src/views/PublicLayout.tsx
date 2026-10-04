@@ -51,11 +51,16 @@ function getPortalInfo(role: User["role"]) {
 }
 
 export default function PublicLayout() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, sessionNotice, dismissSessionNotice } = useAuth();
   const { hospitalConfig } = useOpdData();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const navigate = useNavigate();
+
+  // Signed out automatically (session ended elsewhere): reopen the sign-in form with the reason
+  React.useEffect(() => {
+    if (sessionNotice) setIsAuthModalOpen(true);
+  }, [sessionNotice]);
 
   React.useEffect(() => {
     (window as any).__openAuthModal = () => setIsAuthModalOpen(true);
@@ -269,7 +274,10 @@ export default function PublicLayout() {
       {/* Staff Authentication Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          dismissSessionNotice();
+        }}
       />
 
       {/* Public Footer */}
