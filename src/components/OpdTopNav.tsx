@@ -24,6 +24,7 @@ import {
   Menu,
 } from "./Icons";
 import AuthModal from "./AuthModal";
+import NotificationBell from "./NotificationBell";
 
 interface OpdTopNavProps {
   currentUser?: User | null;
@@ -376,15 +377,8 @@ export default function OpdTopNav({
           <span>{timeString}</span>
         </div>
 
-        {/* Medzone Notification Bell */}
-        <div
-          onClick={() => navigate("/queue")}
-          className="relative p-2 rounded-full text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
-          title="Live OPD Queue Notifications"
-        >
-          <Bell size={18} strokeWidth={2} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white animate-pulse"></span>
-        </div>
+        {/* Role-based notifications */}
+        <NotificationBell />
 
         {/* Quick Role Switcher Dropdown */}
         <div ref={roleMenuRef} className="relative">
