@@ -5,6 +5,7 @@ import Modal from "../../components/Modal";
 import { Plus, Search } from "../../components/Icons";
 import * as ui from "../../components/tableStyles";
 import { NursingTabProps, newId, nowStamp, staffLabel } from "./helpers";
+import { dt } from "../../services/time";
 
 const STATUSES: CarePlanStatus[] = ["Active", "Goal Met", "Partially Met", "Not Met", "Revised"];
 
@@ -193,7 +194,7 @@ export default function CarePlanTab({ user, patients, patientId }: NursingTabPro
             )}
             {rows.map(p => (
               <tr key={p.id} className={ui.tr}>
-                <td className={`${ui.td} font-mono whitespace-nowrap`}>{p.updatedAt}</td>
+                <td className={`${ui.td} font-mono whitespace-nowrap`}>{dt(p.updatedAt)}</td>
                 <td className={ui.td}>
                   <div className="font-bold text-slate-900">{p.patientName}</div>
                   <div className="text-[10px] font-mono text-slate-400">{p.patientId}</div>
@@ -231,7 +232,7 @@ export default function CarePlanTab({ user, patients, patientId }: NursingTabPro
         <Modal
           wide
           title={`Nursing Care Plan — ${viewing.patientName}`}
-          subtitle={`${viewing.id} • by ${viewing.nurse} • updated ${viewing.updatedAt}`}
+          subtitle={`${viewing.id} • by ${viewing.nurse} • updated ${dt(viewing.updatedAt)}`}
           onClose={() => setViewing(null)}
         >
           <table className={`${ui.table} border border-slate-200 rounded-lg`}>

@@ -63,6 +63,16 @@ const MATRIX: ModuleAccess[] = [
     access: { pharmacy: { level: "full" }, doctor: { level: "view" } },
   },
   {
+    module: "OPD Ward (Minor Cases)",
+    description: "Minor-case intake, vital signs, care, standard orders, send home / admit / refer",
+    access: { nurse: { level: "limited", note: "Intake, vitals, care" }, doctor: { level: "full", note: "Orders & disposition" } },
+  },
+  {
+    module: "Transfer & Discharge History",
+    description: "Admissions, ward/bed transfers, referrals, discharges, condition changes",
+    access: { doctor: { level: "view" }, nurse: { level: "view" }, staff: { level: "view" } },
+  },
+  {
     module: "Appointments",
     description: "Book, reschedule and check in patients",
     access: { staff: { level: "full" }, doctor: { level: "view", note: "Own schedule; mark completed" } },
@@ -111,7 +121,7 @@ const MATRIX: ModuleAccess[] = [
   },
   {
     module: "Duty Shifts",
-    description: "Morning / Afternoon / Night schedules",
+    description: "8-hour shifts (nurses & staff), 12-hour duties (doctors)",
     access: Object.fromEntries(
       ALL_ROLES.map(r => [r, r === "admin" ? { level: "full" as Level, note: "Assigns shifts" } : { level: "view" as Level, note: "Own & roster" }])
     ),

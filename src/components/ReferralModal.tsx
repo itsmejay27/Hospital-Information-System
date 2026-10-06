@@ -16,7 +16,7 @@ import {
   Clock,
   HeartPulse,
 } from "./Icons";
-import { uid } from "../services/ids";
+import { timestamp, uid } from "../services/ids";
 
 interface ReferralModalProps {
   isOpen: boolean;
@@ -77,7 +77,7 @@ export default function ReferralModal({
       referredTo: `${destinationFacility} — ${targetDepartment}`,
       reason: `${preliminaryDiagnosis}: ${urgencyJustification} (${clinicalSummary.slice(0, 80)}...)`,
       priority: priority,
-      timestamp: new Date().toISOString().replace("T", " ").slice(0, 16),
+      timestamp: timestamp().slice(0, 16),
       referringDoctor: `${referringDoctorName} (${referringDoctorLicense})`,
       status: "Pending",
     };

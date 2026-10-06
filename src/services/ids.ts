@@ -10,3 +10,8 @@ export function timestamp(date = new Date()): string {
     date.getMinutes()
   )}:${pad(date.getSeconds())}`;
 }
+
+/** Local calendar date "YYYY-MM-DD" (toISOString() would give the UTC date: yesterday before 8 AM in the Philippines). */
+export function localDate(date = new Date()): string {
+  return timestamp(date).slice(0, 10);
+}

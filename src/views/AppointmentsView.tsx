@@ -8,6 +8,7 @@ import PageHeader from "../components/PageHeader";
 import Modal from "../components/Modal";
 import * as ui from "../components/tableStyles";
 import { Calendar, Search } from "../components/Icons";
+import { fmtTime, timeSlots } from "../services/time";
 
 const statusStyle: Record<Appointment["status"], string> = {
   Scheduled: "bg-sky-50 text-sky-700 border-sky-200",
@@ -72,10 +73,10 @@ export default function AppointmentsView() {
     const clash = appts.items.find(
       a => a.id !== draft.id && a.doctorId === draft.doctorId && a.date === draft.date && a.time === draft.time && (a.status === "Scheduled" || a.status === "Checked In")
     );
-    if (clash) return setError(`${draft.doctorName} already has ${clash.patientName} at ${draft.time}. Choose another time.`);
+    if (clash) return setError(`${draft.doctorName} already has ${clash.patientName} at ${fmtTime(draft.time)}. Choose another time.`);
     const item: Appointment = { ...draft, id: draft.id || `APT-${uid()}`, patientName: draft.patientName.trim(), reason: draft.reason.trim(), createdAt: draft.createdAt || timestamp().slice(0, 16) };
     setBusy(true);
-    const err = await appts.save(item, `${draft.id ? "Rescheduled" : "Booked"} appointment with ${item.doctorName} on ${item.date} ${item.time}`, {
+    const err = await appts.save(item, `${draft.id ? "Rescheduled" : "Booked"} appointment with ${item.doctorName} on ${item.date} ${fmtTime(item.time)}`, {
       patientId: item.patientId,
       patientName: item.patientName,
     });
@@ -162,7 +163,7 @@ export default function AppointmentsView() {
                 <tr key={a.id} className={ui.tr}>
                   <td className={`${ui.td} font-mono whitespace-nowrap`}>
                     {a.date}
-                    <div className="font-bold text-slate-900">{a.time}</div>
+                    <div className="font-bold text-slate-900">{fmtTime(a.time)}</div>
                   </td>
                   <td className={ui.td}>
                     <div className="font-bold text-slate-900">{a.patientName}</div>
@@ -278,7 +279,13 @@ export default function AppointmentsView() {
               </div>
               <div>
                 <label className={ui.label}>Time *</label>
-                <input type="time" value={draft.time} onChange={e => setDraft({ ...draft, time: e.target.value })} className={ui.input} />
+                <select value={draft.time} onChange={e => setDraft({ ...draft, time: e.target.value })} className={ui.input}>
+                  {timeSlots(6, 22).map(t => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="sm:col-span-2">

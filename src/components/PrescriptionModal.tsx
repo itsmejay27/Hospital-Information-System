@@ -9,7 +9,7 @@ import {
   AlertCircle,
   FileText,
 } from "./Icons";
-import { uid } from "../services/ids";
+import { uid, localDate } from "../services/ids";
 
 interface PrescriptionModalProps {
   isOpen: boolean;
@@ -64,9 +64,9 @@ export default function PrescriptionModal({
       dose: dose.trim(),
       route: route,
       freq: frequency.trim(),
-      start: new Date().toISOString().split("T")[0],
+      start: localDate(),
       prescribedBy: doctorUser.name,
-      prescribedByLicense: doctorUser.licenseNumber || "PRC Lic. Verified",
+      prescribedByLicense: doctorUser.licenseNumber,
       status: "Active",
       refillable: isRefillable,
       notes: `${instructions} (${quantity}) ${isKonsultaCovered ? "[PhilHealth Konsulta Covered]" : ""}`,

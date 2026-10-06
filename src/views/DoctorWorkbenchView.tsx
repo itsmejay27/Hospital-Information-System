@@ -31,7 +31,7 @@ import PrescriptionModal from "../components/PrescriptionModal";
 import LabOrderModal from "../components/LabOrderModal";
 import EClaimModal from "../components/EClaimModal";
 import PatientHistoryTimeline from "../components/PatientHistoryTimeline";
-import { uid } from "../services/ids";
+import { uid, localDate } from "../services/ids";
 
 interface Props {
   user: User;
@@ -115,7 +115,7 @@ export default function DoctorWorkbenchView({
       id: `REC-2026-${uid()}`,
       patientId: selectedPatient.id,
       patientName: selectedPatient.name,
-      date: new Date().toISOString().split("T")[0],
+      date: localDate(),
       type: visitType,
       doctor: user.name,
       doctorLicense: user.licenseNumber || "PRC-MD-AUTH",

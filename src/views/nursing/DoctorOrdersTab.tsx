@@ -5,6 +5,7 @@ import Modal from "../../components/Modal";
 import { Plus, Search } from "../../components/Icons";
 import * as ui from "../../components/tableStyles";
 import { NursingTabProps, newId, nowStamp, staffLabel } from "./helpers";
+import { dt } from "../../services/time";
 
 const CATEGORIES: DoctorOrderCategory[] = [
   "Medication",
@@ -176,7 +177,7 @@ export default function DoctorOrdersTab({ user, patients, patientId }: NursingTa
             )}
             {rows.map(o => (
               <tr key={o.id} className={ui.tr}>
-                <td className={`${ui.td} font-mono whitespace-nowrap`}>{o.orderedAt}</td>
+                <td className={`${ui.td} font-mono whitespace-nowrap`}>{dt(o.orderedAt)}</td>
                 <td className={ui.td}>
                   <div className="font-bold text-slate-900">{o.patientName}</div>
                   <div className="text-[10px] font-mono text-slate-400">{o.patientId}</div>
@@ -197,7 +198,7 @@ export default function DoctorOrdersTab({ user, patients, patientId }: NursingTa
                   {o.carriedOutBy ? (
                     <>
                       <div>{o.carriedOutBy}</div>
-                      <div className="text-[10px] font-mono text-slate-400">{o.carriedOutAt}</div>
+                      <div className="text-[10px] font-mono text-slate-400">{dt(o.carriedOutAt)}</div>
                     </>
                   ) : (
                     <span className="text-slate-300">—</span>
@@ -304,7 +305,7 @@ export default function DoctorOrdersTab({ user, patients, patientId }: NursingTa
       {carryOut && (
         <Modal
           title="Carry Out Doctor's Order"
-          subtitle={`${carryOut.patientName} • ordered by ${carryOut.orderedBy} at ${carryOut.orderedAt}`}
+          subtitle={`${carryOut.patientName} • ordered by ${carryOut.orderedBy} at ${dt(carryOut.orderedAt)}`}
           onClose={() => setCarryOut(null)}
           footer={
             <>

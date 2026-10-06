@@ -8,7 +8,7 @@ import {
   FileCheck,
   AlertCircle,
 } from "./Icons";
-import { uid } from "../services/ids";
+import { uid, localDate } from "../services/ids";
 
 interface EClaimModalProps {
   isOpen: boolean;
@@ -64,7 +64,7 @@ export default function EClaimModal({
       diagnosisWithIcd: diagnosisIcd,
       caseRateAmount: caseRateLabel,
       claimStatus: "Transmitted",
-      submissionDate: new Date().toISOString().split("T")[0],
+      submissionDate: localDate(),
       hospitalCharges: hospitalCharges,
       philhealthBenefit: philhealthBenefit,
       patientPayable: patientPayable,

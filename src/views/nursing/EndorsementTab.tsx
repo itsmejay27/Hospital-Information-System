@@ -5,8 +5,15 @@ import Modal from "../../components/Modal";
 import { Plus, Search } from "../../components/Icons";
 import * as ui from "../../components/tableStyles";
 import { NursingTabProps, currentShift, newId, nowStamp } from "./helpers";
+import { dt } from "../../services/time";
 
-const NEXT_SHIFT: Record<DutyShift, DutyShift> = { Morning: "Afternoon", Afternoon: "Night", Night: "Morning" };
+const NEXT_SHIFT: Record<DutyShift, DutyShift> = {
+  Morning: "Afternoon",
+  Afternoon: "Night",
+  Night: "Morning",
+  "Day Duty": "Night Duty",
+  "Night Duty": "Day Duty",
+};
 const shiftText = (s: DutyShift) => `${s} (${DUTY_SHIFT_HOURS[s]})`;
 
 const SBAR: { name: "situation" | "background" | "assessment" | "recommendation"; letter: string; label: string; hint: string }[] = [
@@ -128,7 +135,7 @@ export default function EndorsementTab({ user }: NursingTabProps) {
             )}
             {rows.map(e => (
               <tr key={e.id} className={ui.tr}>
-                <td className={`${ui.td} font-mono whitespace-nowrap`}>{e.timestamp}</td>
+                <td className={`${ui.td} font-mono whitespace-nowrap`}>{dt(e.timestamp)}</td>
                 <td className={`${ui.td} max-w-[220px]`}>{e.shiftPeriod}</td>
                 <td className={ui.td}>{e.ward}</td>
                 <td className={`${ui.td} whitespace-nowrap`}>
@@ -162,7 +169,7 @@ export default function EndorsementTab({ user }: NursingTabProps) {
         <Modal
           wide
           title={`Shift Endorsement — ${viewing.ward}`}
-          subtitle={`${viewing.timestamp} • ${viewing.shiftPeriod}`}
+          subtitle={`${dt(viewing.timestamp)} • ${viewing.shiftPeriod}`}
           onClose={() => setViewing(null)}
         >
           <table className={`${ui.table} border border-slate-200`}>

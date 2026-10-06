@@ -14,6 +14,7 @@ import {
   ChevronUp,
   CheckCircle,
 } from "./Icons";
+import { dt } from "../services/time";
 
 interface PatientHistoryTimelineProps {
   patient: Patient;
@@ -88,7 +89,7 @@ export default function PatientHistoryTimeline({
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  {patient.age} yrs • {patient.gender} • Blood: {patient.bloodType} • Registered: {patient.registeredAt}
+                  {patient.age} yrs • {patient.gender} • Blood: {patient.bloodType} • Registered: {dt(patient.registeredAt)}
                 </p>
               </div>
             </div>

@@ -1,11 +1,12 @@
 import { MedicationOrder, StockItem } from "../types";
+import { localDate } from "./ids";
 
 /** Done when fully dispensed (older records only have dispensedAt). */
 export const isFullyDispensed = (m: MedicationOrder) => m.fullyDispensed ?? !!m.dispensedAt;
 export const isToDispense = (m: MedicationOrder) => m.status === "Active" && !isFullyDispensed(m);
 export const dispensedTotal = (m: MedicationOrder) => (m.dispenses || []).reduce((s, d) => s + d.quantity, 0);
 
-export const today = () => new Date().toISOString().slice(0, 10);
+export const today = () => localDate();
 export const daysUntil = (date?: string) => (date ? Math.floor((new Date(date).getTime() - new Date(today()).getTime()) / 86400000) : Infinity);
 
 export function stockStatus(s: StockItem): { label: string; style: string } | null {

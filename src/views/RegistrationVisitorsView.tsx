@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { User, Patient, VisitorLog } from "../types";
 import { Users, Search, Plus, Check, Clock } from "../components/Icons";
 import { uid } from "../services/ids";
+import { fmtTime } from "../services/time";
 
 interface Props {
   user: User;
@@ -184,9 +185,9 @@ export default function RegistrationVisitorsView({
                       {v.wardBed}
                     </td>
                     <td className="py-3 px-3">
-                      <div className="font-mono text-[11px] font-semibold text-slate-700">{v.timeIn}</div>
+                      <div className="font-mono text-[11px] font-semibold text-slate-700">{fmtTime(v.timeIn)}</div>
                       {v.timeOut ? (
-                        <div className="text-[10px] text-emerald-700 font-mono">Exp. Out: {v.timeOut}</div>
+                        <div className="text-[10px] text-emerald-700 font-mono">Exp. Out: {fmtTime(v.timeOut)}</div>
                       ) : (
                         <div className="text-[10px] text-slate-400 italic">Open Visit</div>
                       )}

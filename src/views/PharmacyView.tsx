@@ -9,6 +9,7 @@ import PageHeader from "../components/PageHeader";
 import Modal from "../components/Modal";
 import * as ui from "../components/tableStyles";
 import { Pill, Search } from "../components/Icons";
+import { dt } from "../services/time";
 
 type Tab = "pending" | "dispensed" | "all" | "stock";
 
@@ -297,7 +298,7 @@ export default function PharmacyView() {
                       </td>
                       <td className={ui.td}>{st ? <span className={`${ui.badge} ${st.style}`}>{st.label}</span> : <span className="text-emerald-700 font-semibold">OK</span>}</td>
                       <td className={`${ui.td} text-[10px] text-slate-500`}>
-                        {s.updatedAt}
+                        {dt(s.updatedAt)}
                         <div>{s.updatedBy}</div>
                       </td>
                       <td className={`${ui.td} text-right whitespace-nowrap`}>
@@ -386,7 +387,7 @@ export default function PharmacyView() {
                           <>
                             <div className="font-semibold">× {m.dispenses?.length ? dispensedTotal(m) : m.dispenseQuantity}</div>
                             <div className="text-[10px] text-slate-400 whitespace-nowrap">
-                              {m.dispensedAt} • {m.dispensedBy}
+                              {dt(m.dispensedAt)} • {m.dispensedBy}
                             </div>
                           </>
                         ) : (
@@ -447,7 +448,7 @@ export default function PharmacyView() {
             )}
             {(dispensing.dispenses?.length ?? 0) > 0 && (
               <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900">
-                Already dispensed: {dispensing.dispenses!.map(d => `${d.quantity} on ${d.at}`).join("; ")}
+                Already dispensed: {dispensing.dispenses!.map(d => `${d.quantity} on ${dt(d.at)}`).join("; ")}
               </div>
             )}
             <div>

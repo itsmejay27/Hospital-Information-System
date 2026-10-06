@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { User, Patient, AdmissionEntry, TriageTier } from "../types";
-import { uid } from "../services/ids";
+import { timestamp, uid } from "../services/ids";
+import { useOpdData } from "../context/OpdDataContext";
+import Modal from "../components/Modal";
+import * as ui from "../components/tableStyles";
 import {
   Bed,
   UserPlus,
@@ -13,6 +16,7 @@ import {
   Plus,
   Building2,
 } from "../components/Icons";
+import { dt } from "../services/time";
 
 interface Props {
   user: User;
@@ -23,6 +27,15 @@ interface Props {
   onSignOut?: () => void;
 }
 
+const WARDS = [
+  "Medical Ward (4th Floor)",
+  "Surgical Ward (3rd Floor)",
+  "Intensive Care Unit (ICU)",
+  "Pediatric Ward (2nd Floor)",
+  "OB-GYN Ward (5th Floor)",
+  "OPD Ward (Minor Cases)",
+];
+
 export default function PatientBedAllocationView({
   user,
   patients,
@@ -30,15 +43,23 @@ export default function PatientBedAllocationView({
   onAddAdmission,
   onUpdatePatientStatus,
 }: Props) {
+  const { usersList, transferPatient, vacateBed } = useOpdData();
+  const doctors = usersList.filter(u => u.role === "doctor" && u.status !== "suspended");
   const [notification, setNotification] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [transferring, setTransferring] = useState<AdmissionEntry | null>(null);
+  const [transferWard, setTransferWard] = useState("");
+  const [transferBed, setTransferBed] = useState("");
+  const [transferReason, setTransferReason] = useState("");
+  const [transferError, setTransferError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [wardFilter, setWardFilter] = useState("all");
 
   // Form State for Bed Allocation
-  const [selectedPatientId, setSelectedPatientId] = useState(patients[0]?.id || "");
-  const [admitWard, setAdmitWard] = useState("Medical Ward (4th Floor)");
-  const [admitBed, setAdmitBed] = useState("Bed 401-A");
-  const [admitDoctor, setAdmitDoctor] = useState("Attending Physician, MD (Internal Medicine)");
+  const [selectedPatientId, setSelectedPatientId] = useState("");
+  const [admitWard, setAdmitWard] = useState(WARDS[0]);
+  const [admitBed, setAdmitBed] = useState("");
+  const [admitDoctor, setAdmitDoctor] = useState("");
   const [admitReason, setAdmitReason] = useState("");
   const [admitTriage, setAdmitTriage] = useState<TriageTier>("observation");
   const [admitStatus, setAdmitStatus] = useState<"Admitted" | "Observation">("Admitted");
@@ -51,18 +72,30 @@ export default function PatientBedAllocationView({
   const occupancyPercentage = Math.round((occupiedCount / totalBeds) * 100);
   const criticalCount = activeAdmissions.filter(a => a.triageTier === "critical").length;
 
+  /** Active admission already using this ward + bed (beds are compared ignoring case and spaces). */
+  const bedKey = (w: string, b: string) => `${w}|${b.replace(/\s+/g, "").toLowerCase()}`;
+  const occupiedBy = (ward: string, bed: string, exceptId?: string) =>
+    activeAdmissions.find(a => a.id !== exceptId && bedKey(a.ward, a.bed) === bedKey(ward, bed));
+
   const handleAdmitSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
     const patient = patients.find(p => p.id === selectedPatientId);
-    if (!patient) return;
+    if (!patient) return setFormError("Select the patient.");
+    if (!admitBed.trim()) return setFormError("Enter the bed / room number.");
+    if (!admitDoctor) return setFormError("Select the attending doctor.");
+    const already = activeAdmissions.find(a => a.patientId === patient.id);
+    if (already) return setFormError(`${patient.name} already occupies ${already.ward} • ${already.bed}. Use Transfer to move the patient.`);
+    const taken = occupiedBy(admitWard, admitBed.trim());
+    if (taken) return setFormError(`${admitWard} • ${taken.bed} is occupied by ${taken.patientName}. Choose another bed.`);
 
     const newAdmission: AdmissionEntry = {
       id: `ADM-${uid()}`,
       patientId: patient.id,
       patientName: patient.name,
-      admissionDate: new Date().toISOString().replace("T", " ").substring(0, 16),
+      admissionDate: timestamp().slice(0, 16),
       ward: admitWard,
-      bed: admitBed,
+      bed: admitBed.trim(),
       attendingPhysician: admitDoctor,
       admittingStaff: `${user.name} (${user.title})`,
       reason: admitReason || patient.chiefComplaint || "Inpatient continuous monitoring and management",
@@ -71,17 +104,48 @@ export default function PatientBedAllocationView({
     };
 
     onAddAdmission(newAdmission);
-    onUpdatePatientStatus(patient.id, admitStatus, admitWard, admitBed);
+    onUpdatePatientStatus(patient.id, admitStatus, admitWard, admitBed.trim());
     setNotification(
       `Patient ${patient.name} (${patient.id}) successfully assigned to ${admitWard} • ${admitBed}.`
     );
     setAdmitReason("");
+    setAdmitBed("");
+    setSelectedPatientId("");
     setTimeout(() => setNotification(null), 5000);
   };
 
   const handleDischargePatient = (admission: AdmissionEntry) => {
-    onUpdatePatientStatus(admission.patientId, "Discharged", undefined, undefined);
-    setNotification(`Bed ${admission.bed} in ${admission.ward} vacated. Patient ${admission.patientName} discharged.`);
+    if (
+      !window.confirm(
+        `Vacate ${admission.ward} • ${admission.bed}?\n\nOnly do this after the doctor has cleared ${admission.patientName} for discharge. The patient will be marked Discharged and Stable.`
+      )
+    )
+      return;
+    vacateBed(admission, "Bed vacated after doctor's clearance");
+    setNotification(`Bed ${admission.bed} in ${admission.ward} vacated. ${admission.patientName} discharged.`);
+    setTimeout(() => setNotification(null), 5000);
+  };
+
+  const openTransfer = (adm: AdmissionEntry) => {
+    setTransferError(null);
+    setTransferWard(adm.ward);
+    setTransferBed("");
+    setTransferReason("");
+    setTransferring(adm);
+  };
+
+  const submitTransfer = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!transferring) return;
+    const bed = transferBed.trim();
+    if (!bed) return setTransferError("Enter the new bed / room.");
+    if (bedKey(transferWard, bed) === bedKey(transferring.ward, transferring.bed)) return setTransferError("That is the patient's current bed.");
+    const taken = occupiedBy(transferWard, bed, transferring.id);
+    if (taken) return setTransferError(`${transferWard} • ${taken.bed} is occupied by ${taken.patientName}.`);
+    if (!transferReason.trim()) return setTransferError("Enter the reason for the transfer.");
+    transferPatient(transferring, transferWard, bed, transferReason.trim());
+    setNotification(`${transferring.patientName} transferred to ${transferWard} • ${bed}.`);
+    setTransferring(null);
     setTimeout(() => setNotification(null), 5000);
   };
 
@@ -208,11 +272,14 @@ export default function PatientBedAllocationView({
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:border-emerald-500 focus:outline-hidden"
                   required
                 >
-                  {patients.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} ({p.id}) — {p.admissionStatus}
-                    </option>
-                  ))}
+                  <option value="">— Select patient —</option>
+                  {patients
+                    .filter(p => !activeAdmissions.some(a => a.patientId === p.id))
+                    .map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.id}) — {p.admissionStatus}
+                      </option>
+                    ))}
                 </select>
               </div>
 
@@ -227,11 +294,11 @@ export default function PatientBedAllocationView({
                     onChange={e => setAdmitWard(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-hidden"
                   >
-                    <option value="Medical Ward (4th Floor)">Medical Ward (4th Floor)</option>
-                    <option value="Surgical Ward (3rd Floor)">Surgical Ward (3rd Floor)</option>
-                    <option value="Intensive Care Unit (ICU)">Intensive Care Unit (ICU)</option>
-                    <option value="Pediatric Ward (2nd Floor)">Pediatric Ward (2nd Floor)</option>
-                    <option value="OB-GYN Ward (5th Floor)">OB-GYN Ward (5th Floor)</option>
+                    {WARDS.map(w => (
+                      <option key={w} value={w}>
+                        {w}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -252,15 +319,21 @@ export default function PatientBedAllocationView({
               {/* Attending Physician */}
               <div>
                 <label className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
-                  Attending Physician
+                  Attending Physician <span className="text-rose-500">*</span>
                 </label>
-                <input
-                  type="text"
+                <select
                   value={admitDoctor}
                   onChange={e => setAdmitDoctor(e.target.value)}
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-hidden"
-                  placeholder="Doctor name & specialty"
-                />
+                >
+                  <option value="">— Select doctor —</option>
+                  {doctors.map(d => (
+                    <option key={d.id} value={d.licenseNumber ? `${d.name} (${d.licenseNumber})` : d.name}>
+                      {d.name}
+                      {d.department ? ` — ${d.department}` : ""}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Triage Acuity & Admission Status */}
@@ -308,6 +381,7 @@ export default function PatientBedAllocationView({
                 />
               </div>
 
+              {formError && <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold">{formError}</div>}
               <button
                 type="submit"
                 className="w-full bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs py-2.5 rounded-xl shadow-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
@@ -387,7 +461,7 @@ export default function PatientBedAllocationView({
                           <div className="text-[10px] text-slate-500 mt-0.5">{adm.ward}</div>
                         </td>
                         <td className="py-3 px-3 text-[11px] text-slate-600">
-                          <div>{adm.admissionDate}</div>
+                          <div>{dt(adm.admissionDate)}</div>
                           <div className="text-[10px] text-slate-400 truncate max-w-[140px]">{adm.attendingPhysician}</div>
                         </td>
                         <td className="py-3 px-3">
@@ -405,6 +479,12 @@ export default function PatientBedAllocationView({
                         </td>
                         <td className="py-3 px-3 text-right">
                           <button
+                            onClick={() => openTransfer(adm)}
+                            className="text-[10px] font-bold bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer mr-1.5"
+                          >
+                            Transfer
+                          </button>
+                          <button
                             onClick={() => handleDischargePatient(adm)}
                             className="text-[10px] font-bold bg-slate-100 hover:bg-rose-50 hover:text-rose-700 text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"
                           >
@@ -420,6 +500,46 @@ export default function PatientBedAllocationView({
           </div>
         </div>
       </div>
+      {transferring && (
+        <Modal
+          title={`Transfer ${transferring.patientName}`}
+          subtitle={`Currently in ${transferring.ward} • ${transferring.bed}`}
+          onClose={() => setTransferring(null)}
+          footer={
+            <>
+              <button type="button" onClick={() => setTransferring(null)} className={ui.secondaryBtn}>
+                Cancel
+              </button>
+              <button type="submit" form="transfer-form" className={ui.primaryBtn}>
+                Confirm Transfer
+              </button>
+            </>
+          }
+        >
+          <form id="transfer-form" onSubmit={submitTransfer} className="space-y-3">
+            {transferError && <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 font-semibold">{transferError}</div>}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={ui.label}>New ward *</label>
+                <select value={transferWard} onChange={e => setTransferWard(e.target.value)} className={ui.input}>
+                  {WARDS.map(w => (
+                    <option key={w}>{w}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={ui.label}>New bed / room *</label>
+                <input value={transferBed} onChange={e => setTransferBed(e.target.value)} placeholder="e.g. Bed 402-B" className={ui.input} />
+              </div>
+            </div>
+            <div>
+              <label className={ui.label}>Reason for transfer *</label>
+              <input value={transferReason} onChange={e => setTransferReason(e.target.value)} placeholder="e.g. Needs ICU monitoring; isolation" className={ui.input} />
+            </div>
+            <p className="text-slate-500">The transfer is saved in the patient's Transfer &amp; Discharge History.</p>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

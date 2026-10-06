@@ -4,6 +4,7 @@ import { useOpdData } from "../context/OpdDataContext";
 import { DiagnosticResult } from "../types";
 import { timestamp } from "../services/ids";
 import { AlertTriangle } from "./Icons";
+import { dt } from "../services/time";
 
 /**
  * Banner shown to doctors and nurses on every page while a released lab result has a
@@ -51,7 +52,7 @@ export default function CriticalResultsAlert() {
                 <span className="font-bold">{l.patientName}</span> ({l.patientId}) • {l.test} •{" "}
                 {crit.map(i => `${i.name} ${i.value}${i.unit ? " " + i.unit : ""} (${i.flag === "HH" ? "critical high" : "critical low"})`).join(", ")}
                 <div className="text-[10px] text-rose-700">
-                  Released {l.releasedAt} by {l.releasedBy} • ordered by {l.orderingPhysician}
+                  Released {dt(l.releasedAt)} by {l.releasedBy} • ordered by {l.orderingPhysician}
                   {mine ? " (you)" : ""}
                 </div>
               </div>

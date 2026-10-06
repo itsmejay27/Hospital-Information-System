@@ -21,6 +21,7 @@ import Modal from "../components/Modal";
 import StaffAvatar from "../components/StaffAvatar";
 import * as ui from "../components/tableStyles";
 import { Users, Plus, Search, Check } from "../components/Icons";
+import { dt } from "../services/time";
 
 type Tab = "accounts" | "requests";
 
@@ -463,7 +464,7 @@ export default function AdminAccountsView() {
                   const fields = Object.keys(r.changes) as EditableProfileField[];
                   return (
                     <tr key={r.id} className={ui.tr}>
-                      <td className={`${ui.td} font-mono whitespace-nowrap`}>{r.requestedAt}</td>
+                      <td className={`${ui.td} font-mono whitespace-nowrap`}>{dt(r.requestedAt)}</td>
                       <td className={ui.td}>
                         <div className="font-bold text-slate-900">{r.userName}</div>
                         <div className="text-[10px] text-slate-400">{ROLE_LABELS[r.role]}</div>
@@ -516,7 +517,7 @@ export default function AdminAccountsView() {
                             </button>
                           </>
                         ) : (
-                          <span className="text-[10px] text-slate-400 font-mono">{r.reviewedAt}</span>
+                          <span className="text-[10px] text-slate-400 font-mono">{dt(r.reviewedAt)}</span>
                         )}
                       </td>
                     </tr>

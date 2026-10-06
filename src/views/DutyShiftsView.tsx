@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
 import { useWardData } from "../context/WardDataContext";
-import { DutyShift, DUTY_SHIFT_HOURS, ShiftSchedule, ROLE_LABELS, ALL_ROLES, Role } from "../types";
+import { DutyShift, DUTY_SHIFT_HOURS, ShiftSchedule, ROLE_LABELS, ALL_ROLES, Role, SHIFT_TIMES, shiftsForRole, shiftInterval, isOnDuty } from "../types";
 import PageHeader from "../components/PageHeader";
 import Modal from "../components/Modal";
 import StaffAvatar from "../components/StaffAvatar";
@@ -10,12 +10,14 @@ import { Clock, Plus, ChevronLeft, ChevronRight } from "../components/Icons";
 import * as ui from "../components/tableStyles";
 import { currentShift, newId, todayIso } from "./nursing/helpers";
 
-const SHIFTS: DutyShift[] = ["Morning", "Afternoon", "Night"];
+const SHIFTS: DutyShift[] = ["Day Duty", "Morning", "Afternoon", "Night Duty", "Night"];
 
 const shiftStyle: Record<DutyShift, string> = {
   Morning: "bg-amber-50 text-amber-800 border-amber-200",
   Afternoon: "bg-sky-50 text-sky-800 border-sky-200",
   Night: "bg-indigo-50 text-indigo-800 border-indigo-200",
+  "Day Duty": "bg-emerald-50 text-emerald-800 border-emerald-200",
+  "Night Duty": "bg-violet-50 text-violet-800 border-violet-200",
 };
 
 function addDays(iso: string, days: number): string {
@@ -53,7 +55,8 @@ export default function DutyShiftsView() {
     .filter(s => s.userId === user?.id && s.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date) || SHIFTS.indexOf(a.shift) - SHIFTS.indexOf(b.shift));
   const nowShift = currentShift();
-  const onDutyNow = shiftSchedules.filter(s => s.date === today && s.shift === nowShift);
+  const yesterday = addDays(today, -1);
+  const onDutyNow = shiftSchedules.filter(s => (s.date === today || s.date === yesterday) && isOnDuty(s));
 
   if (!user) return null;
 
@@ -75,8 +78,24 @@ export default function DutyShiftsView() {
       assignedBy: user.name,
       notes: draft.notes.trim() || undefined,
     }));
-    const clash = entries.find(en => shiftSchedules.some(s => s.userId === en.userId && s.date === en.date && s.shift === en.shift));
-    if (clash) return setError(`${person.name} already has the ${clash.shift} shift on ${clash.date}.`);
+    if (!shiftsForRole(person.role).includes(draft.shift)) {
+      return setError(`${ROLE_LABELS[person.role]} staff take ${shiftsForRole(person.role).join(" / ")} shifts.`);
+    }
+    // No two shifts of the same person may overlap in time (including overnight shifts)
+    let clash: { en: ShiftSchedule; s: ShiftSchedule } | undefined;
+    for (const en of entries) {
+      const [a1, b1] = shiftInterval(en.date, en.shift);
+      const s = shiftSchedules.find(x => {
+        if (x.userId !== en.userId) return false;
+        const [a2, b2] = shiftInterval(x.date, x.shift);
+        return a1 < b2 && a2 < b1;
+      });
+      if (s) {
+        clash = { en, s };
+        break;
+      }
+    }
+    if (clash) return setError(`${person.name} already has the ${clash.s.shift} shift on ${clash.s.date}, which overlaps.`);
     setBusy(true);
     try {
       for (const en of entries) await saveShiftSchedule(en);
@@ -98,13 +117,13 @@ export default function DutyShiftsView() {
       <PageHeader
         icon={<Clock size={20} />}
         title="Duty Shifts"
-        description={`Morning ${DUTY_SHIFT_HOURS.Morning} • Afternoon ${DUTY_SHIFT_HOURS.Afternoon} • Night ${DUTY_SHIFT_HOURS.Night}`}
+        description={`Nurses & other staff (8 hours): Morning ${DUTY_SHIFT_HOURS.Morning} • Afternoon ${DUTY_SHIFT_HOURS.Afternoon} • Night ${DUTY_SHIFT_HOURS.Night}. Doctors (12 hours): Day ${DUTY_SHIFT_HOURS["Day Duty"]} • Night ${DUTY_SHIFT_HOURS["Night Duty"]}.`}
         actions={
           isAdmin && (
             <button
               onClick={() => {
                 setError(null);
-                setDraft({ userId: usersList[0]?.id || "", date: today, shift: "Morning", area: "", notes: "", repeatDays: "1" });
+                setDraft({ userId: usersList[0]?.id || "", date: today, shift: shiftsForRole(usersList[0]?.role || "nurse")[0], area: "", notes: "", repeatDays: "1" });
               }}
               className={ui.primaryBtn}
             >
@@ -158,7 +177,7 @@ export default function DutyShiftsView() {
         <div className={ui.tableWrap}>
           <div className={ui.toolbar}>
             <h3 className="text-sm font-bold text-slate-900">
-              On Duty Now — <span className="text-emerald-700">{nowShift} Shift</span>
+              On Duty Now <span className="text-slate-500 font-semibold">(nurses: {nowShift} shift, {DUTY_SHIFT_HOURS[nowShift]})</span>
             </h3>
           </div>
           <table className={ui.table}>
@@ -306,7 +325,15 @@ export default function DutyShiftsView() {
             {error && <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 font-semibold">{error}</div>}
             <div>
               <label className={ui.label}>Staff Member *</label>
-              <select value={draft.userId} onChange={e => setDraft({ ...draft, userId: e.target.value })} className={ui.input}>
+              <select
+                value={draft.userId}
+                onChange={e => {
+                  const role = usersList.find(u => u.id === e.target.value)?.role || "nurse";
+                  const options = shiftsForRole(role);
+                  setDraft({ ...draft, userId: e.target.value, shift: options.includes(draft.shift) ? draft.shift : options[0] });
+                }}
+                className={ui.input}
+              >
                 {usersList
                   .filter(u => u.status !== "suspended")
                   .map(u => (
@@ -339,9 +366,9 @@ export default function DutyShiftsView() {
                   onChange={e => setDraft({ ...draft, shift: e.target.value as DutyShift })}
                   className={ui.input}
                 >
-                  {SHIFTS.map(s => (
+                  {shiftsForRole(usersList.find(u => u.id === draft.userId)?.role || "nurse").map(s => (
                     <option key={s} value={s}>
-                      {s} ({DUTY_SHIFT_HOURS[s]})
+                      {s} ({DUTY_SHIFT_HOURS[s]}, {SHIFT_TIMES[s].hours} hours)
                     </option>
                   ))}
                 </select>

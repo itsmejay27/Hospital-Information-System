@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ImagingFile, ImagingFileMeta } from "../types";
 import { hospitalDb } from "../services/db";
 import { X } from "./Icons";
+import { dt } from "../services/time";
 
 /** Turns a data: URL into a blob: URL so browsers will show PDFs inline. */
 function toBlobUrl(dataUrl: string): string {
@@ -94,7 +95,7 @@ export default function ImagingGallery({ images }: { images: ImagingFileMeta[] }
             <div className="min-w-0">
               <div className="font-bold truncate">{current.name}</div>
               <div className="text-white/60">
-                {open! + 1} of {files.length} • uploaded {current.uploadedAt} by {current.uploadedBy}
+                {open! + 1} of {files.length} • uploaded {dt(current.uploadedAt)} by {current.uploadedBy}
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">

@@ -8,6 +8,7 @@ import PageHeader from "../components/PageHeader";
 import Modal from "../components/Modal";
 import * as ui from "../components/tableStyles";
 import { AlertTriangle, Search } from "../components/Icons";
+import { dt } from "../services/time";
 
 const CATEGORIES: IncidentReport["category"][] = ["Patient Safety", "Medication Error", "Fall / Injury", "Data Privacy Breach", "Equipment", "Staff Conduct", "Other"];
 const SEVERITIES: IncidentReport["severity"][] = ["Low", "Moderate", "High", "Sentinel"];
@@ -174,7 +175,7 @@ export default function IncidentsView({ embedded = false }: { embedded?: boolean
               {rows.map(i => (
                 <tr key={i.id} className={ui.tr}>
                   <td className={`${ui.td} font-mono whitespace-nowrap`}>
-                    {i.reportedAt}
+                    {dt(i.reportedAt)}
                     <div className="text-[10px] text-slate-400">{i.id}</div>
                   </td>
                   <td className={ui.td}>{i.category}</td>
@@ -184,7 +185,7 @@ export default function IncidentsView({ embedded = false }: { embedded?: boolean
                   <td className={ui.td}>
                     <div className="max-w-[340px] line-clamp-2">{i.description}</div>
                     <div className="text-[10px] text-slate-500">
-                      {i.location} • occurred {i.occurredAt}
+                      {i.location} • occurred {dt(i.occurredAt)}
                       {i.patientName ? ` • patient ${i.patientName}` : ""}
                     </div>
                   </td>
@@ -290,7 +291,7 @@ export default function IncidentsView({ embedded = false }: { embedded?: boolean
         <Modal
           wide
           title={`Incident ${reviewing.id}`}
-          subtitle={`${reviewing.category} • ${reviewing.severity} • reported ${reviewing.reportedAt} by ${reviewing.reportedBy} (${ROLE_LABELS[reviewing.reporterRole]})`}
+          subtitle={`${reviewing.category} • ${reviewing.severity} • reported ${dt(reviewing.reportedAt)} by ${reviewing.reportedBy} (${ROLE_LABELS[reviewing.reporterRole]})`}
           onClose={() => !busy && setReviewing(null)}
           footer={
             manager ? (
@@ -308,7 +309,7 @@ export default function IncidentsView({ embedded = false }: { embedded?: boolean
           {error && <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 font-semibold">{error}</div>}
           <div className="p-3 rounded-lg bg-slate-50 border border-slate-200 space-y-1">
             <div>
-              <b>When / where:</b> {reviewing.occurredAt} • {reviewing.location}
+              <b>When / where:</b> {dt(reviewing.occurredAt)} • {reviewing.location}
             </div>
             {reviewing.patientName && (
               <div>

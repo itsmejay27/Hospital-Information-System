@@ -322,6 +322,30 @@ create policy "desk insert" on public.appointments for insert to authenticated w
 create policy "desk update" on public.appointments for update to authenticated
   using ((select private.my_role()) in ('staff','doctor')) with check ((select private.my_role()) in ('staff','doctor'));
 
+-- Patient movement history (append-only) and OPD Ward minor cases
+do $$
+declare t text;
+begin
+  foreach t in array array['patient_movements','opd_cases'] loop
+    execute format('create table if not exists public.%I (id text primary key, data jsonb not null, updated_at timestamptz not null default now())', t);
+    execute format('alter table public.%I enable row level security', t);
+    execute format('revoke all on public.%I from anon', t);
+  end loop;
+end $$;
+drop policy if exists "staff read" on public.patient_movements;
+drop policy if exists "staff append" on public.patient_movements;
+create policy "staff read" on public.patient_movements for select to authenticated using ((select private.is_staff()));
+-- Anyone on staff can add history, recorded under their own role; nobody can edit or delete it
+create policy "staff append" on public.patient_movements for insert to authenticated
+  with check ((select private.is_staff()) and data->>'byRole' = (select private.my_role()));
+drop policy if exists "staff read" on public.opd_cases;
+drop policy if exists "ward insert" on public.opd_cases;
+drop policy if exists "ward update" on public.opd_cases;
+create policy "staff read" on public.opd_cases for select to authenticated using ((select private.is_staff()));
+create policy "ward insert" on public.opd_cases for insert to authenticated with check ((select private.my_role()) in ('nurse','doctor'));
+create policy "ward update" on public.opd_cases for update to authenticated
+  using ((select private.my_role()) in ('nurse','doctor')) with check ((select private.my_role()) in ('nurse','doctor'));
+
 -- ------------------------------------------------------------------------------
 -- Giving a staff member access
 -- ------------------------------------------------------------------------------

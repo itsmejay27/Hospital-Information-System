@@ -391,8 +391,8 @@ export function PublicHomePage() {
   ];
 
   const hours = [
-    { day: "Monday – Friday", time: "08:00 – 17:00" },
-    { day: "Saturday", time: "08:00 – 12:00" },
+    { day: "Monday – Friday", time: "8:00 AM – 5:00 PM" },
+    { day: "Saturday", time: "8:00 AM – 12:00 PM" },
     { day: "Sunday & Holidays", time: "Closed" },
     { day: "Emergency Room", time: "Open 24/7" },
   ];

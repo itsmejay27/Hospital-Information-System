@@ -6,6 +6,8 @@ import { ROLE_LABELS } from "../types";
 import { isToDispense } from "../services/pharmacy";
 import * as ui from "../components/tableStyles";
 import { imagingStage } from "./ImagingWorklistView";
+import { dt } from "../services/time";
+import { localDate } from "../services/ids";
 
 interface Kpi {
   label: string;
@@ -37,7 +39,7 @@ export default function RoleDashboardView() {
   const navigate = useNavigate();
   if (!user) return null;
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate();
   let kpis: Kpi[] = [];
   let actions: { label: string; to: string; primary?: boolean }[] = [];
   let tableTitle = "";
@@ -71,7 +73,7 @@ export default function RoleDashboardView() {
     head = ["Ordered", "Priority", "Patient", "Study", "Doctor", reader ? "Images" : "Status"];
     const list = reader ? reading : [...ordered, ...imaging];
     body = list.slice(0, 8).map(l => [
-      <span className="font-mono">{l.orderedAt || l.date}</span>,
+      <span className="font-mono">{dt(l.orderedAt || l.date)}</span>,
       l.priority || "Routine",
       <span className="font-bold text-slate-900">{l.patientName}</span>,
       l.test,
@@ -93,7 +95,7 @@ export default function RoleDashboardView() {
     tableTitle = "Waiting for you";
     head = ["Ordered", "Priority", "Patient", "Test", "Doctor", "Status"];
     body = [...pending, ...progress].slice(0, 8).map(l => [
-      <span className="font-mono">{l.orderedAt || l.date}</span>,
+      <span className="font-mono">{dt(l.orderedAt || l.date)}</span>,
       l.priority || "Routine",
       <span className="font-bold text-slate-900">{l.patientName}</span>,
       l.test,
@@ -162,7 +164,7 @@ export default function RoleDashboardView() {
     tableTitle = "Latest activity";
     head = ["Time", "Staff", "Role", "Action", "Patient"];
     body = auditLogs.slice(0, 10).map(l => [
-      <span className="font-mono whitespace-nowrap">{l.timestamp}</span>,
+      <span className="font-mono whitespace-nowrap">{dt(l.timestamp)}</span>,
       <span className="font-bold text-slate-900">{l.userName}</span>,
       ROLE_LABELS[l.userRole] || l.userRole,
       l.action,

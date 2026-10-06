@@ -34,8 +34,12 @@ import {
 } from "../components/Icons";
 import ReferralModal from "../components/ReferralModal";
 import DischargeModal from "../components/DischargeModal";
-import { uid, timestamp } from "../services/ids";
+import { uid, timestamp, localDate } from "../services/ids";
 import RoleDashboardView from "./RoleDashboardView";
+import { dt, fmtTime } from "../services/time";
+import ConditionBadge from "../components/ConditionBadge";
+import { useWardData } from "../context/WardDataContext";
+import { DUTY_SHIFT_HOURS, isOnDuty } from "../types";
 
 function CircularProgress({
   percentage,
@@ -136,6 +140,14 @@ export default function OpdDashboardView({
   } = useOpdData();
 
   const user = propsUser || authUser;
+  const { shiftSchedules } = useWardData();
+  const yesterdayIso = localDate(new Date(Date.now() - 86400000));
+  const tomorrowIso = localDate(new Date(Date.now() + 86400000));
+  const myDuties = shiftSchedules
+    .filter(s => s.userId === user?.id && s.date >= yesterdayIso && s.date <= tomorrowIso)
+    .filter(s => s.date !== yesterdayIso || isOnDuty(s))
+    .sort((x, y) => (x.date + x.shift).localeCompare(y.date + y.shift))
+    .slice(0, 3);
   const queue = propsQueue || contextQueue;
   const patients = propsPatients || contextPatients;
 
@@ -243,7 +255,7 @@ export default function OpdDashboardView({
       chiefComplaint: newPatComplaint,
       triageTier: newPatTriage,
       admissionStatus: "Outpatient",
-      registeredAt: new Date().toISOString().split("T")[0],
+      registeredAt: localDate(),
       attendingPhysician: user?.name || "Attending Physician",
     };
 
@@ -265,7 +277,7 @@ export default function OpdDashboardView({
       diagnosisWithIcd: claimDiag,
       caseRateAmount: claimPackage,
       claimStatus: "Ready for Submission",
-      submissionDate: new Date().toISOString().split("T")[0],
+      submissionDate: localDate(),
       // Benefit comes from the case rate; Finance finalizes actual hospital charges
       hospitalCharges: Number(claimPackage.replace(/[^0-9]/g, "")) || 0,
       philhealthBenefit: Number(claimPackage.replace(/[^0-9]/g, "")) || 0,
@@ -444,7 +456,7 @@ export default function OpdDashboardView({
                   {auditLogs.slice(0, 5).map(log => (
                     <tr key={log.id} className="hover:bg-slate-50 transition-colors">
                       <td className="py-3 px-3 font-mono text-slate-600 text-[11px]">
-                        {log.timestamp}
+                        {dt(log.timestamp)}
                       </td>
                       <td className="py-3 px-3">
                         <div className="font-semibold text-slate-900">{log.userName}</div>
@@ -670,23 +682,13 @@ export default function OpdDashboardView({
                           <div className="text-[10px] text-slate-400 font-mono">#{item.queueNumber} • {item.gender}, {item.age}y/o</div>
                         </td>
                         <td className="py-3 px-3">
-                          <span
-                            className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                              item.triageTier === "critical"
-                                ? "bg-rose-100 text-rose-800 border border-rose-200"
-                                : item.triageTier === "observation"
-                                ? "bg-amber-100 text-amber-800 border border-amber-200"
-                                : "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                            }`}
-                          >
-                            {item.triageTier.toUpperCase()}
-                          </span>
+                          <ConditionBadge patientId={item.patientId} fallback={item.triageTier} />
                         </td>
                         <td className="py-3 px-3 text-slate-700 max-w-[160px] truncate">
                           {item.chiefComplaint}
                         </td>
                         <td className="py-3 px-3 text-slate-500 text-[11px] font-mono">
-                          {item.checkInTime}
+                          {fmtTime(item.checkInTime)}
                         </td>
                         <td className="py-3 px-3 text-right">
                           <div className="inline-flex items-center justify-end gap-1.5 flex-wrap">
@@ -762,24 +764,23 @@ export default function OpdDashboardView({
                   <span className="text-xs text-teal-700 font-bold cursor-pointer">Endorsement</span>
                 </div>
                 <div className="space-y-2.5">
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
-                    <div className="flex justify-between font-bold text-slate-900">
-                      <span>Nurse Angelmae Palma, RN</span>
-                      <span className="text-[10px] text-slate-400">07:00 Shift</span>
-                    </div>
-                    <p className="text-[11px] text-slate-600 mt-1">
-                      Ward 4B bed 03 ready for discharge. Emergency cart verified and sealed.
-                    </p>
-                  </div>
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
-                    <div className="flex justify-between font-bold text-slate-900">
-                      <span>Nurse Rechel Ann Perez, RN</span>
-                      <span className="text-[10px] text-slate-400">06:30 Shift</span>
-                    </div>
-                    <p className="text-[11px] text-slate-600 mt-1">
-                      All morning vitals logged for OPD queue patients. Oxygen cylinder verified.
-                    </p>
-                  </div>
+                  {shiftEndorsements.length === 0 && <p className="text-xs text-slate-400 italic">No handovers yet.</p>}
+                  {[...shiftEndorsements]
+                    .sort((x, y) => y.timestamp.localeCompare(x.timestamp))
+                    .slice(0, 2)
+                    .map(e => (
+                      <div key={e.id} className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 text-xs">
+                        <div className="flex justify-between gap-2 font-bold text-slate-900">
+                          <span>
+                            {e.outgoingNurse} → {e.incomingNurse}
+                          </span>
+                          <span className="text-[10px] text-slate-400 whitespace-nowrap">{dt(e.timestamp)}</span>
+                        </div>
+                        <p className="text-[11px] text-slate-600 mt-1 line-clamp-2">
+                          {e.ward}: {e.situation}
+                        </p>
+                      </div>
+                    ))}
                 </div>
               </div>
             </div>
@@ -1575,17 +1576,7 @@ export default function OpdDashboardView({
                         {item.chiefComplaint}
                       </td>
                       <td className="py-3 px-3">
-                        <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            item.triageTier === "critical"
-                              ? "bg-rose-100 text-rose-800 border border-rose-200"
-                              : item.triageTier === "observation"
-                              ? "bg-amber-100 text-amber-800 border border-amber-200"
-                              : "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                          }`}
-                        >
-                          {item.triageTier.toUpperCase()}
-                        </span>
+                        <ConditionBadge patientId={item.patientId} fallback={item.triageTier} />
                       </td>
                       <td className="py-3 px-3">
                         <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold ${
@@ -1689,24 +1680,23 @@ export default function OpdDashboardView({
 
             <div className="bg-white rounded-2xl border border-slate-100 shadow-xs p-5 space-y-3.5 select-none">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900">Physician Consulting Schedule</h3>
-                <span className="text-xs text-slate-500 font-semibold">Active Shift</span>
+                <h3 className="text-sm font-bold text-slate-900">My Duty Schedule</h3>
+                <span className="text-xs text-slate-500 font-semibold">12-hour duties</span>
               </div>
               <div className="space-y-2 text-xs">
-                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200">
-                  <div className="font-bold text-emerald-950 flex justify-between">
-                    <span>Morning Outpatient Clinic</span>
-                    <span className="font-mono">08:00 - 12:00</span>
+                {myDuties.length === 0 && <p className="text-slate-400 italic">No duty assigned for today or tomorrow. See Duty Shifts.</p>}
+                {myDuties.map(d => (
+                  <div key={d.id} className={`p-2.5 rounded-xl border ${isOnDuty(d) ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-100"}`}>
+                    <div className="font-bold text-slate-900 flex justify-between gap-2">
+                      <span>
+                        {d.shift}
+                        {isOnDuty(d) ? " (on duty now)" : d.date === localDate() ? " (today)" : ` (${d.date})`}
+                      </span>
+                      <span className="whitespace-nowrap">{DUTY_SHIFT_HOURS[d.shift]}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{d.area}</p>
                   </div>
-                  <p className="text-[11px] text-emerald-800 mt-0.5">Booth 01 • Internal Medicine</p>
-                </div>
-                <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                  <div className="font-bold text-slate-900 flex justify-between">
-                    <span>Afternoon Teleconsult & Ward Rounds</span>
-                    <span className="font-mono">13:30 - 17:00</span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Inpatient Ward Rounds & Review</p>
-                </div>
+                ))}
               </div>
             </div>
           </div>

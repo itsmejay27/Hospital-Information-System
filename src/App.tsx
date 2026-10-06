@@ -38,6 +38,8 @@ import SystemFlowchartView from "./views/SystemFlowchartView";
 import DiagnosticsWorklistView from "./views/DiagnosticsWorklistView";
 import ImagingWorklistView from "./views/ImagingWorklistView";
 import BillingView from "./views/BillingView";
+import OpdWardView from "./views/OpdWardView";
+import PatientHistoryView from "./views/PatientHistoryView";
 import AppointmentsView from "./views/AppointmentsView";
 import LegalView from "./views/LegalView";
 import IncidentsView from "./views/IncidentsView";
@@ -514,6 +516,22 @@ export default function App() {
               {/* ============================================================ */}
               {/* BILLING & REPORTS */}
               {/* ============================================================ */}
+              <Route
+                path="/opd-ward"
+                element={
+                  <ProtectedRoute allowedRoles={["nurse", "doctor"]}>
+                    <OpdWardView />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/history"
+                element={
+                  <ProtectedRoute allowedRoles={["nurse", "doctor", "staff"]}>
+                    <PatientHistoryView />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/billing"
                 element={

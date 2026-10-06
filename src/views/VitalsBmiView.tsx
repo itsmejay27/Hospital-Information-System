@@ -12,6 +12,7 @@ import {
   Plus,
 } from "../components/Icons";
 import { uid } from "../services/ids";
+import { dt, nowTime } from "../services/time";
 
 interface Props {
   user: User;
@@ -217,7 +218,7 @@ export default function VitalsBmiView({
                 </h3>
               </div>
               <span className="text-[10px] font-mono text-slate-400">
-                Timestamp: {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                Timestamp: {nowTime()}
               </span>
             </div>
 
@@ -505,7 +506,7 @@ export default function VitalsBmiView({
                       const v = log.structuredVitals;
                       return (
                         <tr key={log.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70 align-top">
-                          <td className="px-3 py-2 font-mono whitespace-nowrap text-slate-600">{log.timestamp}</td>
+                          <td className="px-3 py-2 font-mono whitespace-nowrap text-slate-600">{dt(log.timestamp)}</td>
                           <td className="px-3 py-2 font-semibold text-slate-900 min-w-[160px]">{log.treatmentName}</td>
                           {v ? (
                             <>

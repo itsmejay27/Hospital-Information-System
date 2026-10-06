@@ -13,6 +13,8 @@ import {
   Filter,
   Calendar,
 } from "../components/Icons";
+import { dt } from "../services/time";
+import { localDate } from "../services/ids";
 
 interface Props {
   user: User;
@@ -46,10 +48,10 @@ export default function AdminAuditLedgerView({ user, auditLogs }: Props) {
 
   const handleExportLedger = () => {
     // Exports what is on screen (current search, role, status and date filters)
-    downloadCsv(`CarePoint_Audit_Log_${selectedDate || new Date().toISOString().split("T")[0]}.csv`, [
+    downloadCsv(`CarePoint_Audit_Log_${selectedDate || localDate()}.csv`, [
       ["ID", "Timestamp", "User", "Role", "License", "Action", "Patient", "Patient ID", "Department", "Device", "Status", "Digest"],
       ...filteredLogs.map(l => [
-        l.id, l.timestamp, l.userName, ROLE_LABELS[l.userRole] || l.userRole, l.userLicense || "", l.action, l.targetPatient, l.patientId,
+        l.id, dt(l.timestamp), l.userName, ROLE_LABELS[l.userRole] || l.userRole, l.userLicense || "", l.action, l.targetPatient, l.patientId,
         l.department, l.ipAddress, l.status, generateDigest(l),
       ]),
     ]);
@@ -61,7 +63,7 @@ export default function AdminAuditLedgerView({ user, auditLogs }: Props) {
     const rows = filteredLogs
       .map(
         l =>
-          `<tr><td>${esc(l.timestamp)}</td><td>${esc(l.userName)}<br><span class="muted">${esc(ROLE_LABELS[l.userRole] || l.userRole)}</span></td><td>${esc(l.action)}</td><td>${esc(l.targetPatient)}</td><td class="${l.status === "Flagged" ? "flag" : ""}">${esc(l.status)}</td></tr>`
+          `<tr><td>${esc(dt(l.timestamp))}</td><td>${esc(l.userName)}<br><span class="muted">${esc(ROLE_LABELS[l.userRole] || l.userRole)}</span></td><td>${esc(l.action)}</td><td>${esc(l.targetPatient)}</td><td class="${l.status === "Flagged" ? "flag" : ""}">${esc(l.status)}</td></tr>`
       )
       .join("");
     const filters = [searchTerm && `search "${searchTerm}"`, roleFilter !== "all" && `role ${roleFilter}`, statusFilter !== "all" && `status ${statusFilter}`, selectedDate && `date ${selectedDate}`]
@@ -312,7 +314,7 @@ export default function AdminAuditLedgerView({ user, auditLogs }: Props) {
                   return (
                     <tr key={log.id} className="hover:bg-slate-50/80 transition-colors">
                       <td className="py-3 px-3 font-mono text-[11px] text-slate-500 whitespace-nowrap">
-                        {log.timestamp}
+                        {dt(log.timestamp)}
                       </td>
                       <td className="py-3 px-3">
                         <div className="font-bold text-slate-900">{log.userName}</div>
