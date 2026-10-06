@@ -22,6 +22,7 @@ import StaffAvatar from "../components/StaffAvatar";
 import * as ui from "../components/tableStyles";
 import { Users, Plus, Search, Check } from "../components/Icons";
 import { dt } from "../services/time";
+import { useConfirm } from "../components/ConfirmDialog";
 
 type Tab = "accounts" | "requests";
 
@@ -68,6 +69,7 @@ const statusBadge = (s: ProfileChangeRequest["status"]) =>
     : "bg-amber-50 text-amber-700 border-amber-200";
 
 export default function AdminAccountsView() {
+  const confirm = useConfirm();
   const { user } = useAuth();
   const {
     usersList,
@@ -227,10 +229,10 @@ export default function AdminAccountsView() {
 
   const toggleStatus = async (u: User) => {
     const suspend = u.status !== "suspended";
-    const ok = window.confirm(
+    const ok = await confirm(
       suspend
-        ? `Suspend ${u.name}? They will be signed out of all data immediately and cannot sign in until reactivated.`
-        : `Reactivate ${u.name}? They will be able to sign in again.`
+        ? { title: `Suspend ${u.name}?`, message: "They lose access to all data immediately and cannot sign in until reactivated.", confirmText: "Suspend", tone: "danger" }
+        : { title: `Reactivate ${u.name}?`, message: "They will be able to sign in again.", confirmText: "Reactivate" }
     );
     if (!ok) return;
     setRowError(null);

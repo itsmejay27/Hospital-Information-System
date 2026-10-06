@@ -714,6 +714,14 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
     const p = patients.find(x => x.id === adm.patientId);
     const now = timestamp().slice(0, 16);
     patchAdmission({ ...adm, status: "Discharged", dischargeDate: now });
+    // A duplicate bed record (same patient admitted twice): close only this entry, the patient stays admitted
+    const stillAdmitted = admissions.some(
+      a => a.id !== adm.id && a.patientId === adm.patientId && (a.status === "Admitted" || a.status === "Observation")
+    );
+    if (stillAdmitted) {
+      logAction(`Removed duplicate bed record ${adm.ward} / ${adm.bed}`, { patientId: adm.patientId, patientName: adm.patientName });
+      return;
+    }
     patchPatient(adm.patientId, { admissionStatus: "Discharged", triageTier: "stable", triageReason: `Discharged ${now.slice(0, 10)}`, ward: undefined, bed: undefined });
     closeQueueEntries(adm.patientId);
     recordMovement({

@@ -17,6 +17,8 @@ import {
   Building2,
 } from "../components/Icons";
 import { dt } from "../services/time";
+import { useConfirm } from "../components/ConfirmDialog";
+import ConditionBadge from "../components/ConditionBadge";
 
 interface Props {
   user: User;
@@ -44,6 +46,7 @@ export default function PatientBedAllocationView({
   onUpdatePatientStatus,
 }: Props) {
   const { usersList, transferPatient, vacateBed } = useOpdData();
+  const confirm = useConfirm();
   const doctors = usersList.filter(u => u.role === "doctor" && u.status !== "suspended");
   const [notification, setNotification] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -61,7 +64,6 @@ export default function PatientBedAllocationView({
   const [admitBed, setAdmitBed] = useState("");
   const [admitDoctor, setAdmitDoctor] = useState("");
   const [admitReason, setAdmitReason] = useState("");
-  const [admitTriage, setAdmitTriage] = useState<TriageTier>("observation");
   const [admitStatus, setAdmitStatus] = useState<"Admitted" | "Observation">("Admitted");
 
   // Tally & Metrics
@@ -99,7 +101,7 @@ export default function PatientBedAllocationView({
       attendingPhysician: admitDoctor,
       admittingStaff: `${user.name} (${user.title})`,
       reason: admitReason || patient.chiefComplaint || "Inpatient continuous monitoring and management",
-      triageTier: admitTriage,
+      triageTier: patient.triageTier,
       status: admitStatus,
     };
 
@@ -114,13 +116,27 @@ export default function PatientBedAllocationView({
     setTimeout(() => setNotification(null), 5000);
   };
 
-  const handleDischargePatient = (admission: AdmissionEntry) => {
-    if (
-      !window.confirm(
-        `Vacate ${admission.ward} • ${admission.bed}?\n\nOnly do this after the doctor has cleared ${admission.patientName} for discharge. The patient will be marked Discharged and Stable.`
-      )
-    )
-      return;
+  const handleDischargePatient = async (admission: AdmissionEntry) => {
+    const duplicate = activeAdmissions.some(a => a.id !== admission.id && a.patientId === admission.patientId);
+    const ok = await confirm({
+      title: `Vacate ${admission.bed}?`,
+      message: duplicate ? (
+        <>
+          <b>{admission.patientName}</b> has another active bed record. This removes only this duplicate entry ({admission.ward} • {admission.bed}); the
+          patient stays admitted.
+        </>
+      ) : (
+        <>
+          <b>{admission.ward} • {admission.bed}</b> will be freed and <b>{admission.patientName}</b> marked <b>Discharged</b> and <b>Stable</b>.
+          <br />
+          <br />
+          Only do this after the doctor has cleared the patient for discharge.
+        </>
+      ),
+      confirmText: duplicate ? "Remove Duplicate" : "Vacate Bed",
+      tone: "danger",
+    });
+    if (!ok) return;
     vacateBed(admission, "Bed vacated after doctor's clearance");
     setNotification(`Bed ${admission.bed} in ${admission.ward} vacated. ${admission.patientName} discharged.`);
     setTimeout(() => setNotification(null), 5000);
@@ -340,17 +356,14 @@ export default function PatientBedAllocationView({
               <div className="grid grid-cols-2 gap-2.5">
                 <div>
                   <label className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
-                    Triage Acuity
+                    Patient Condition
                   </label>
-                  <select
-                    value={admitTriage}
-                    onChange={e => setAdmitTriage(e.target.value as TriageTier)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 focus:bg-white focus:outline-hidden"
-                  >
-                    <option value="stable">Stable (Tier 3)</option>
-                    <option value="observation">Observation (Tier 2)</option>
-                    <option value="critical">Critical Care (Tier 1)</option>
-                  </select>
+                  {selectedPatientId ? (
+                    <ConditionBadge patientId={selectedPatientId} />
+                  ) : (
+                    <span className="text-[11px] text-slate-400">Select a patient</span>
+                  )}
+                  <p className="text-[10px] text-slate-400 mt-1">Set by the doctor</p>
                 </div>
                 <div>
                   <label className="text-[10px] font-bold uppercase text-slate-600 block mb-1">
@@ -465,17 +478,7 @@ export default function PatientBedAllocationView({
                           <div className="text-[10px] text-slate-400 truncate max-w-[140px]">{adm.attendingPhysician}</div>
                         </td>
                         <td className="py-3 px-3">
-                          <span
-                            className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                              adm.triageTier === "critical"
-                                ? "bg-rose-100 text-rose-800 border border-rose-300"
-                                : adm.triageTier === "observation"
-                                ? "bg-amber-100 text-amber-800 border border-amber-300"
-                                : "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                            }`}
-                          >
-                            {adm.triageTier || "Stable"}
-                          </span>
+                          <ConditionBadge patientId={adm.patientId} fallback={adm.triageTier} />
                         </td>
                         <td className="py-3 px-3 text-right">
                           <button

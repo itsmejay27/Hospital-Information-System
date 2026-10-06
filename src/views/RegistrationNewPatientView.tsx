@@ -76,7 +76,10 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
       allergies: regAllergies ? regAllergies.split(",").map(a => a.trim()) : ["None reported"],
       chiefComplaint: regComplaint || "Routine clinical consultation / Outpatient intake",
       triageTier: regTriageTier,
-      triageReason: regTriageReason || `Triage to ${regDepartmentTriage}`,
+      triageReason:
+        regTriageTier === "observation"
+          ? `Flagged urgent at front desk${regTriageReason ? `: ${regTriageReason}` : ""} — for doctor's assessment`
+          : regTriageReason || `Triage to ${regDepartmentTriage}`,
       emergencyContact: {
         name: regEmergName.trim() || "Designated Relative",
         relationship: regEmergRel,
@@ -413,18 +416,16 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
                 </div>
 
                 <div>
-                  <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">
-                    Initial Acuity Priority
+                  <label className="text-[11px] font-bold uppercase text-slate-600 block mb-1">Urgent?</label>
+                  <label className={`flex items-start gap-2 px-3 py-2 rounded-xl border cursor-pointer ${regTriageTier === "observation" ? "bg-amber-50 border-amber-300 text-amber-900" : "bg-slate-50 border-slate-300 text-slate-700"}`}>
+                    <input
+                      type="checkbox"
+                      checked={regTriageTier === "observation"}
+                      onChange={e => setRegTriageTier(e.target.checked ? "observation" : "stable")}
+                      className="mt-0.5"
+                    />
+                    <span className="text-[11px] font-semibold">Needs immediate attention — flag for the nurse/doctor. The doctor sets the condition.</span>
                   </label>
-                  <select
-                    value={regTriageTier}
-                    onChange={e => setRegTriageTier(e.target.value as TriageTier)}
-                    className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 font-bold text-slate-900 focus:bg-white focus:border-teal-500 outline-hidden"
-                  >
-                    <option value="stable">Green: Tier 3 Stable</option>
-                    <option value="observation">Yellow: Tier 2 Observation</option>
-                    <option value="critical">Red: Tier 1 Critical</option>
-                  </select>
                 </div>
               </div>
 

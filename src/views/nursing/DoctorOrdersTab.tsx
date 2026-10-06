@@ -6,6 +6,7 @@ import { Plus, Search } from "../../components/Icons";
 import * as ui from "../../components/tableStyles";
 import { NursingTabProps, newId, nowStamp, staffLabel } from "./helpers";
 import { dt } from "../../services/time";
+import { useConfirm } from "../../components/ConfirmDialog";
 
 const CATEGORIES: DoctorOrderCategory[] = [
   "Medication",
@@ -33,6 +34,7 @@ const statusStyle: Record<DoctorOrderStatus, string> = {
 };
 
 export default function DoctorOrdersTab({ user, patients, patientId }: NursingTabProps) {
+  const confirm = useConfirm();
   const { doctorOrders, saveDoctorOrder } = useWardData();
   const isDoctor = user.role === "doctor";
   const isNurse = user.role === "nurse";
@@ -106,10 +108,10 @@ export default function DoctorOrdersTab({ user, patients, patientId }: NursingTa
     ).then(() => setCarryOut(null), () => {});
   };
 
-  const discontinue = (o: DoctorOrder) => {
-    if (!window.confirm(`Discontinue this order for ${o.patientName}?`)) return;
+  const discontinue = async (o: DoctorOrder) => {
+    if (!(await confirm({ title: "Discontinue order?", message: `${o.order} — ${o.patientName}`, confirmText: "Discontinue", tone: "danger" }))) return;
     run(() => saveDoctorOrder({ ...o, status: "Discontinued", remarks: `Discontinued by ${user.name} ${nowStamp()}` })).catch(() =>
-      window.alert("Could not discontinue the order. Please try again.")
+      confirm({ title: "Not saved", message: "Could not discontinue the order. Please try again.", alertOnly: true })
     );
   };
 

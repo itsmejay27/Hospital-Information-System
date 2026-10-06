@@ -181,7 +181,7 @@ export default function OpdDashboardView({
   const [newPatAge, setNewPatAge] = useState<number>(35);
   const [newPatGender, setNewPatGender] = useState<"Female" | "Male" | "Other">("Female");
   const [newPatComplaint, setNewPatComplaint] = useState("");
-  const [newPatTriage, setNewPatTriage] = useState<TriageTier>("observation");
+  const [newPatTriage, setNewPatTriage] = useState<TriageTier>("stable");
   const [newPatContact, setNewPatContact] = useState("0917-555-0192");
 
   // Quick eClaims Form State
@@ -1376,16 +1376,12 @@ export default function OpdDashboardView({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-slate-700 font-semibold mb-1">Triage Priority</label>
-                    <select
-                      value={newPatTriage}
-                      onChange={e => setNewPatTriage(e.target.value as TriageTier)}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg focus:border-emerald-500 focus:outline-hidden"
-                    >
-                      <option value="stable">Green - Stable</option>
-                      <option value="observation">Yellow - Observation</option>
-                      <option value="critical">Red - Critical</option>
-                    </select>
+                        <label className="block text-slate-700 font-semibold mb-1">Urgent?</label>
+                        <label className="flex items-center gap-2 px-3 py-1.5 border border-slate-300 rounded-lg bg-white cursor-pointer">
+                          <input type="checkbox" checked={newPatTriage === "observation"} onChange={e => setNewPatTriage(e.target.checked ? "observation" : "stable")} />
+                          <span className="text-[11px]">Needs immediate attention</span>
+                        </label>
+
                   </div>
                   <div>
                     <label className="block text-slate-700 font-semibold mb-1">Contact Number</label>
