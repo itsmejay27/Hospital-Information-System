@@ -1,6 +1,8 @@
+import { useNavigate } from "react-router-dom";
 import React, { useState } from "react";
 import { User, Patient, TriageTier } from "../types";
 import { Users, Search, Filter, Phone, MapPin, Check } from "../components/Icons";
+import ConditionBadge from "../components/ConditionBadge";
 
 interface Props {
   user: User;
@@ -9,6 +11,7 @@ interface Props {
 }
 
 export default function RegistrationDirectoryView({ user, patients }: Props) {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [triageFilter, setTriageFilter] = useState<TriageTier | "all">("all");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -107,27 +110,24 @@ export default function RegistrationDirectoryView({ user, patients }: Props) {
                       </span>
                     </td>
                     <td className="py-3 px-3">
-                      <div className="font-semibold text-slate-800">{p.admissionStatus}</div>
-                      {p.ward && <div className="text-[10px] text-slate-500">{p.ward} ({p.bed})</div>}
+                      <div className={`font-semibold ${p.admissionStatus === "Discharged" ? "text-slate-500" : "text-slate-800"}`}>{p.admissionStatus}</div>
+                      {p.ward && <div className="text-[10px] text-slate-500">{p.ward}{p.bed ? ` (${p.bed})` : ""}</div>}
+                      {p.admissionStatus === "Discharged" && p.triageReason && <div className="text-[10px] text-slate-400">{p.triageReason}</div>}
                     </td>
                     <td className="py-3 px-3">
                       <div className="font-mono text-[11px] text-slate-700">{p.philhealth?.pin || "N/A"}</div>
-                      <div className="text-[10px] text-emerald-600 font-semibold">{p.philhealth?.eligibilityStatus || "Verified"}</div>
+                      <div className="text-[10px] text-emerald-600 font-semibold">{p.philhealth?.eligibilityStatus || "No PhilHealth on file"}</div>
                     </td>
                     <td className="py-3 px-3">
-                      <span
-                        className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                          p.triageTier === "critical"
-                            ? "bg-rose-100 text-rose-800 border border-rose-300"
-                            : p.triageTier === "observation"
-                            ? "bg-amber-100 text-amber-800 border border-amber-300"
-                            : "bg-emerald-100 text-emerald-800 border border-emerald-300"
-                        }`}
-                      >
-                        {p.triageTier}
-                      </span>
+                      <ConditionBadge patientId={p.id} fallback={p.triageTier} />
                     </td>
                     <td className="py-3 px-3 text-right">
+                      <button
+                        onClick={() => navigate(`/history?patient=${encodeURIComponent(p.id)}`)}
+                        className="text-[11px] font-bold bg-white hover:bg-sky-50 hover:text-sky-700 text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer mr-1.5"
+                      >
+                        History
+                      </button>
                       <button
                         onClick={() => setSelectedPatient(p)}
                         className="text-[11px] font-bold bg-slate-100 hover:bg-emerald-50 hover:text-emerald-700 text-slate-700 border border-slate-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer"

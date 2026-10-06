@@ -1,5 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
+  PatientMovement,
+  TriageTier,
   Patient,
   HealthRecord,
   DiagnosticResult,
@@ -43,6 +45,7 @@ import { hospitalDb } from "../services/db";
 import { supabase, isSupabaseConfigured } from "../services/supabase";
 import { useAuth } from "./AuthContext";
 import { uid, timestamp } from "../services/ids";
+import { nowTime } from "../services/time";
 
 interface OpdDataContextType {
   // Queue & Patients
@@ -122,6 +125,19 @@ interface OpdDataContextType {
 
   // Activity log (audit trail)
   checkInPatient: (patientId: string, doctorName: string, complaint: string) => string | null;
+  /** Adds an entry to the patient's movement history (append-only). */
+  recordMovement: (m: Omit<PatientMovement, "id" | "at" | "by" | "byRole"> & { at?: string }) => void;
+  /** Doctor updates the patient's condition (Stable / Observation / Critical); updates queue and ward too. */
+  updatePatientCondition: (patientId: string, tier: TriageTier, reason: string) => void;
+  /**
+   * Discharges (or admits / transfers out) a patient from a doctor's discharge record:
+   * saves it, sets the patient Discharged and Stable, frees the bed, closes queue entries and records history.
+   */
+  dischargePatient: (record: OpdDischarge) => void;
+  /** Moves an admitted patient to another ward / bed and records the transfer. */
+  transferPatient: (admission: AdmissionEntry, ward: string, bed: string, reason: string) => void;
+  /** Frees the bed of a patient the doctor has cleared, marks them discharged and stable. */
+  vacateBed: (admission: AdmissionEntry, note: string) => void;
   logAction: (action: string, opts?: { patientId?: string; patientName?: string; status?: AuditLog["status"] }) => void;
 
   // Diagnostics & pharmacy updates
@@ -408,7 +424,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
       age: patient.age,
       gender: patient.gender,
       triageTier: patient.triageTier,
-      checkInTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      checkInTime: nowTime(),
       chiefComplaint: complaint || patient.chiefComplaint,
       assignedDoctor: doctorName,
       status: "Waiting",
@@ -509,7 +525,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const administerMedication = (medId: string, nurseName: string, nurseLicense?: string) => {
-    const timeNow = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const timeNow = nowTime();
     const med = medications.find(m => m.id === medId);
     if (med) logAction(`Administered ${med.name} ${med.dose}`, { patientId: med.patientId, patientName: med.patientName });
     setMedications(prev =>
@@ -557,6 +573,15 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
     setReferrals(prev => [newRef, ...prev]);
     hospitalDb.saveReferral(newRef).catch(reportSaveError);
     logAction(`Referred patient to ${newRef.referredTo}`, { patientId: newRef.patientId, patientName: newRef.patientName });
+    recordMovement({
+      patientId: newRef.patientId,
+      patientName: newRef.patientName,
+      type: "Referred / Transferred Out",
+      from: newRef.referredFrom,
+      to: newRef.referredTo,
+      details: `${newRef.priority}: ${newRef.reason}`,
+      sourceId: newRef.id,
+    });
   };
 
   const addDischarge = (newDis: OpdDischarge) => {
@@ -565,10 +590,160 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
     logAction(`Discharged patient (${newDis.disposition})`, { patientId: newDis.patientId, patientName: newDis.patientName });
   };
 
+  const recordMovement = (m: Omit<PatientMovement, "id" | "at" | "by" | "byRole"> & { at?: string }) => {
+    const actor = actorRef.current;
+    if (!actor) return;
+    const entry: PatientMovement = {
+      ...m,
+      id: `MOV-${uid()}`,
+      at: m.at || timestamp().slice(0, 16),
+      by: actor.licenseNumber ? `${actor.name} (${actor.licenseNumber})` : actor.name,
+      byRole: actor.role,
+    };
+    hospitalDb.append("patient_movements", entry).catch(reportSaveError);
+  };
+
+  /** Applies a change to one patient (state + database). */
+  const patchPatient = (patientId: string, patch: Partial<Patient>) => {
+    setPatients(prev =>
+      prev.map(p => {
+        if (p.id !== patientId) return p;
+        const updated: Patient = { ...p, ...patch };
+        hospitalDb.savePatient(updated).catch(reportSaveError);
+        return updated;
+      })
+    );
+    setSelectedPatient(prev => (prev && prev.id === patientId ? { ...prev, ...patch } : prev));
+  };
+
+  const patchAdmission = (adm: AdmissionEntry) => {
+    setAdmissions(prev => prev.map(a => (a.id === adm.id ? adm : a)));
+    hospitalDb.saveAdmission(adm).catch(reportSaveError);
+  };
+
+  /** Ends the patient's active queue entries (waiting / in consultation). */
+  const closeQueueEntries = (patientId: string) => {
+    setQueue(prev => {
+      if (!prev.some(q => q.patientId === patientId && (q.status === "Waiting" || q.status === "In-Consultation"))) return prev;
+      const updated = prev.map(q =>
+        q.patientId === patientId && (q.status === "Waiting" || q.status === "In-Consultation") ? { ...q, status: "Completed" as const } : q
+      );
+      hospitalDb.saveQueue(updated).catch(reportSaveError);
+      return updated;
+    });
+  };
+
+  const updatePatientCondition = (patientId: string, tier: TriageTier, reason: string) => {
+    const p = patients.find(x => x.id === patientId);
+    if (!p || p.triageTier === tier) return;
+    patchPatient(patientId, { triageTier: tier, triageReason: reason });
+    setQueue(prev => {
+      const updated = prev.map(q => (q.patientId === patientId && q.status !== "Completed" ? { ...q, triageTier: tier } : q));
+      hospitalDb.saveQueue(updated).catch(reportSaveError);
+      return updated;
+    });
+    admissions
+      .filter(a => a.patientId === patientId && (a.status === "Admitted" || a.status === "Observation"))
+      .forEach(a => patchAdmission({ ...a, triageTier: tier }));
+    recordMovement({
+      patientId,
+      patientName: p.name,
+      type: "Condition Updated",
+      conditionBefore: p.triageTier,
+      conditionAfter: tier,
+      details: reason,
+    });
+    logAction(`Condition updated: ${p.triageTier} → ${tier} (${reason})`, { patientId, patientName: p.name });
+  };
+
+  const dischargePatient = (rec: OpdDischarge) => {
+    const p = patients.find(x => x.id === rec.patientId);
+    const before = p?.triageTier;
+    const record: OpdDischarge = { ...rec, triageBeforeDischarge: before };
+    setDischarges(prev => [record, ...prev]);
+    hospitalDb.saveDischarge(record).catch(reportSaveError);
+    const from = p?.ward ? `${p.ward}${p.bed ? ` / ${p.bed}` : ""}` : "OPD";
+
+    if (rec.disposition === "Admitted to Inpatient Ward" || rec.disposition === "Transferred to Inpatient Ward") {
+      patchPatient(rec.patientId, { admissionStatus: "Admitted" });
+      closeQueueEntries(rec.patientId);
+      recordMovement({ patientId: rec.patientId, patientName: rec.patientName, type: "Admitted", from, to: "Inpatient ward (bed to be assigned)", details: rec.dischargeSummary, sourceId: record.id });
+      logAction(`Admitted to inpatient ward (${rec.disposition})`, { patientId: rec.patientId, patientName: rec.patientName });
+      return;
+    }
+
+    const outside = /Tertiary|Referred/i.test(rec.disposition);
+    const today = timestamp().slice(0, 16);
+    patchPatient(rec.patientId, {
+      admissionStatus: "Discharged",
+      triageTier: "stable",
+      triageReason: `Discharged ${today.slice(0, 10)} — ${rec.conditionAtDischarge || rec.disposition}`,
+      ward: undefined,
+      bed: undefined,
+    });
+    admissions
+      .filter(a => a.patientId === rec.patientId && (a.status === "Admitted" || a.status === "Observation"))
+      .forEach(a => patchAdmission({ ...a, status: "Discharged", dischargeDate: today }));
+    closeQueueEntries(rec.patientId);
+    recordMovement({
+      patientId: rec.patientId,
+      patientName: rec.patientName,
+      type: outside ? "Referred / Transferred Out" : "Discharged",
+      from,
+      to: outside ? rec.referredTo || rec.disposition : "Home",
+      conditionBefore: before,
+      conditionAfter: "stable",
+      details: `${rec.disposition}${rec.conditionAtDischarge ? ` • Condition: ${rec.conditionAtDischarge}` : ""}${rec.followUpDate ? ` • Follow-up ${rec.followUpDate}` : ""}`,
+      sourceId: record.id,
+    });
+    logAction(`Discharged patient (${rec.disposition}${before && before !== "stable" ? `; ${before} → stable` : ""})`, {
+      patientId: rec.patientId,
+      patientName: rec.patientName,
+    });
+  };
+
+  const transferPatient = (adm: AdmissionEntry, ward: string, bed: string, reason: string) => {
+    const from = `${adm.ward} / ${adm.bed}`;
+    patchAdmission({ ...adm, ward, bed });
+    patchPatient(adm.patientId, { ward, bed });
+    recordMovement({ patientId: adm.patientId, patientName: adm.patientName, type: "Ward / Bed Transfer", from, to: `${ward} / ${bed}`, details: reason, sourceId: adm.id });
+    logAction(`Transferred ${from} → ${ward} / ${bed}`, { patientId: adm.patientId, patientName: adm.patientName });
+  };
+
+  const vacateBed = (adm: AdmissionEntry, note: string) => {
+    const p = patients.find(x => x.id === adm.patientId);
+    const now = timestamp().slice(0, 16);
+    patchAdmission({ ...adm, status: "Discharged", dischargeDate: now });
+    patchPatient(adm.patientId, { admissionStatus: "Discharged", triageTier: "stable", triageReason: `Discharged ${now.slice(0, 10)}`, ward: undefined, bed: undefined });
+    closeQueueEntries(adm.patientId);
+    recordMovement({
+      patientId: adm.patientId,
+      patientName: adm.patientName,
+      type: "Discharged",
+      from: `${adm.ward} / ${adm.bed}`,
+      to: "Home",
+      conditionBefore: p?.triageTier,
+      conditionAfter: "stable",
+      details: note || "Bed vacated after doctor's clearance",
+      sourceId: adm.id,
+    });
+    logAction(`Vacated ${adm.ward} / ${adm.bed} (discharged)`, { patientId: adm.patientId, patientName: adm.patientName });
+  };
+
   const addAdmission = (newAdm: AdmissionEntry) => {
     setAdmissions(prev => [newAdm, ...prev]);
     hospitalDb.saveAdmission(newAdm).catch(reportSaveError);
     logAction(`Admitted to ${newAdm.ward} / ${newAdm.bed}`, { patientId: newAdm.patientId, patientName: newAdm.patientName });
+    const p = patients.find(x => x.id === newAdm.patientId);
+    recordMovement({
+      patientId: newAdm.patientId,
+      patientName: newAdm.patientName,
+      type: "Admitted",
+      from: p?.ward && p.ward !== newAdm.ward ? p.ward : "OPD",
+      to: `${newAdm.ward} / ${newAdm.bed}`,
+      details: newAdm.reason,
+      sourceId: newAdm.id,
+    });
   };
 
   const addAuditLog = (newLog: AuditLog) => {
@@ -818,6 +993,11 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
         addClaim,
         updateClaims,
         checkInPatient,
+        recordMovement,
+        updatePatientCondition,
+        dischargePatient,
+        transferPatient,
+        vacateBed,
         records,
         addRecord,
         medications,

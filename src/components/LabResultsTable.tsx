@@ -2,6 +2,7 @@ import React from "react";
 import { DiagnosticResult, LabTestItem } from "../types";
 import ImagingGallery from "./ImagingGallery";
 import { printDiagnosticReport } from "../services/reports";
+import { dt } from "../services/time";
 
 /** Some stored values already include the unit ("13.8 g/dL"); avoid printing it twice. */
 export function splitValue(item: LabTestItem): { value: string; unit: string } {
@@ -108,7 +109,7 @@ export function DiagnosticReport({ lab }: { lab: DiagnosticResult }) {
         <span className="flex items-center gap-3">
           <span>
             Released by: {lab.releasedBy || "—"}
-            {lab.releasedAt ? ` • ${lab.releasedAt}` : ""}
+            {lab.releasedAt ? ` • ${dt(lab.releasedAt)}` : ""}
           </span>
           <PrintReportButton lab={lab} />
         </span>

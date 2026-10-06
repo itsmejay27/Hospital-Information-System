@@ -24,6 +24,7 @@ import {
   KeyRound,
   RefreshCw,
 } from "../components/Icons";
+import { dt } from "../services/time";
 
 export default function SettingsView() {
   const { user, changePassword, isSecureMode, refreshProfile } = useAuth();
@@ -76,7 +77,6 @@ export default function SettingsView() {
   // Display Preferences
   const [accentColor, setAccentColor] = useState<"emerald" | "teal" | "mint">("emerald");
   const [tableDensity, setTableDensity] = useState<"comfortable" | "compact">("comfortable");
-  const [timeFormat, setTimeFormat] = useState<"12h" | "24h">("12h");
 
   // Security Form State
   const [currentPassword, setCurrentPassword] = useState("");
@@ -352,7 +352,7 @@ export default function SettingsView() {
                 {Object.keys(pendingRequest.changes)
                   .map(k => PROFILE_FIELD_LABELS[k as EditableProfileField])
                   .join(", ")}{" "}
-                (sent {pendingRequest.requestedAt}).
+                (sent {dt(pendingRequest.requestedAt)}).
               </span>
               <button
                 type="button"
@@ -428,7 +428,7 @@ export default function SettingsView() {
                   <tbody>
                     {myRequests.map(r => (
                       <tr key={r.id} className="border-b border-slate-100 last:border-0 align-top">
-                        <td className="px-3 py-2 font-mono whitespace-nowrap">{r.requestedAt}</td>
+                        <td className="px-3 py-2 font-mono whitespace-nowrap">{dt(r.requestedAt)}</td>
                         <td className="px-3 py-2">
                           {Object.entries(r.changes).map(([k, v]) => (
                             <div key={k}>
@@ -677,34 +677,6 @@ export default function SettingsView() {
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
-                <label className="font-bold text-slate-900 block mb-1">Header Clock Format</label>
-                <p className="text-[11px] text-slate-500 mb-3">Time display in top navigation bar.</p>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setTimeFormat("12h")}
-                    className={`flex-1 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                      timeFormat === "12h"
-                        ? "bg-emerald-600 text-white shadow-xs"
-                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
-                    }`}
-                  >
-                    12-Hour (02:30 PM)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTimeFormat("24h")}
-                    className={`flex-1 py-2 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-                      timeFormat === "24h"
-                        ? "bg-emerald-600 text-white shadow-xs"
-                        : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
-                    }`}
-                  >
-                    24-Hour (14:30)
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
 

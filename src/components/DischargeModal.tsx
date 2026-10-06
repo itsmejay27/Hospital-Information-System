@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
 import { Patient, OpdDischarge } from "../types";
@@ -17,7 +17,7 @@ import {
   ShieldCheck,
   Building2,
 } from "./Icons";
-import { uid } from "../services/ids";
+import { uid, localDate } from "../services/ids";
 
 interface DischargeModalProps {
   isOpen: boolean;
@@ -31,7 +31,7 @@ export default function DischargeModal({
   defaultPatientId,
 }: DischargeModalProps) {
   const { user } = useAuth();
-  const { patients, selectedPatient, addDischarge, updatePatientAdmissionStatus } = useOpdData();
+  const { patients, selectedPatient, dischargePatient } = useOpdData();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
@@ -40,11 +40,9 @@ export default function DischargeModal({
   const [selectedPatId, setSelectedPatId] = useState<string>(initialPatId);
 
   // Step 1: Clinical Encounter Resolution
-  const [finalDiagnosis, setFinalDiagnosis] = useState("Acute Bronchitis, Resolving; Stage 1 Essential Hypertension controlled");
-  const [icd10Code, setIcd10Code] = useState("J20.9 / I10");
-  const [clinicalResolution, setClinicalResolution] = useState(
-    "Patient underwent outpatient nebulization and oral bronchodilator therapy. Vitals have normalized: BP 120/80 mmHg, HR 74 bpm, SpO2 99% on room air. Lungs clear to auscultation bilaterally."
-  );
+  const [finalDiagnosis, setFinalDiagnosis] = useState("");
+  const [icd10Code, setIcd10Code] = useState("");
+  const [clinicalResolution, setClinicalResolution] = useState("");
 
   // Step 2: Disposition Selection
   const [disposition, setDisposition] = useState<
@@ -57,59 +55,111 @@ export default function DischargeModal({
   const [bedReleaseConfirmed, setBedReleaseConfirmed] = useState(true);
 
   // Step 3: Home Instructions & Restriction Guidelines
-  const [takeHomeMedications, setTakeHomeMedications] = useState(
-    "Amoxicillin-Clavulanate 625mg PO BID x 5 days; Losartan Potassium 50mg PO OD in AM; Paracetamol 500mg PO PRN fever/pain."
-  );
-  const [homeInstructions, setHomeInstructions] = useState(
-    "Complete full antibiotic course. Adequate fluid intake of 2.5L daily. Rest and avoid strenuous physical exertion for 5 days. Low-sodium diet."
-  );
-  const [redFlags, setRedFlags] = useState(
-    "Recurrent high fever >38.5°C, shortness of breath, blood-streaked sputum, chest heaviness, or severe dizziness."
-  );
+  const [takeHomeMedications, setTakeHomeMedications] = useState("");
+  const [homeInstructions, setHomeInstructions] = useState("");
+  const [redFlags, setRedFlags] = useState("");
   const [followUpDate, setFollowUpDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() + 7);
-    return d.toISOString().split("T")[0];
+    return localDate(d);
   });
 
   // Step 4: Physician Clearance Authorization & Bed Release
-  const [attendingDoctorName, setAttendingDoctorName] = useState(user?.name || "Dr. Mark Arkiel Jacobe, MD");
-  const [attendingDoctorLicense, setAttendingDoctorLicense] = useState(user?.licenseNumber || "PRC Lic. #0089201");
-  const [clearanceConfirmed, setClearanceConfirmed] = useState(true);
+  const attendingDoctorName = user?.name || "";
+  const attendingDoctorLicense = user?.licenseNumber || "";
+  const [clearanceConfirmed, setClearanceConfirmed] = useState(false);
+  const [condition, setCondition] = useState("Stable — vital signs within normal limits");
+  const [stableConfirmed, setStableConfirmed] = useState(false);
+  const [stepError, setStepError] = useState<string | null>(null);
   const [submittedSuccessfully, setSubmittedSuccessfully] = useState(false);
+
+  // Every time the dialog opens, start clean for the chosen patient (never reuse a previous patient's data)
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelectedPatId(defaultPatientId || selectedPatient?.id || patients[0]?.id || "");
+    setStep(1);
+    setFinalDiagnosis("");
+    setIcd10Code("");
+    setClinicalResolution("");
+    setDisposition("Treated & Sent Home");
+    setBedReleaseConfirmed(true);
+    setTakeHomeMedications("");
+    setHomeInstructions("");
+    setRedFlags("");
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    setFollowUpDate(localDate(d));
+    setClearanceConfirmed(false);
+    setCondition("Stable — vital signs within normal limits");
+    setStableConfirmed(false);
+    setStepError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, defaultPatientId]);
 
   if (!isOpen) return null;
 
-  const currentPatient = patients.find(p => p.id === selectedPatId) || patients[0];
+  const currentPatient = patients.find(p => p.id === selectedPatId);
+  const wasCritical = currentPatient?.triageTier === "critical" || currentPatient?.triageTier === "observation";
+  const leavingHospital = disposition !== "Admitted to Inpatient Ward";
+
+  /** Required fields of each step, checked before moving on. */
+  const stepProblem = (s: number): string | null => {
+    if (s === 1) {
+      if (!currentPatient) return "Select the patient.";
+      if (!finalDiagnosis.trim()) return "Enter the final diagnosis.";
+      if (!clinicalResolution.trim()) return "Summarize the patient's response to treatment.";
+    }
+    if (s === 3 && leavingHospital && !homeInstructions.trim()) return "Enter the home care instructions.";
+    if (s === 4) {
+      if (!attendingDoctorName) return "Sign in as the attending doctor to clear a discharge.";
+      if (leavingHospital && wasCritical && !stableConfirmed)
+        return `${currentPatient?.name} is marked ${currentPatient?.triageTier?.toUpperCase()}. Confirm that the patient is now stable before discharging.`;
+      if (!clearanceConfirmed) return "Tick the physician clearance confirmation.";
+    }
+    return null;
+  };
+  const goNext = () => {
+    const problem = stepProblem(step);
+    if (problem) return setStepError(problem);
+    setStepError(null);
+    setStep((step + 1) as 1 | 2 | 3 | 4);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    for (const s of [1, 3, 4]) {
+      const problem = stepProblem(s);
+      if (problem) {
+        setStepError(problem);
+        setStep(s as 1 | 3 | 4);
+        return;
+      }
+    }
 
     if (currentPatient) {
-      // Update patient status to Discharged
-      if (updatePatientAdmissionStatus) {
-        updatePatientAdmissionStatus(currentPatient.id, "Discharged");
-      }
-
       const dischargeRecord: OpdDischarge = {
-        id: `DC-2026-${uid()}`,
+        id: `DC-${uid()}`,
         patientId: currentPatient.id,
         patientName: currentPatient.name,
         disposition: disposition,
-        dischargeDate: new Date().toISOString().split("T")[0],
+        dischargeDate: localDate(),
         followUpDate: followUpDate,
-        clearedByDoctor: `${attendingDoctorName} (${attendingDoctorLicense})`,
-        instructions: `${finalDiagnosis} (ICD-10: ${icd10Code}). Instructions: ${homeInstructions}. Warning Signs: ${redFlags}. Rx: ${takeHomeMedications}`,
-        attendingDoctor: `${attendingDoctorName} (${attendingDoctorLicense})`,
-        dischargeSummary: `${clinicalResolution} Disposition: ${disposition}.`,
-        dischargeMeds: takeHomeMedications.split(";").map(m => m.trim()),
+        clearedByDoctor: attendingDoctorLicense ? `${attendingDoctorName} (${attendingDoctorLicense})` : attendingDoctorName,
+        instructions: [
+          `${finalDiagnosis.trim()}${icd10Code.trim() ? ` (ICD-10: ${icd10Code.trim()})` : ""}.`,
+          homeInstructions.trim() && `Instructions: ${homeInstructions.trim()}`,
+          redFlags.trim() && `Warning signs: ${redFlags.trim()}`,
+          takeHomeMedications.trim() && `Rx: ${takeHomeMedications.trim()}`,
+        ]
+          .filter(Boolean)
+          .join(" "),
+        attendingDoctor: attendingDoctorLicense ? `${attendingDoctorName} (${attendingDoctorLicense})` : attendingDoctorName,
+        dischargeSummary: `${clinicalResolution.trim()} Disposition: ${disposition}.`,
+        dischargeMeds: takeHomeMedications.split(/[;\n]/).map(m => m.trim()).filter(Boolean),
+        conditionAtDischarge: leavingHospital ? condition : undefined,
       };
-
-      if (addDischarge) {
-        addDischarge(dischargeRecord);
-      }
-
-      // Logged centrally by addDischarge (OpdDataContext)
+      // Saves the record, sets the patient Discharged + Stable, frees the bed and records the history
+      dischargePatient(dischargeRecord);
     }
 
     setSubmittedSuccessfully(true);
@@ -257,11 +307,13 @@ export default function DischargeModal({
                       onChange={e => setSelectedPatId(e.target.value)}
                       className="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900 focus:border-teal-500 outline-hidden"
                     >
-                      {patients.map(p => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} ({p.id}) — {p.age}y/o {p.gender} • Status: {p.admissionStatus}
-                        </option>
-                      ))}
+                      {patients
+                        .filter(p => p.admissionStatus !== "Discharged" || p.id === selectedPatId)
+                        .map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.name} ({p.id}) — {p.age}y/o {p.gender} • {p.admissionStatus} • {p.triageTier}
+                          </option>
+                        ))}
                     </select>
 
                     {currentPatient && (
@@ -272,11 +324,11 @@ export default function DischargeModal({
                         </div>
                         <div>
                           <span className="text-slate-500 block">Bed / Location:</span>
-                          <strong className="text-slate-800">{currentPatient.ward || "OPD Lounge"} • {currentPatient.bed || "B-01"}</strong>
+                          <strong className="text-slate-800">{currentPatient.ward || "OPD"}{currentPatient.bed ? ` • ${currentPatient.bed}` : ""}</strong>
                         </div>
                         <div>
                           <span className="text-slate-500 block">Allergies:</span>
-                          <strong className="text-rose-700 truncate block">{currentPatient.allergies.join(", ")}</strong>
+                          <strong className="text-rose-700 truncate block">{currentPatient.allergies.join(", ") || "None recorded"}</strong>
                         </div>
                         <div>
                           <span className="text-slate-500 block">Current Status:</span>
@@ -508,32 +560,34 @@ export default function DischargeModal({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">
-                        Attending Physician Name
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={attendingDoctorName}
-                        onChange={e => setAttendingDoctorName(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-teal-500 outline-hidden font-semibold"
-                      />
+                  {leavingHospital && (
+                    <div className={`rounded-xl p-3.5 border space-y-2 ${wasCritical ? "bg-rose-50 border-rose-300" : "bg-slate-50 border-slate-200"}`}>
+                      <label className="block font-bold text-slate-700">Condition at discharge *</label>
+                      <select value={condition} onChange={e => setCondition(e.target.value)} className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white font-semibold">
+                        <option>Stable — vital signs within normal limits</option>
+                        <option>Improved — stable, needs follow-up</option>
+                        <option>Recovered</option>
+                        <option>Stable for transfer to another facility</option>
+                        <option>Against medical advice — condition explained to patient</option>
+                      </select>
+                      {wasCritical && (
+                        <label className="flex items-start gap-2 text-[11px] text-rose-900 font-semibold cursor-pointer">
+                          <input type="checkbox" checked={stableConfirmed} onChange={e => setStableConfirmed(e.target.checked)} className="mt-0.5 shrink-0" />
+                          <span>
+                            {currentPatient?.name} is currently marked <b className="uppercase">{currentPatient?.triageTier}</b>. I re-assessed the patient
+                            and confirm the condition is now stable for discharge. The status will change to <b>STABLE</b> for doctors and the front desk.
+                          </span>
+                        </label>
+                      )}
                     </div>
+                  )}
 
-                    <div>
-                      <label className="block font-bold text-slate-700 mb-1">
-                        PRC License & Certification
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={attendingDoctorLicense}
-                        onChange={e => setAttendingDoctorLicense(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:border-teal-500 outline-hidden font-mono"
-                      />
-                    </div>
+                  <div className="rounded-xl p-3 border border-slate-200 bg-white text-[11px]">
+                    <span className="text-slate-500">Cleared and signed by:</span>{" "}
+                    <strong className="text-slate-900">
+                      {attendingDoctorName || "—"}
+                      {attendingDoctorLicense ? ` (${attendingDoctorLicense})` : ""}
+                    </strong>
                   </div>
 
                   {/* Digital Signature Confirmation */}
@@ -551,12 +605,18 @@ export default function DischargeModal({
                 </div>
               )}
 
+              {stepError && (
+                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 font-semibold">{stepError}</div>
+              )}
               {/* Step Navigation Controls */}
               <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
                 {step > 1 ? (
                   <button
                     type="button"
-                    onClick={() => setStep((step - 1) as any)}
+                    onClick={() => {
+                      setStepError(null);
+                      setStep((step - 1) as 1 | 2 | 3 | 4);
+                    }}
                     className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-100 font-semibold transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <ChevronLeft size={15} />
@@ -569,7 +629,7 @@ export default function DischargeModal({
                 {step < 4 ? (
                   <button
                     type="button"
-                    onClick={() => setStep((step + 1) as any)}
+                    onClick={goNext}
                     className="px-5 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold shadow-md transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
                     <span>Next: Step {step + 1}</span>
@@ -579,6 +639,7 @@ export default function DischargeModal({
                   <button
                     type="submit"
                     disabled={!clearanceConfirmed}
+                    title={!clearanceConfirmed ? "Tick the physician clearance confirmation first" : undefined}
                     className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-bold shadow-md hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     <CheckCircle2 size={16} strokeWidth={2.5} />

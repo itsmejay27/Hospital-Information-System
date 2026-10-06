@@ -7,6 +7,7 @@ import Modal from "../../components/Modal";
 import { Plus, Search } from "../../components/Icons";
 import * as ui from "../../components/tableStyles";
 import { NursingTabProps, newId, nowStamp, staffLabel } from "./helpers";
+import { dt } from "../../services/time";
 
 const severityStyle = (n: number) =>
   n >= 7
@@ -146,7 +147,7 @@ export default function ChiefComplaintTab({ user, patients, patientId }: Nursing
                     <td className={`${ui.td} whitespace-nowrap`}>
                       {latest ? (
                         <>
-                          <div className="font-mono">{latest.recordedAt}</div>
+                          <div className="font-mono">{dt(latest.recordedAt)}</div>
                           <div className="text-[10px] text-slate-400">{latest.recordedBy}</div>
                         </>
                       ) : (
@@ -201,7 +202,7 @@ export default function ChiefComplaintTab({ user, patients, patientId }: Nursing
               )}
               {history.map(c => (
                 <tr key={c.id} className={ui.tr}>
-                  <td className={`${ui.td} font-mono whitespace-nowrap`}>{c.recordedAt}</td>
+                  <td className={`${ui.td} font-mono whitespace-nowrap`}>{dt(c.recordedAt)}</td>
                   <td className={`${ui.td} font-bold text-slate-900 whitespace-nowrap`}>{c.patientName}</td>
                   <td className={`${ui.td} font-medium text-slate-900`}>{c.complaint}</td>
                   <td className={ui.td}>{c.onset || "—"}</td>

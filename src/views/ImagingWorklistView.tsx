@@ -10,6 +10,7 @@ import ImagingGallery from "../components/ImagingGallery";
 import { PrintReportButton } from "../components/LabResultsTable";
 import * as ui from "../components/tableStyles";
 import { Scan, Search, X } from "../components/Icons";
+import { dt } from "../services/time";
 
 type Tab = "todo" | "imaging" | "reading" | "released" | "all";
 type Stage = Exclude<Tab, "all">;
@@ -248,7 +249,7 @@ export default function ImagingWorklistView() {
   ];
 
   const studyHeader = (l: DiagnosticResult) =>
-    `${l.patientName} (${l.patientId}) • ordered ${l.orderedAt || l.date} by ${l.orderingPhysician}${l.indication ? ` • for ${l.indication}` : ""}`;
+    `${l.patientName} (${l.patientId}) • ordered ${dt(l.orderedAt || l.date)} by ${l.orderingPhysician}${l.indication ? ` • for ${l.indication}` : ""}`;
 
   return (
     <div className="space-y-4 max-w-7xl mx-auto pb-10">
@@ -314,7 +315,7 @@ export default function ImagingWorklistView() {
                 const stage = imagingStage(l);
                 return (
                   <tr key={l.id} className={ui.tr}>
-                    <td className={`${ui.td} font-mono whitespace-nowrap`}>{l.orderedAt || l.date}</td>
+                    <td className={`${ui.td} font-mono whitespace-nowrap`}>{dt(l.orderedAt || l.date)}</td>
                     <td className={ui.td}>
                       <span
                         className={`${ui.badge} ${
@@ -509,7 +510,7 @@ export default function ImagingWorklistView() {
         <Modal
           wide
           title={`${viewing.test} — ${viewing.patientName}`}
-          subtitle={`${stageLabel[imagingStage(viewing)]} • ordered ${viewing.orderedAt || viewing.date} by ${viewing.orderingPhysician}`}
+          subtitle={`${stageLabel[imagingStage(viewing)]} • ordered ${dt(viewing.orderedAt || viewing.date)} by ${viewing.orderingPhysician}`}
           onClose={() => setViewing(null)}
         >
           <div>
@@ -533,7 +534,7 @@ export default function ImagingWorklistView() {
               </div>
               <p className="text-slate-500 flex justify-between gap-2">
                 <span>
-                  Reported by {viewing.releasedBy} • {viewing.releasedAt}
+                  Reported by {viewing.releasedBy} • {dt(viewing.releasedAt)}
                 </span>
                 <PrintReportButton lab={viewing} />
               </p>
@@ -568,7 +569,7 @@ function PriorStudies({ current, studies }: { current: DiagnosticResult; studies
               className="w-full text-left px-3 py-2 flex justify-between gap-2 cursor-pointer hover:bg-slate-50"
             >
               <span>
-                <span className="font-mono">{p.releasedAt || p.date}</span> • <b>{p.test}</b> — {p.summary || "no impression"}
+                <span className="font-mono">{dt(p.releasedAt || p.date)}</span> • <b>{p.test}</b> — {p.summary || "no impression"}
               </span>
               <span className="text-emerald-700 font-bold shrink-0">{open === p.id ? "Hide" : "Show"}</span>
             </button>

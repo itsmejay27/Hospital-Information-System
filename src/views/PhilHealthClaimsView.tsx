@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { PhilHealthClaim, ClaimStatus, HospitalConfig, Patient } from "../types";
-import { uid } from "../services/ids";
+import { uid, localDate } from "../services/ids";
 import {
   CreditCard,
   Search,
@@ -134,7 +134,7 @@ export default function PhilHealthClaimsView({
       diagnosisWithIcd: newDiagnosis,
       caseRateAmount: newCaseRate,
       claimStatus: "Ready for Submission",
-      submissionDate: new Date().toISOString().split("T")[0],
+      submissionDate: localDate(),
       hospitalCharges: newHospitalCharges,
       philhealthBenefit: newBenefit,
       patientPayable: Math.max(0, newHospitalCharges - newBenefit),

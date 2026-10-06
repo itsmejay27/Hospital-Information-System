@@ -172,11 +172,27 @@ export default function OpdSidebar({
       ],
     },
     {
+      id: "opd-ward",
+      path: "/opd-ward",
+      label: "OPD Ward (Minor Cases)",
+      icon: Stethoscope,
+      roles: ["nurse", "doctor"],
+      group: "clinical",
+    },
+    {
       id: "nurse-beds",
       path: "/registration/beds",
       label: "Ward Bed Allocation",
       icon: Bed,
       roles: ["nurse"],
+      group: "clinical",
+    },
+    {
+      id: "movement-history",
+      path: "/history",
+      label: "Transfer & Discharge History",
+      icon: FileText,
+      roles: ["nurse", "doctor", "staff"],
       group: "clinical",
     },
 

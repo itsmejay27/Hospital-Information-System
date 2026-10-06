@@ -1066,7 +1066,7 @@ export const INITIAL_SHIFT_ENDORSEMENTS: ShiftEndorsement[] = [
   {
     id: "END-2026-0914-01",
     timestamp: "2026-09-14 07:00",
-    shiftPeriod: "Night Shift (23:00–07:00) to Morning Shift (07:00–15:00)",
+    shiftPeriod: "Night (10:00 PM – 6:00 AM) to Morning (6:00 AM – 2:00 PM)",
     ward: "Surgical & Medical Inpatient Wards",
     outgoingNurse: "Maria Lourdes Santos, RN",
     outgoingNurseLicense: "PRC Lic. #0087410",

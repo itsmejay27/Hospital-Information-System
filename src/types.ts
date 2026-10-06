@@ -510,6 +510,11 @@ export interface OpdDischarge {
   dischargeSummary?: string;
   dischargeMeds?: string[];
   attendingDoctor?: string;
+  /** Condition confirmed by the doctor at discharge, and the triage level the patient had before. */
+  conditionAtDischarge?: string;
+  triageBeforeDischarge?: TriageTier;
+  /** Receiving hospital when referred / transferred out. */
+  referredTo?: string;
 }
 
 
@@ -602,13 +607,47 @@ export interface ChiefComplaintEntry {
   associatedSymptoms: string;
 }
 
-export type DutyShift = "Morning" | "Afternoon" | "Night";
+/**
+ * Nurses and other staff work 8-hour shifts (Morning / Afternoon / Night).
+ * Doctors work 12-hour duties (Day Duty / Night Duty). The hospital runs 24 hours.
+ */
+export type DutyShift = "Morning" | "Afternoon" | "Night" | "Day Duty" | "Night Duty";
 
-export const DUTY_SHIFT_HOURS: Record<DutyShift, string> = {
-  Morning: "06:00 – 14:00",
-  Afternoon: "14:00 – 22:00",
-  Night: "22:00 – 06:00",
+/** Start and end hour (0–23) of each shift; an end before the start means it ends the next morning. */
+export const SHIFT_TIMES: Record<DutyShift, { start: number; end: number; hours: number }> = {
+  Morning: { start: 6, end: 14, hours: 8 },
+  Afternoon: { start: 14, end: 22, hours: 8 },
+  Night: { start: 22, end: 6, hours: 8 },
+  "Day Duty": { start: 6, end: 18, hours: 12 },
+  "Night Duty": { start: 18, end: 6, hours: 12 },
 };
+
+const hourLabel = (h: number) => `${h % 12 === 0 ? 12 : h % 12}:00 ${h < 12 ? "AM" : "PM"}`;
+
+export const DUTY_SHIFT_HOURS: Record<DutyShift, string> = Object.fromEntries(
+  (Object.keys(SHIFT_TIMES) as DutyShift[]).map(s => [s, `${hourLabel(SHIFT_TIMES[s].start)} – ${hourLabel(SHIFT_TIMES[s].end)}`])
+) as Record<DutyShift, string>;
+
+/** Physicians (doctors and radiologists) take 12-hour duties; everyone else 8-hour shifts. */
+export const shiftsForRole = (role: Role): DutyShift[] =>
+  role === "doctor" || role === "radiologist" ? ["Day Duty", "Night Duty"] : ["Morning", "Afternoon", "Night"];
+
+/** Shift start/end as timestamps (ms); overnight shifts end the next day. */
+export function shiftInterval(date: string, shift: DutyShift): [number, number] {
+  const t = SHIFT_TIMES[shift];
+  const start = new Date(`${date}T00:00:00`);
+  start.setHours(t.start);
+  const end = new Date(`${date}T00:00:00`);
+  end.setHours(t.end);
+  if (t.end <= t.start) end.setDate(end.getDate() + 1);
+  return [start.getTime(), end.getTime()];
+}
+
+/** True while the shift is in progress (handles overnight shifts that began yesterday). */
+export function isOnDuty(entry: { date: string; shift: DutyShift }, now = new Date()): boolean {
+  const [a, b] = shiftInterval(entry.date, entry.shift);
+  return now.getTime() >= a && now.getTime() < b;
+}
 
 export interface ShiftSchedule {
   id: string;
@@ -737,4 +776,82 @@ export interface Appointment {
   status: "Scheduled" | "Checked In" | "Completed" | "Cancelled" | "No-show";
   createdBy: string;
   createdAt: string;
+}
+
+// ------------------------------------------------------------------------------
+// Patient movement history (admissions, transfers, referrals, discharges, condition changes)
+// ------------------------------------------------------------------------------
+export type MovementType =
+  | "Moved to OPD Ward"
+  | "Admitted"
+  | "Ward / Bed Transfer"
+  | "Referred / Transferred Out"
+  | "Discharged"
+  | "Sent Home (OPD)"
+  | "Condition Updated";
+
+export interface PatientMovement {
+  id: string;
+  patientId: string;
+  patientName: string;
+  type: MovementType;
+  from?: string;
+  to?: string;
+  /** Condition (triage) before → after, when it changed. */
+  conditionBefore?: TriageTier;
+  conditionAfter?: TriageTier;
+  details?: string;
+  at: string;
+  by: string;
+  byRole: Role;
+  /** Discharge / referral / admission record this entry belongs to. */
+  sourceId?: string;
+}
+
+// ------------------------------------------------------------------------------
+// OPD Ward — minor cases handled by nurses and doctors
+// ------------------------------------------------------------------------------
+export type OpdCaseType =
+  | "URTI / Common Cold / Flu"
+  | "Hypertension"
+  | "Diabetes Mellitus Type 2"
+  | "Asthma / Bronchitis"
+  | "Urinary Tract Infection (UTI)"
+  | "Acute Gastroenteritis (AGE)"
+  | "Other Minor Case";
+
+export interface OpdCaseVitals {
+  at: string;
+  by: string;
+  bp?: string;
+  hr?: string;
+  rr?: string;
+  temp?: string;
+  spo2?: string;
+  bloodSugar?: string;
+  bloodSugarType?: "FBS" | "RBS";
+  weight?: string;
+  stools?: string; // AGE: number of loose stools / vomiting since last check
+  note?: string;
+}
+
+export interface OpdCase {
+  id: string;
+  patientId: string;
+  patientName: string;
+  age: number;
+  gender: string;
+  caseType: OpdCaseType;
+  symptoms: string[];
+  complaint: string;
+  vitals: OpdCaseVitals[];
+  redFlags: string[];
+  care: { at: string; by: string; what: string }[];
+  ordersAppliedAt?: string;
+  ordersAppliedBy?: string;
+  doctorPlan?: string;
+  status: "In OPD Ward" | "Sent Home" | "Admitted" | "Referred / Transferred";
+  disposition?: { at: string; by: string; type: string; instructions?: string; followUpDate?: string };
+  createdAt: string;
+  createdBy: string;
 }

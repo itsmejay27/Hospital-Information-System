@@ -10,6 +10,7 @@ import PageHeader from "../components/PageHeader";
 import Modal from "../components/Modal";
 import * as ui from "../components/tableStyles";
 import { CreditCard, Search, X } from "../components/Icons";
+import { dt } from "../services/time";
 
 type Tab = "open" | "paid" | "all" | "revenue";
 const CATEGORIES: BillItem["category"][] = ["Consultation", "Laboratory", "Imaging", "Medicines", "Room", "Procedure", "Other"];
@@ -203,12 +204,12 @@ export default function BillingView() {
       .join("");
     const payHtml = b.payments.length
       ? `<h2>Payments</h2><table><tr><th>Date</th><th>OR No.</th><th>Method</th><th class="right">Amount</th></tr>${b.payments
-          .map(p => `<tr><td>${esc(p.at)}</td><td>${esc(p.orNumber)}</td><td>${esc(p.method)}</td><td class="right">${esc(peso(p.amount))}</td></tr>`)
+          .map(p => `<tr><td>${esc(dt(p.at))}</td><td>${esc(p.orNumber)}</td><td>${esc(p.method)}</td><td class="right">${esc(peso(p.amount))}</td></tr>`)
           .join("")}</table>`
       : "";
     const ok = printDocument(
       "Statement of Account",
-      `<p><b>Patient:</b> ${esc(b.patientName)} (${esc(b.patientId)})<br><b>Bill No.:</b> ${esc(b.id)} &nbsp; <b>Date:</b> ${esc(b.createdAt)}</p>
+      `<p><b>Patient:</b> ${esc(b.patientName)} (${esc(b.patientId)})<br><b>Bill No.:</b> ${esc(b.id)} &nbsp; <b>Date:</b> ${esc(dt(b.createdAt))}</p>
 <h2>Charges</h2><table><tr><th>Description</th><th>Category</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Amount</th></tr>${rowsHtml}</table>
 <table style="width:320px;margin-left:auto;margin-top:12px">
 <tr><td>Gross charges</td><td class="right">${esc(peso(billGross(b)))}</td></tr>
@@ -294,7 +295,7 @@ ${payHtml}
               onClick={() =>
                 downloadCsv(`payments_${from}_to_${to}.csv`, [
                   ["Date", "OR Number", "Bill", "Patient ID", "Patient", "Method", "Amount", "Received By"],
-                  ...paymentsInRange.map(p => [p.at, p.orNumber, p.bill.id, p.bill.patientId, p.bill.patientName, p.method, p.amount.toFixed(2), p.by]),
+                  ...paymentsInRange.map(p => [dt(p.at), p.orNumber, p.bill.id, p.bill.patientId, p.bill.patientName, p.method, p.amount.toFixed(2), p.by]),
                 ])
               }
               className={ui.secondaryBtn}
@@ -305,7 +306,7 @@ ${payHtml}
               onClick={() =>
                 downloadCsv(`bills_${from}_to_${to}.csv`, [
                   ["Bill", "Date", "Patient ID", "Patient", "Gross", "PhilHealth", "Discount", "Net", "Paid", "Balance", "Status"],
-                  ...billsInRange.map(b => [b.id, b.createdAt, b.patientId, b.patientName, billGross(b).toFixed(2), b.philhealthDeduction.toFixed(2), b.discountAmount.toFixed(2), billNet(b).toFixed(2), billPaid(b).toFixed(2), billBalance(b).toFixed(2), b.status]),
+                  ...billsInRange.map(b => [b.id, dt(b.createdAt), b.patientId, b.patientName, billGross(b).toFixed(2), b.philhealthDeduction.toFixed(2), b.discountAmount.toFixed(2), billNet(b).toFixed(2), billPaid(b).toFixed(2), billBalance(b).toFixed(2), b.status]),
                 ])
               }
               className={ui.secondaryBtn}
@@ -385,7 +386,7 @@ ${payHtml}
                   )}
                   {paymentsInRange.map(p => (
                     <tr key={p.id} className={ui.tr}>
-                      <td className={`${ui.td} font-mono whitespace-nowrap`}>{p.at}</td>
+                      <td className={`${ui.td} font-mono whitespace-nowrap`}>{dt(p.at)}</td>
                       <td className={`${ui.td} font-mono`}>{p.orNumber}</td>
                       <td className={ui.td}>{p.bill.patientName}</td>
                       <td className={ui.td}>{p.method}</td>
@@ -434,7 +435,7 @@ ${payHtml}
                 )}
                 {rows.map(b => (
                   <tr key={b.id} className={ui.tr}>
-                    <td className={`${ui.td} font-mono whitespace-nowrap`}>{b.createdAt}</td>
+                    <td className={`${ui.td} font-mono whitespace-nowrap`}>{dt(b.createdAt)}</td>
                     <td className={`${ui.td} font-mono`}>{b.id}</td>
                     <td className={ui.td}>
                       <div className="font-bold text-slate-900">{b.patientName}</div>
@@ -597,7 +598,7 @@ ${payHtml}
         <Modal
           wide
           title={`Bill ${openBill.id}`}
-          subtitle={`${openBill.patientName} (${openBill.patientId}) • ${openBill.createdAt} • by ${openBill.createdBy}`}
+          subtitle={`${openBill.patientName} (${openBill.patientId}) • ${dt(openBill.createdAt)} • by ${openBill.createdBy}`}
           onClose={() => !busy && setOpenBill(null)}
           footer={
             <>
@@ -663,7 +664,7 @@ ${payHtml}
               {openBill.payments.map(p => (
                 <div key={p.id} className="flex justify-between border-b border-slate-100 py-1">
                   <span>
-                    {p.at} • OR <span className="font-mono">{p.orNumber}</span> • {p.method} • {p.by}
+                    {dt(p.at)} • OR <span className="font-mono">{p.orNumber}</span> • {p.method} • {p.by}
                   </span>
                   <span className="font-mono font-bold">{peso(p.amount)}</span>
                 </div>

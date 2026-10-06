@@ -1,3 +1,6 @@
+import { dt } from "./time";
+import { timestamp } from "./ids";
+
 // Prints a simple, clean document (lab report, imaging report, statement of account)
 // in a new window using the browser's print dialog ("Save as PDF" works too).
 
@@ -26,7 +29,7 @@ export function printDocument(title: string, bodyHtml: string, hospitalName = "C
   @media print{body{margin:12mm}}
 </style></head><body>
 <div class="head"><div><h1>${esc(hospitalName)}</h1><div class="muted">Hospital Information System</div></div>
-<div class="right"><b>${esc(title)}</b><div class="muted">Printed ${esc(new Date().toLocaleString())}</div></div></div>
+<div class="right"><b>${esc(title)}</b><div class="muted">Printed ${esc(dt(timestamp()))}</div></div></div>
 ${bodyHtml}
 <script>window.onload=function(){setTimeout(function(){window.print()},300)}</script>
 </body></html>`);

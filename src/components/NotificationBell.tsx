@@ -6,9 +6,10 @@ import { useWardData } from "../context/WardDataContext";
 import { hospitalDb } from "../services/db";
 import { isToDispense, stockStatus } from "../services/pharmacy";
 import { billBalance } from "../services/billing";
-import { timestamp } from "../services/ids";
-import { Appointment, Bill, IncidentReport, PrivacyRequest, StockItem } from "../types";
+import { timestamp, localDate } from "../services/ids";
+import { Appointment, Bill, IncidentReport, OpdCase, PrivacyRequest, StockItem } from "../types";
 import { Bell } from "./Icons";
+import { dt, fmtTime } from "../services/time";
 
 type Level = "critical" | "warning" | "info";
 interface Notice {
@@ -49,8 +50,9 @@ interface Extra {
   incidents: IncidentReport[];
   privacy: PrivacyRequest[];
   bills: Bill[];
+  opdCases: OpdCase[];
 }
-const EMPTY: Extra = { stock: [], appointments: [], incidents: [], privacy: [], bills: [] };
+const EMPTY: Extra = { stock: [], appointments: [], incidents: [], privacy: [], bills: [], opdCases: [] };
 
 /** Role-aware notification centre in the top bar. */
 export default function NotificationBell() {
@@ -72,14 +74,15 @@ export default function NotificationBell() {
     if (!role) return;
     const get = async <T extends { id: string }>(store: string, roles: string[]) =>
       roles.includes(role) ? hospitalDb.getAll<T>(store).catch(() => [] as T[]) : ([] as T[]);
-    const [stock, appointments, incidents, privacy, bills] = await Promise.all([
+    const [stock, appointments, incidents, privacy, bills, opdCases] = await Promise.all([
       get<StockItem>("pharmacy_stock", ["pharmacy"]),
       get<Appointment>("appointments", ["staff", "doctor"]),
       get<IncidentReport>("incident_reports", ["legal", "admin"]),
       get<PrivacyRequest>("privacy_requests", ["legal"]),
       get<Bill>("bills", ["finance"]),
+      get<OpdCase>("opd_cases", ["doctor", "nurse"]),
     ]);
-    setExtra({ stock, appointments, incidents, privacy, bills });
+    setExtra({ stock, appointments, incidents, privacy, bills, opdCases });
   }, [role]);
 
   useEffect(() => {
@@ -105,7 +108,7 @@ export default function NotificationBell() {
     if (!user) return [];
     const list: Notice[] = [];
     const today = timestamp().slice(0, 10);
-    const recent = (d?: string) => !!d && d.slice(0, 10) >= new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+    const recent = (d?: string) => !!d && d.slice(0, 10) >= localDate(new Date(Date.now() - 3 * 86400000));
 
     // Everyone: decisions on my own profile change requests
     profileRequests
@@ -165,9 +168,24 @@ export default function NotificationBell() {
           id: `appts-${today}-${mine.length}`,
           level: "info",
           title: `${mine.length} appointment${mine.length > 1 ? "s" : ""} today`,
-          detail: mine.map(a => `${a.time} ${a.patientName}`).slice(0, 3).join(", "),
+          detail: mine.map(a => `${fmtTime(a.time)} ${a.patientName}`).slice(0, 3).join(", "),
           path: "/appointments",
         });
+    }
+
+    if (role === "doctor" || role === "nurse") {
+      extra.opdCases
+        .filter(c => c.status === "In OPD Ward" && (c.redFlags.length > 0 || (role === "doctor" && !c.ordersAppliedAt)))
+        .forEach(c =>
+          list.push({
+            id: `opdcase-${c.id}-${c.redFlags.length}-${c.ordersAppliedAt ? "o" : "n"}`,
+            level: c.redFlags.length ? "critical" : "info",
+            title: `OPD Ward: ${c.patientName}${c.redFlags.length ? " — warning signs" : " — needs orders"}`,
+            detail: `${c.caseType}${c.redFlags.length ? ` • ${c.redFlags.join(", ")}` : ""}`,
+            time: c.createdAt,
+            path: "/opd-ward",
+          })
+        );
     }
 
     if (role === "nurse") {
@@ -205,7 +223,7 @@ export default function NotificationBell() {
           list.push({
             id: `appt-${a.id}`,
             level: "info",
-            title: `Appointment ${a.time}: ${a.patientName}`,
+            title: `Appointment ${fmtTime(a.time)}: ${a.patientName}`,
             detail: `with ${a.doctorName}${a.patientId ? "" : " • not registered yet"}`,
             path: "/appointments",
           })
@@ -311,7 +329,7 @@ export default function NotificationBell() {
 
     if (role === "legal") {
       extra.privacy
-        .filter(r => (r.status === "Received" || r.status === "In Review") && r.dueDate <= new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10))
+        .filter(r => (r.status === "Received" || r.status === "In Review") && r.dueDate <= localDate(new Date(Date.now() + 5 * 86400000)))
         .forEach(r =>
           list.push({
             id: `dpr-${r.id}-${r.dueDate < today ? "overdue" : "due"}`,
@@ -401,7 +419,7 @@ export default function NotificationBell() {
                   <span className="min-w-0 flex-1">
                     <span className={`block text-xs ${isUnread ? "font-bold text-slate-900" : "font-semibold text-slate-600"}`}>{n.title}</span>
                     <span className="block text-[11px] text-slate-500 truncate">{n.detail}</span>
-                    {n.time && <span className="block text-[10px] text-slate-400 font-mono mt-0.5">{n.time}</span>}
+                    {n.time && <span className="block text-[10px] text-slate-400 font-mono mt-0.5">{dt(n.time)}</span>}
                   </span>
                 </button>
               );

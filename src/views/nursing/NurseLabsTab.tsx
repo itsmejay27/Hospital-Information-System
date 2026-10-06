@@ -6,6 +6,7 @@ import { DiagnosticReport, labStatusLabel } from "../../components/LabResultsTab
 import { Search } from "../../components/Icons";
 import * as ui from "../../components/tableStyles";
 import { NursingTabProps } from "./helpers";
+import { dt } from "../../services/time";
 
 const statusStyle: Record<DiagnosticResult["status"], string> = {
   Ready: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -118,7 +119,7 @@ export default function NurseLabsTab({ patientId }: NursingTabProps) {
         <Modal
           wide
           title={`${viewing.test} — ${viewing.patientName}`}
-          subtitle={`${viewing.orderedAt || viewing.date} • ordered by ${viewing.orderingPhysician}`}
+          subtitle={`${dt(viewing.orderedAt || viewing.date)} • ordered by ${viewing.orderingPhysician}`}
           onClose={() => setViewing(null)}
         >
           <DiagnosticReport lab={viewing} />

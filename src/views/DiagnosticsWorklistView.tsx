@@ -8,6 +8,7 @@ import Modal from "../components/Modal";
 import LabResultsTable, { PrintReportButton } from "../components/LabResultsTable";
 import * as ui from "../components/tableStyles";
 import { FlaskConical, Scan, Search, Plus, X } from "../components/Icons";
+import { dt } from "../services/time";
 
 type Mode = "lab" | "imaging";
 type Tab = "todo" | "progress" | "released" | "all";
@@ -232,7 +233,7 @@ export default function DiagnosticsWorklistView({ mode }: { mode: Mode }) {
               )}
               {rowsShown.map(l => (
                 <tr key={l.id} className={ui.tr}>
-                  <td className={`${ui.td} font-mono whitespace-nowrap`}>{l.orderedAt || l.date}</td>
+                  <td className={`${ui.td} font-mono whitespace-nowrap`}>{dt(l.orderedAt || l.date)}</td>
                   <td className={ui.td}>
                     <span
                       className={`${ui.badge} ${
@@ -407,7 +408,7 @@ export default function DiagnosticsWorklistView({ mode }: { mode: Mode }) {
         <Modal
           wide
           title={`${viewing.test} — ${viewing.patientName}`}
-          subtitle={`Ordered ${viewing.orderedAt || viewing.date} by ${viewing.orderingPhysician}${
+          subtitle={`Ordered ${dt(viewing.orderedAt || viewing.date)} by ${viewing.orderingPhysician}${
             viewing.releasedBy ? ` • released ${viewing.releasedAt || ""} by ${viewing.releasedBy}` : ""
           }`}
           onClose={() => setViewing(null)}

@@ -9,6 +9,7 @@ import Modal from "../components/Modal";
 import IncidentsView from "./IncidentsView";
 import * as ui from "../components/tableStyles";
 import { Scale, Search } from "../components/Icons";
+import { dt } from "../services/time";
 
 type Tab = "incidents" | "privacy";
 const TYPES: PrivacyRequest["type"][] = ["Access to records", "Correction", "Erasure / Blocking", "Objection to processing", "Data portability", "Complaint"];
@@ -148,7 +149,7 @@ export default function LegalView() {
                 {rows.map(r => (
                   <tr key={r.id} className={ui.tr}>
                     <td className={`${ui.td} font-mono whitespace-nowrap`}>
-                      {r.receivedAt}
+                      {dt(r.receivedAt)}
                       <div className="text-[10px] text-slate-400">{r.id}</div>
                     </td>
                     <td className={ui.td}>

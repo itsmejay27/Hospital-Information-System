@@ -5,6 +5,7 @@ import Modal from "../../components/Modal";
 import { Plus, Search } from "../../components/Icons";
 import * as ui from "../../components/tableStyles";
 import { NursingTabProps, currentShift, newId, nowStamp, staffLabel } from "./helpers";
+import { dt } from "../../services/time";
 
 const FDAR: { name: "focus" | "data" | "action" | "response"; letter: string; label: string; hint: string }[] = [
   { name: "focus", letter: "F", label: "Focus", hint: "e.g. Acute pain, Fever, Post-op care" },
@@ -119,7 +120,7 @@ export default function NurseNotesTab({ user, patients, patientId }: NursingTabP
             )}
             {rows.map(n => (
               <tr key={n.id} className={ui.tr}>
-                <td className={`${ui.td} font-mono whitespace-nowrap`}>{n.timestamp}</td>
+                <td className={`${ui.td} font-mono whitespace-nowrap`}>{dt(n.timestamp)}</td>
                 <td className={ui.td}>{n.shift}</td>
                 <td className={ui.td}>
                   <div className="font-bold text-slate-900">{n.patientName}</div>

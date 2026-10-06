@@ -18,6 +18,8 @@ import {
   Bed,
   UserPlus,
 } from "../components/Icons";
+import { fmtTime } from "../services/time";
+import ConditionBadge from "../components/ConditionBadge";
 
 interface OpdQueueViewProps {
   queue?: OpdQueueItem[];
@@ -365,30 +367,11 @@ export default function OpdQueueView({
                     <td className="py-3 px-3 whitespace-nowrap text-slate-700">
                       {item.age} / {item.gender}
                     </td>
-                    <td className="py-3 px-3 whitespace-nowrap font-mono text-slate-600">{item.checkInTime}</td>
+                    <td className="py-3 px-3 whitespace-nowrap font-mono text-slate-600">{fmtTime(item.checkInTime)}</td>
 
                     {/* Triage Tier */}
                     <td className="py-3 px-3 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          item.triageTier === "critical"
-                            ? "bg-rose-50 text-rose-700 border border-rose-200"
-                            : item.triageTier === "observation"
-                            ? "bg-amber-50 text-amber-800 border border-amber-200"
-                            : "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                        }`}
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            item.triageTier === "critical"
-                              ? "bg-rose-500 animate-ping"
-                              : item.triageTier === "observation"
-                              ? "bg-amber-500"
-                              : "bg-emerald-500"
-                          }`}
-                        ></span>
-                        {item.triageTier}
-                      </span>
+                      <ConditionBadge patientId={item.patientId} fallback={item.triageTier} />
                     </td>
 
                     {/* Chief Complaint */}

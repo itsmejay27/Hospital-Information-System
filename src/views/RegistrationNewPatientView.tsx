@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Patient, TriageTier } from "../types";
-import { uid } from "../services/ids";
+import { uid, localDate } from "../services/ids";
 import {
   UserPlus,
   Check,
@@ -85,12 +85,12 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
       admissionStatus: "Outpatient",
       ward: regDepartmentTriage,
       bed: "Waiting Area",
-      registeredAt: new Date().toISOString().split("T")[0],
+      registeredAt: localDate(),
       consents: {
         treatmentCareConsent: regConsentTreatment,
         healthInfoSharingConsent: regConsentPrivacy,
         contactNoticeConsent: true,
-        signedDate: new Date().toISOString().split("T")[0],
+        signedDate: localDate(),
         witnessStaff: `${user.name} (${user.licenseNumber || user.id})`,
       },
       medicalHistory: {
@@ -197,7 +197,7 @@ export default function RegistrationNewPatientView({ user, patients, onAddPatien
                   <input
                     type="date"
                     required
-                    max={new Date().toISOString().slice(0, 10)}
+                    max={localDate()}
                     value={regDob}
                     onChange={e => setRegDob(e.target.value)}
                     className="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-slate-900 focus:bg-white focus:border-teal-500 outline-hidden font-medium"
