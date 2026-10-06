@@ -716,13 +716,24 @@ export default function OpdWardView() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className={ui.label}>Condition (triage)</label>
-                <select value={intake.triage} onChange={e => setIntakeField({ triage: e.target.value as TriageTier, triageTouched: true })} className={ui.input}>
-                  <option value="stable">Stable</option>
-                  <option value="observation">Observation</option>
-                  <option value="critical">Critical</option>
-                </select>
-                {!intake.triageTouched && <p className="text-[10px] text-slate-500 mt-1">Suggested from the warning signs.</p>}
+                <label className={ui.label}>Condition</label>
+                {isDoctor ? (
+                  <>
+                    <select value={intake.triage} onChange={e => setIntakeField({ triage: e.target.value as TriageTier, triageTouched: true })} className={ui.input}>
+                      <option value="stable">Stable</option>
+                      <option value="observation">Observation</option>
+                      <option value="critical">Critical</option>
+                    </select>
+                    {!intake.triageTouched && <p className="text-[10px] text-slate-500 mt-1">Suggested from the warning signs.</p>}
+                  </>
+                ) : (
+                  <>
+                    <div className={`px-3 py-2 rounded-lg border text-xs font-bold uppercase ${intake.triage === "critical" ? "bg-rose-50 border-rose-200 text-rose-700" : intake.triage === "observation" ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-800"}`}>
+                      {intake.triage}
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">Set automatically from the warning signs; the doctor confirms or changes it.</p>
+                  </>
+                )}
               </div>
               <div>
                 <label className={ui.label}>Doctor *</label>

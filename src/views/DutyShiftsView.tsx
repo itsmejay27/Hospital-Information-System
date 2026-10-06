@@ -9,6 +9,7 @@ import StaffAvatar from "../components/StaffAvatar";
 import { Clock, Plus, ChevronLeft, ChevronRight } from "../components/Icons";
 import * as ui from "../components/tableStyles";
 import { currentShift, newId, todayIso } from "./nursing/helpers";
+import { useConfirm } from "../components/ConfirmDialog";
 
 const SHIFTS: DutyShift[] = ["Day Duty", "Morning", "Afternoon", "Night Duty", "Night"];
 
@@ -36,6 +37,7 @@ const dayLabel = (iso: string) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 
 export default function DutyShiftsView() {
+  const confirm = useConfirm();
   const { user } = useAuth();
   const { usersList } = useOpdData();
   const { shiftSchedules, saveShiftSchedule, removeShiftSchedule } = useWardData();
@@ -107,9 +109,9 @@ export default function DutyShiftsView() {
     }
   };
 
-  const remove = (s: ShiftSchedule) => {
-    if (!window.confirm(`Remove ${s.staffName}'s ${s.shift} shift on ${s.date}?`)) return;
-    removeShiftSchedule(s.id).catch(() => window.alert("Could not remove the shift. Please try again."));
+  const remove = async (s: ShiftSchedule) => {
+    if (!(await confirm({ title: "Remove shift?", message: `${s.staffName} — ${s.shift} (${DUTY_SHIFT_HOURS[s.shift]}) on ${s.date}.`, confirmText: "Remove", tone: "danger" }))) return;
+    removeShiftSchedule(s.id).catch(() => confirm({ title: "Not saved", message: "Could not remove the shift. Please try again.", alertOnly: true }));
   };
 
   return (

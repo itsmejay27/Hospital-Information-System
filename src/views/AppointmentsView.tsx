@@ -9,6 +9,7 @@ import Modal from "../components/Modal";
 import * as ui from "../components/tableStyles";
 import { Calendar, Search } from "../components/Icons";
 import { fmtTime, timeSlots } from "../services/time";
+import { useConfirm } from "../components/ConfirmDialog";
 
 const statusStyle: Record<Appointment["status"], string> = {
   Scheduled: "bg-sky-50 text-sky-700 border-sky-200",
@@ -23,6 +24,7 @@ export default function AppointmentsView() {
   const { user } = useAuth();
   const { patients, usersList, checkInPatient } = useOpdData();
   const appts = useCollection<Appointment>("appointments");
+  const confirm = useConfirm();
   const canBook = user?.role === "staff";
   const isDoctor = user?.role === "doctor";
 
@@ -94,7 +96,11 @@ export default function AppointmentsView() {
       const qErr = checkInPatient(a.patientId, a.doctorName, a.reason);
       if (qErr) return setError(qErr);
     }
-    if (status === "Cancelled" && !window.confirm(`Cancel ${a.patientName}'s appointment?`)) return;
+    if (
+      status === "Cancelled" &&
+      !(await confirm({ title: "Cancel appointment?", message: `${a.patientName} — ${a.date} with ${a.doctorName}.`, confirmText: "Cancel Appointment", cancelText: "Keep", tone: "danger" }))
+    )
+      return;
     const err = await appts.save({ ...a, status }, `Appointment ${a.id} → ${status}`, { patientId: a.patientId, patientName: a.patientName });
     if (err) return setError(err);
     flash(status === "Checked In" ? `${a.patientName} checked in and added to ${a.doctorName}'s queue.` : `Appointment marked ${status}.`);

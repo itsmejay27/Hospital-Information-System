@@ -11,6 +11,7 @@ import Modal from "../components/Modal";
 import * as ui from "../components/tableStyles";
 import { CreditCard, Search, X } from "../components/Icons";
 import { dt } from "../services/time";
+import { useConfirm } from "../components/ConfirmDialog";
 
 type Tab = "open" | "paid" | "all" | "revenue";
 const CATEGORIES: BillItem["category"][] = ["Consultation", "Laboratory", "Imaging", "Medicines", "Room", "Procedure", "Other"];
@@ -27,6 +28,7 @@ export default function BillingView() {
   const { user } = useAuth();
   const { patients, labResults, medications, claims, hospitalConfig } = useOpdData();
   const bills = useCollection<Bill>("bills");
+  const confirm = useConfirm();
   const stock = useCollection<StockItem>("pharmacy_stock");
   const canEdit = user?.role === "finance" || user?.role === "staff";
 
@@ -191,7 +193,7 @@ export default function BillingView() {
 
   const cancelBill = async (b: Bill) => {
     if (b.payments.length > 0) return setError("A bill with payments cannot be cancelled.");
-    if (!window.confirm(`Cancel bill ${b.id} for ${b.patientName}?`)) return;
+    if (!(await confirm({ title: "Cancel bill?", message: `Bill ${b.id} for ${b.patientName} will be marked Cancelled.`, confirmText: "Cancel Bill", cancelText: "Keep", tone: "danger" }))) return;
     const updated: Bill = { ...b, status: "Cancelled" };
     const err = await bills.save(updated, `Cancelled bill ${b.id}`, { patientId: b.patientId, patientName: b.patientName });
     if (err) return setError(err);
