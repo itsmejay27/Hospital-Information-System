@@ -39,6 +39,9 @@ import {
   X,
 } from "./Icons";
 
+/** Roles that can open Clinical Care (view only unless doctor). */
+const CLINICAL_VIEW_ROLES: Role[] = ["doctor", "nurse", "medtech", "radtech", "radiologist", "pharmacy"];
+
 interface OpdSidebarProps {
   collapsed: boolean;
   onToggleCollapse: () => void;
@@ -144,13 +147,14 @@ export default function OpdSidebar({
       path: "/clinical",
       label: "Clinical Care",
       icon: Stethoscope,
-      roles: ["doctor"],
+      // Clinical roles can view every tab; only doctors can change anything there
+      roles: CLINICAL_VIEW_ROLES,
       group: "clinical",
       subItems: [
-        { id: "doctor-workbench", label: "Doctor Workbench", path: "/clinical?tab=workbench", roles: ["doctor"] },
-        { id: "prescriptions", label: "e-Prescriptions & Rx", path: "/clinical?tab=prescriptions", roles: ["doctor"] },
-        { id: "diagnostics", label: "Labs & Diagnostics", path: "/clinical?tab=labs", roles: ["doctor"] },
-        { id: "vitals-bmi", label: "Vitals & BMI Assessment", path: "/clinical?tab=vitals", roles: ["doctor", "nurse"] },
+        { id: "doctor-workbench", label: "Doctor Workbench", path: "/clinical?tab=workbench", roles: CLINICAL_VIEW_ROLES },
+        { id: "prescriptions", label: "e-Prescriptions & Rx", path: "/clinical?tab=prescriptions", roles: CLINICAL_VIEW_ROLES },
+        { id: "diagnostics", label: "Labs & Diagnostics", path: "/clinical?tab=labs", roles: CLINICAL_VIEW_ROLES },
+        { id: "vitals-bmi", label: "Vitals & BMI Assessment", path: "/clinical?tab=vitals", roles: CLINICAL_VIEW_ROLES },
       ],
     },
     {
@@ -161,7 +165,7 @@ export default function OpdSidebar({
       roles: ["doctor", "nurse"],
       group: "clinical",
       subItems: [
-        { id: "ns-vitals", label: "Vitals & BMI", path: "/clinical?tab=vitals", roles: ["nurse"] },
+        { id: "ns-vitals", label: "Vitals & BMI", path: "/nursing?tab=vitals", roles: ["nurse"] },
         { id: "ns-complaint-top", label: "Chief Complaint", path: "/nursing?tab=complaint", roles: ["nurse"] },
         { id: "ns-careplan", label: "Care Plan (ADPIE)", path: "/nursing?tab=careplan", roles: ["doctor", "nurse"] },
         { id: "ns-orders", label: "Doctor's Orders", path: "/nursing?tab=orders", roles: ["doctor", "nurse"] },
@@ -408,8 +412,7 @@ export default function OpdSidebar({
 
   const handleNavClick = (item: NavItem) => {
     if (item.id === "clinical-group") {
-      const defaultTab = currentRole === "nurse" ? "/clinical?tab=vitals" : "/clinical?tab=workbench";
-      navigate(defaultTab);
+      navigate("/clinical?tab=workbench");
     } else {
       navigate(item.path);
     }

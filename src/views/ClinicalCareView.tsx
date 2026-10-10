@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import StaffAvatar from "../components/StaffAvatar";
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -45,23 +45,14 @@ export default function ClinicalCareView() {
   } = useOpdData();
 
   const currentRole: Role = user?.role || "doctor";
-  const isNurse = currentRole === "nurse";
+  // Every clinical role can see all of Clinical Care; only doctors can add or change anything here
+  const canEdit = currentRole === "doctor";
 
   // Tab state synced with URL search params ?tab=
-  const requestedTab = (searchParams.get("tab") as ClinicalTab) || (isNurse ? "vitals" : "workbench");
-
-  // Enforce strict role access: nurse is ONLY allowed "vitals" tab
-  const activeTab: ClinicalTab = isNurse ? "vitals" : requestedTab;
-
-  useEffect(() => {
-    // If nurse tries to access doctor tabs via query param, force ?tab=vitals
-    if (isNurse && searchParams.get("tab") !== "vitals") {
-      setSearchParams({ tab: "vitals" }, { replace: true });
-    }
-  }, [isNurse, searchParams, setSearchParams]);
+  const requested = searchParams.get("tab") as ClinicalTab | null;
+  const activeTab: ClinicalTab = requested && ["workbench", "prescriptions", "labs", "vitals"].includes(requested) ? requested : "workbench";
 
   const handleTabChange = (tab: ClinicalTab) => {
-    if (isNurse && tab !== "vitals") return;
     setSearchParams({ tab });
   };
 
@@ -112,18 +103,6 @@ export default function ClinicalCareView() {
           status: "active",
         };
 
-  // Nurse User Fallback
-  const nurseUser: User =
-    user || {
-      id: "NURSE-001",
-      name: "Triage & Ward Nurse",
-      role: "nurse",
-      title: "Staff Nurse, RN",
-      avatarInitials: "RN",
-      department: "Nursing Station",
-      licenseNumber: "PRC Lic. Registered Nurse",
-      status: "active",
-    };
 
   // Filtered Medications for the Prescriptions Tab
   const patientMeds = medications.filter(m => {
@@ -152,14 +131,12 @@ export default function ClinicalCareView() {
       id: "workbench" as ClinicalTab,
       label: "Doctor Workbench",
       icon: Stethoscope,
-      doctorOnly: true,
       description: "SOAP encounters, clinical diagnosis, and triage management",
     },
     {
       id: "prescriptions" as ClinicalTab,
       label: "e-Prescriptions & Rx",
       icon: Pill,
-      doctorOnly: true,
       badge: medications.filter(m => m.status === "Active").length,
       description: "Digital prescription orders, PhilHealth Konsulta meds",
     },
@@ -167,7 +144,6 @@ export default function ClinicalCareView() {
       id: "labs" as ClinicalTab,
       label: "Labs & Diagnostics",
       icon: FlaskConical,
-      doctorOnly: true,
       badge: labResults.length,
       description: "Laboratory orders, radiology requisitions, diagnostic panels",
     },
@@ -175,10 +151,9 @@ export default function ClinicalCareView() {
       id: "vitals" as ClinicalTab,
       label: "Vitals & BMI Assessment",
       icon: Activity,
-      doctorOnly: false,
       description: "Bedside hemodynamics, blood pressure, SpO2, fluid balance",
     },
-  ].filter(tab => !isNurse || !tab.doctorOnly);
+  ];
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -207,6 +182,13 @@ export default function ClinicalCareView() {
           </div>
         </div>
       </div>
+
+      {!canEdit && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-2.5 text-xs font-semibold flex items-center gap-2">
+          <ShieldCheck size={16} className="text-amber-700 shrink-0" />
+          <span>View only. You can see every tab of Clinical Care, but only doctors can add or change consultations, prescriptions, lab orders and vitals here.</span>
+        </div>
+      )}
 
       {/* Tabbed Navigation Bar */}
       <div className="bg-white rounded-2xl border border-slate-200/80 p-1.5 shadow-xs flex items-center gap-1.5 overflow-x-auto scrollbar-thin">
@@ -241,10 +223,11 @@ export default function ClinicalCareView() {
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: DOCTOR WORKBENCH (Doctors Only) */}
+      {/* TAB 1: DOCTOR WORKBENCH (view only for non-doctors) */}
       {/* ========================================================================= */}
-      {activeTab === "workbench" && !isNurse && (
+      {activeTab === "workbench" && (
         <DoctorWorkbenchView
+          readOnly={!canEdit}
           user={doctorUser}
           patients={patients}
           records={records}
@@ -259,9 +242,9 @@ export default function ClinicalCareView() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: e-PRESCRIPTIONS & RX (Doctors Only) */}
+      {/* TAB 2: e-PRESCRIPTIONS & RX (view only for non-doctors) */}
       {/* ========================================================================= */}
-      {activeTab === "prescriptions" && !isNurse && (
+      {activeTab === "prescriptions" && (
         <div className="space-y-6">
           {/* Patient Selection & Quick Stats Strip */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -286,6 +269,7 @@ export default function ClinicalCareView() {
             </div>
 
             <div className="flex items-center gap-2 self-end md:self-auto">
+              {canEdit && (
               <button
                 type="button"
                 onClick={() => setIsRxModalOpen(true)}
@@ -294,6 +278,7 @@ export default function ClinicalCareView() {
                 <Plus size={16} strokeWidth={2.5} />
                 <span>+ Issue New e-Prescription</span>
               </button>
+              )}
             </div>
           </div>
 
@@ -344,7 +329,7 @@ export default function ClinicalCareView() {
                       <th className="py-3 px-3">Prescribed By</th>
                       <th className="py-3 px-3">Start Date</th>
                       <th className="py-3 px-3">Status</th>
-                      <th className="py-3 px-3 text-right">Actions</th>
+                      {canEdit && <th className="py-3 px-3 text-right">Actions</th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -378,6 +363,7 @@ export default function ClinicalCareView() {
                             {m.status}
                           </span>
                         </td>
+                        {canEdit && (
                         <td className="py-3 px-3 text-right">
                           <button
                             onClick={() => notify(`Rx for ${m.name} copied / transmitted to pharmacy.`)}
@@ -386,6 +372,7 @@ export default function ClinicalCareView() {
                             Print / Re-issue
                           </button>
                         </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -395,7 +382,7 @@ export default function ClinicalCareView() {
           </div>
 
           <PrescriptionModal
-            isOpen={isRxModalOpen}
+            isOpen={canEdit && isRxModalOpen}
             onClose={() => setIsRxModalOpen(false)}
             patient={currentPatient}
             doctorUser={doctorUser}
@@ -408,9 +395,9 @@ export default function ClinicalCareView() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: LABS & DIAGNOSTICS (Doctors Only) */}
+      {/* TAB 3: LABS & DIAGNOSTICS (view only for non-doctors) */}
       {/* ========================================================================= */}
-      {activeTab === "labs" && !isNurse && (
+      {activeTab === "labs" && (
         <div className="space-y-6">
           {/* Patient Selection Strip */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -435,6 +422,7 @@ export default function ClinicalCareView() {
             </div>
 
             <div className="flex items-center gap-2 self-end md:self-auto">
+              {canEdit && (
               <button
                 type="button"
                 onClick={() => setIsLabModalOpen(true)}
@@ -443,6 +431,7 @@ export default function ClinicalCareView() {
                 <Plus size={16} strokeWidth={2.5} />
                 <span>+ Order Diagnostic Lab</span>
               </button>
+              )}
             </div>
           </div>
 
@@ -552,7 +541,7 @@ export default function ClinicalCareView() {
           </div>
 
           <LabOrderModal
-            isOpen={isLabModalOpen}
+            isOpen={canEdit && isLabModalOpen}
             onClose={() => setIsLabModalOpen(false)}
             patient={currentPatient}
             doctorUser={doctorUser}
@@ -565,11 +554,12 @@ export default function ClinicalCareView() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 4: VITALS & BMI ASSESSMENT (Doctors & Nurses) */}
+      {/* TAB 4: VITALS & BMI ASSESSMENT (view only for non-doctors; nurses record vitals in the Nursing Station) */}
       {/* ========================================================================= */}
       {activeTab === "vitals" && (
         <VitalsBmiView
-          user={isNurse ? nurseUser : doctorUser}
+          readOnly={!canEdit}
+          user={doctorUser}
           patients={patients}
           treatments={treatments}
           onAddTreatment={addTreatment}

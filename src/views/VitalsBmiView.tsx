@@ -21,6 +21,8 @@ interface Props {
   onAddTreatment: (treatment: TreatmentLog) => void;
   initialPatientId?: string;
   onSignOut?: () => void;
+  /** View only: the vitals log without the recording form (Clinical Care for non-doctors). */
+  readOnly?: boolean;
 }
 
 export default function VitalsBmiView({
@@ -29,6 +31,7 @@ export default function VitalsBmiView({
   treatments,
   onAddTreatment,
   initialPatientId,
+  readOnly = false,
 }: Props) {
   const [selectedPatientId, setSelectedPatientId] = useState(
     initialPatientId || patients[0]?.id || "P-2024-001"
@@ -175,16 +178,20 @@ export default function VitalsBmiView({
             ))}
           </select>
         </div>
-        <p className="text-xs text-slate-500">
-          Recording as <span className="font-semibold text-slate-800">{user.name}</span>
-          {user.licenseNumber && <span className="font-mono text-slate-500"> • {user.licenseNumber}</span>}
-        </p>
+        {readOnly ? (
+          <p className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1">View only — only doctors can record vitals here</p>
+        ) : (
+          <p className="text-xs text-slate-500">
+            Recording as <span className="font-semibold text-slate-800">{user.name}</span>
+            {user.licenseNumber && <span className="font-mono text-slate-500"> • {user.licenseNumber}</span>}
+          </p>
+        )}
       </div>
 
       {/* Patient Demographic Summary Strip */}
       <PatientInfoBar
         patient={selectedPatient}
-        extra={[
+        extra={readOnly ? [] : [
           {
             label: "BMI",
             value: (
@@ -208,6 +215,7 @@ export default function VitalsBmiView({
       {/* Two Column Layout: Vitals Form (Left) & Historical Trend Table (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Vitals Entry Form (full width) */}
+        {!readOnly && (
         <div className="lg:col-span-12">
           <form onSubmit={handleSaveVitals} className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-6">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
@@ -469,6 +477,7 @@ export default function VitalsBmiView({
             </div>
           </form>
         </div>
+        )}
 
         {/* Right Column: Historical Vitals Table & Trends (5 Cols) */}
         <div className="lg:col-span-12 space-y-6">

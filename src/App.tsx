@@ -380,7 +380,7 @@ export default function App() {
               <Route
                 path="/clinical"
                 element={
-                  <ProtectedRoute allowedRoles={["doctor", "nurse"]}>
+                  <ProtectedRoute allowedRoles={["doctor", "nurse", "medtech", "radtech", "radiologist", "pharmacy"]}>
                     <ClinicalCareView />
                   </ProtectedRoute>
                 }

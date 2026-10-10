@@ -29,13 +29,20 @@ const MATRIX: ModuleAccess[] = [
     access: { doctor: { level: "full" }, nurse: { level: "full" }, staff: { level: "full" } },
   },
   {
-    module: "Clinical Care (SOAP, e-Prescriptions, Lab Orders)",
-    description: "Consultations, diagnoses, prescriptions, diagnostic requests",
-    access: { doctor: { level: "full" }, nurse: { level: "limited", note: "Vitals & BMI only" } },
+    module: "Clinical Care (SOAP, e-Prescriptions, Lab Orders, Vitals)",
+    description: "Consultations, diagnoses, prescriptions, diagnostic requests, vitals log",
+    access: {
+      doctor: { level: "full" },
+      nurse: { level: "view", note: "All tabs; records vitals in the Nursing Station" },
+      medtech: { level: "view" },
+      radtech: { level: "view" },
+      radiologist: { level: "view" },
+      pharmacy: { level: "view" },
+    },
   },
   {
     module: "Nursing Station",
-    description: "ADPIE care plans, nurses' notes, endorsements, chief complaints",
+    description: "Vitals & BMI, ADPIE care plans, nurses' notes, endorsements, chief complaints",
     access: { nurse: { level: "full" }, doctor: { level: "limited", note: "Writes doctor's orders; reads nursing records" } },
   },
   {

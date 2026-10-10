@@ -141,7 +141,7 @@ export default function OpdTopNav({
     if (user?.role === "doctor") {
       navigate("/clinical?tab=workbench");
     } else if (user?.role === "nurse") {
-      navigate("/clinical?tab=vitals");
+      navigate("/nursing?tab=vitals");
     } else if (user?.role === "staff") {
       navigate("/registration/directory");
     }
@@ -257,7 +257,7 @@ export default function OpdTopNav({
               if (user?.role === "doctor") {
                 navigate("/clinical?tab=workbench");
               } else if (user?.role === "nurse") {
-                navigate("/clinical?tab=vitals");
+                navigate("/nursing?tab=vitals");
               } else {
                 navigate("/registration/directory");
               }

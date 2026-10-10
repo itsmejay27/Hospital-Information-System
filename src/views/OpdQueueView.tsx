@@ -174,7 +174,7 @@ export default function OpdQueueView({
           ) : user?.role === "nurse" ? (
             <>
               <button
-                onClick={() => navigate("/clinical?tab=vitals")}
+                onClick={() => navigate("/nursing?tab=vitals")}
                 className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold border border-emerald-700 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
               >
                 <Activity size={16} strokeWidth={2.5} />
@@ -447,7 +447,7 @@ export default function OpdQueueView({
                           onClick={() => {
                             const p = patients.find(pat => pat.id === item.patientId);
                             if (p) contextSetSelectedPatient(p);
-                            navigate("/clinical?tab=vitals");
+                            navigate("/nursing?tab=vitals");
                           }}
                           className="px-3 py-1.5 rounded-full bg-teal-50 hover:bg-teal-600 hover:text-white text-teal-800 border border-teal-200 text-[11px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
                         >

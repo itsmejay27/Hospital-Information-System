@@ -581,7 +581,7 @@ export default function OpdDashboardView({
           </div>
           <div className="flex flex-wrap items-center gap-2">
                 <button
-                  onClick={() => navigate("/clinical?tab=vitals")}
+                  onClick={() => navigate("/nursing?tab=vitals")}
                   className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
                 >
                   <Activity size={15} />
@@ -607,7 +607,7 @@ export default function OpdDashboardView({
         {/* 4 Nursing Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div
-            onClick={() => navigate("/clinical?tab=vitals")}
+            onClick={() => navigate("/nursing?tab=vitals")}
             className="bg-white p-4 rounded-2xl border border-slate-100 shadow-xs hover:shadow-md cursor-pointer transition-all flex items-center justify-between"
           >
             <div>
@@ -666,7 +666,7 @@ export default function OpdDashboardView({
                   <p className="text-[11px] text-slate-500">Log patient vital signs and advance triage status</p>
                 </div>
                 <button
-                  onClick={() => navigate("/clinical?tab=vitals")}
+                  onClick={() => navigate("/nursing?tab=vitals")}
                   className="text-xs text-teal-700 hover:text-teal-800 font-bold inline-flex items-center gap-1 cursor-pointer"
                 >
                   <span>Full Vitals Station</span>
@@ -984,7 +984,7 @@ export default function OpdDashboardView({
                     type="button"
                     onClick={() => {
                       setIsVitalsModalOpen(false);
-                      navigate("/clinical?tab=vitals");
+                      navigate("/nursing?tab=vitals");
                     }}
                     className="text-teal-700 text-[11px] font-semibold hover:underline cursor-pointer"
                   >
