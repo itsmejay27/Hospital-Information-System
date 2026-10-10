@@ -1,8 +1,8 @@
-import { useNavigate } from "react-router-dom";
 import React, { useState } from "react";
 import { User, Patient, TriageTier } from "../types";
 import { Users, Search, Filter, Phone, MapPin, Check } from "../components/Icons";
 import ConditionBadge from "../components/ConditionBadge";
+import PatientRecordPanel from "../components/PatientRecordPanel";
 
 interface Props {
   user: User;
@@ -11,10 +11,10 @@ interface Props {
 }
 
 export default function RegistrationDirectoryView({ user, patients }: Props) {
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [triageFilter, setTriageFilter] = useState<TriageTier | "all">("all");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [historyOf, setHistoryOf] = useState<Patient | null>(null);
 
   const filteredPatients = patients.filter(p => {
     const matchesSearch =
@@ -123,10 +123,10 @@ export default function RegistrationDirectoryView({ user, patients }: Props) {
                     </td>
                     <td className="py-3 px-3 text-right">
                       <button
-                        onClick={() => navigate(`/history?patient=${encodeURIComponent(p.id)}`)}
+                        onClick={() => setHistoryOf(p)}
                         className="text-[11px] font-bold bg-white hover:bg-sky-50 hover:text-sky-700 text-slate-600 border border-slate-200 px-2.5 py-1 rounded-lg transition-colors cursor-pointer mr-1.5"
                       >
-                        History
+                        View History
                       </button>
                       <button
                         onClick={() => setSelectedPatient(p)}
@@ -142,6 +142,8 @@ export default function RegistrationDirectoryView({ user, patients }: Props) {
           </div>
         )}
       </div>
+
+      {historyOf && <PatientRecordPanel patientId={historyOf.id} patientName={historyOf.name} onClose={() => setHistoryOf(null)} />}
 
       {/* Patient Detail Modal */}
       {selectedPatient && (

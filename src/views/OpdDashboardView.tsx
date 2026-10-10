@@ -152,10 +152,12 @@ export default function OpdDashboardView({
   const patients = propsPatients || contextPatients;
 
   // Dynamically filter patient queue when search query is entered in header
+  // Only patients still waiting or in consultation (finished, referred and discharged ones are off the queue)
   const displayedQueue = React.useMemo(() => {
-    if (!globalSearchQuery.trim()) return queue;
+    const active = queue.filter(item => item.status === "Waiting" || item.status === "In-Consultation");
+    if (!globalSearchQuery.trim()) return active;
     const qLower = globalSearchQuery.toLowerCase().trim();
-    return queue.filter(item => {
+    return active.filter(item => {
       const pat = patients.find(p => p.id === item.patientId);
       const pin = pat?.philhealth?.pin || "";
       return (
@@ -675,6 +677,11 @@ export default function OpdDashboardView({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
+                    {displayedQueue.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-400 italic">No patients waiting right now.</td>
+                      </tr>
+                    )}
                     {displayedQueue.slice(0, 5).map(item => (
                       <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                         <td className="py-3 px-3">
@@ -1559,6 +1566,11 @@ export default function OpdDashboardView({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
+                  {displayedQueue.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-slate-400 italic">No patients waiting right now.</td>
+                    </tr>
+                  )}
                   {displayedQueue.slice(0, 5).map(item => (
                     <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                       <td className="py-3 px-3">

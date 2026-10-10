@@ -317,32 +317,42 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
     };
   }, [authUserId]);
 
+  // A discharged patient is no longer in the live queue, even if an older queue entry was never closed
+  // (entries made before discharge closed them). The stored entries are left as they are.
+  const liveQueue = useMemo(() => {
+    const discharged = new Set(patients.filter(p => p.admissionStatus === "Discharged").map(p => p.id));
+    return queue.map(q =>
+      (q.status === "Waiting" || q.status === "In-Consultation") && discharged.has(q.patientId) ? { ...q, status: "Completed" as QueueStatus } : q
+    );
+  }, [queue, patients]);
+  const isActive = (q: OpdQueueItem) => q.status === "Waiting" || q.status === "In-Consultation";
+
   // Dynamically computed metrics derived directly from queue array
   const waitingCount = useMemo(
-    () => queue.filter(q => q.status === "Waiting").length,
-    [queue]
+    () => liveQueue.filter(q => q.status === "Waiting").length,
+    [liveQueue]
   );
   const criticalCount = useMemo(
-    () => queue.filter(q => q.triageTier === "critical").length,
-    [queue]
+    () => liveQueue.filter(q => isActive(q) && q.triageTier === "critical").length,
+    [liveQueue]
   );
   const observationCount = useMemo(
-    () => queue.filter(q => q.triageTier === "observation").length,
-    [queue]
+    () => liveQueue.filter(q => isActive(q) && q.triageTier === "observation").length,
+    [liveQueue]
   );
   const stableCount = useMemo(
-    () => queue.filter(q => q.triageTier === "stable").length,
-    [queue]
+    () => liveQueue.filter(q => isActive(q) && q.triageTier === "stable").length,
+    [liveQueue]
   );
   const completedCount = useMemo(
-    () => queue.filter(q => q.status === "Completed").length,
-    [queue]
+    () => liveQueue.filter(q => q.status === "Completed").length,
+    [liveQueue]
   );
   const inConsultCount = useMemo(
-    () => queue.filter(q => q.status === "In-Consultation").length,
-    [queue]
+    () => liveQueue.filter(q => q.status === "In-Consultation").length,
+    [liveQueue]
   );
-  const totalQueueCount = queue.length;
+  const totalQueueCount = liveQueue.filter(isActive).length;
 
   // Actions
   const selectPatientById = (patientId: string): Patient | null => {
@@ -373,7 +383,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const callNextPatient = (): OpdQueueItem | null => {
-    const nextWaiting = queue.find(q => q.status === "Waiting");
+    const nextWaiting = liveQueue.find(q => q.status === "Waiting");
     if (nextWaiting) {
       logAction("Called patient for consultation", { patientId: nextWaiting.patientId, patientName: nextWaiting.patientName });
       setQueue(prev => {
@@ -399,8 +409,9 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
     const p = patients.find(x => x.id === patientId);
     logAction("Started consultation", { patientId, patientName: p?.name });
     setQueue(prev => {
+      // Only the patient's open entry; finished visits stay finished
       const updated = prev.map(q =>
-        q.patientId === patientId
+        q.patientId === patientId && q.status === "Waiting"
           ? { ...q, status: "In-Consultation" as QueueStatus, roomOrBooth: "Consultation Room 1" }
           : q
       );
@@ -416,6 +427,8 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
   };
 
   const enqueue = (patient: Patient, doctorName: string, complaint: string) => {
+    // A discharged patient who comes back is an outpatient again
+    if (patient.admissionStatus === "Discharged") patchPatient(patient.id, { admissionStatus: "Outpatient" });
     const newQueueItem: OpdQueueItem = {
       id: `Q-${uid()}`,
       queueNumber: queue.reduce((max, q) => Math.max(max, q.queueNumber || 0), 0) + 1,
@@ -442,7 +455,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
   const checkInPatient = (patientId: string, doctorName: string, complaint: string): string | null => {
     const patient = patients.find(p => p.id === patientId);
     if (!patient) return "Patient not found. Register the patient first.";
-    if (queue.some(q => q.patientId === patientId && (q.status === "Waiting" || q.status === "In-Consultation"))) {
+    if (liveQueue.some(q => q.patientId === patientId && isActive(q))) {
       return `${patient.name} is already in the queue.`;
     }
     const item = enqueue(patient, doctorName, complaint);
@@ -989,7 +1002,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
   return (
     <OpdDataContext.Provider
       value={{
-        queue,
+        queue: liveQueue,
         setQueue,
         patients,
         setPatients,
