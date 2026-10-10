@@ -169,6 +169,15 @@ export default function OpdDashboardView({
     });
   }, [queue, globalSearchQuery, patients]);
 
+  // One row per admitted patient (a duplicate bed record would otherwise show the patient twice)
+  const wardPatients = React.useMemo(() => {
+    const seen = new Set<string>();
+    return admissions
+      .filter(a => a.status === "Admitted" || a.status === "Observation")
+      .sort((x, y) => y.admissionDate.localeCompare(x.admissionDate))
+      .filter(a => !seen.has(a.patientId) && !!seen.add(a.patientId));
+  }, [admissions]);
+
   // Modal toggle states
   const [isNewPatientModalOpen, setIsNewPatientModalOpen] = useState(false);
   const [isEClaimsModalOpen, setIsEClaimsModalOpen] = useState(false);
@@ -1529,7 +1538,7 @@ export default function OpdDashboardView({
           <div>
             <span className="text-xs font-semibold text-slate-500">Completed Encounters</span>
             <div className="text-2xl font-extrabold text-slate-900 mt-1">{completedCount} Finished</div>
-            <span className="text-[10px] text-blue-700 font-semibold mt-0.5 block">Discharged Today</span>
+            <span className="text-[10px] text-blue-700 font-semibold mt-0.5 block">Finished visits</span>
           </div>
           <CircularProgress percentage={Math.min(100, completedCount * 20)} color="#3B82F6" trackColor="#DBEAFE" />
         </div>
@@ -1545,13 +1554,25 @@ export default function OpdDashboardView({
                 <h3 className="text-sm font-bold text-slate-900">Doctor's Active Consultation Queue</h3>
                 <p className="text-[11px] text-slate-500">Live patients ready for physician clinical examination</p>
               </div>
-              <button
-                onClick={() => navigate("/queue")}
-                className="text-xs text-emerald-700 hover:text-emerald-800 font-bold inline-flex items-center gap-1 cursor-pointer"
-              >
-                <span>See All in Queue</span>
-                <ChevronRight size={14} />
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    setActiveModalPatientId(undefined);
+                    setIsDischargeModalOpen(true);
+                  }}
+                  className="px-3 py-1.5 rounded-full bg-rose-50 hover:bg-rose-600 text-rose-800 hover:text-white border border-rose-200 text-[11px] font-bold transition-all inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <CheckCircle size={12} />
+                  <span>Discharge a Patient</span>
+                </button>
+                <button
+                  onClick={() => navigate("/queue")}
+                  className="text-xs text-emerald-700 hover:text-emerald-800 font-bold inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <span>See All in Queue</span>
+                  <ChevronRight size={14} />
+                </button>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -1630,6 +1651,62 @@ export default function OpdDashboardView({
                             <span>Discharge</span>
                           </button>
                         </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Ward patients: the doctor discharges them here, which also frees the bed */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-xs p-5 space-y-4">
+            <div>
+              <h3 className="text-sm font-bold text-slate-900">Admitted Ward Patients</h3>
+              <p className="text-[11px] text-slate-500">Patients in a ward bed. Discharge clears them, frees the bed and records it in Transfer &amp; Discharge History.</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-100 uppercase text-[10px]">
+                  <tr>
+                    <th className="py-2.5 px-3">Patient</th>
+                    <th className="py-2.5 px-3">Ward / Bed</th>
+                    <th className="py-2.5 px-3">Admitted</th>
+                    <th className="py-2.5 px-3">Condition</th>
+                    <th className="py-2.5 px-3 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {wardPatients.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-slate-400 italic">No admitted patients.</td>
+                    </tr>
+                  )}
+                  {wardPatients.map(a => (
+                    <tr key={a.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-3">
+                        <div className="font-bold text-slate-900">{a.patientName}</div>
+                        <div className="text-[10px] font-mono text-slate-400">{a.patientId}</div>
+                      </td>
+                      <td className="py-3 px-3">
+                        <div className="font-semibold text-slate-800">{a.bed}</div>
+                        <div className="text-[10px] text-slate-500">{a.ward}</div>
+                      </td>
+                      <td className="py-3 px-3 whitespace-nowrap text-slate-600">{dt(a.admissionDate)}</td>
+                      <td className="py-3 px-3">
+                        <ConditionBadge patientId={a.patientId} fallback={a.triageTier} />
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <button
+                          onClick={() => {
+                            setActiveModalPatientId(a.patientId);
+                            setIsDischargeModalOpen(true);
+                          }}
+                          className="px-2.5 py-1 rounded-full bg-rose-50 hover:bg-rose-600 text-rose-800 hover:text-white border border-rose-200 text-[11px] font-semibold transition-all inline-flex items-center gap-1 cursor-pointer"
+                        >
+                          <CheckCircle size={12} />
+                          <span>Discharge</span>
+                        </button>
                       </td>
                     </tr>
                   ))}
