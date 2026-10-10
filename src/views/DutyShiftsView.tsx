@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useOpdData } from "../context/OpdDataContext";
 import { useWardData } from "../context/WardDataContext";
@@ -27,10 +27,9 @@ function addDays(iso: string, days: number): string {
   return todayIso(d);
 }
 
-function startOfWeek(iso: string): string {
-  const d = new Date(`${iso}T00:00:00`);
-  const mondayOffset = (d.getDay() + 6) % 7;
-  return addDays(iso, -mondayOffset);
+/** Whole days from `from` to `to` (both YYYY-MM-DD). */
+function daysBetween(from: string, to: string): number {
+  return Math.round((new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / 86400000);
 }
 
 const dayLabel = (iso: string) =>
@@ -72,8 +71,16 @@ export default function DutyShiftsView() {
   const { shiftSchedules, saveShiftSchedule, removeShiftSchedule } = useWardData();
   const isAdmin = user?.role === "admin";
 
+  // Re-render every minute so "today", the roster and "On Duty Now" follow the clock (also past midnight)
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick(n => n + 1), 60_000);
+    return () => clearInterval(t);
+  }, []);
   const today = todayIso();
-  const [weekStart, setWeekStart] = useState(startOfWeek(today));
+  // The roster shows 7 days starting today; the arrows move it a week at a time
+  const [weekOffset, setWeekOffset] = useState(0);
+  const weekStart = addDays(today, weekOffset);
   const [roleFilter, setRoleFilter] = useState<"all" | Role>("all");
   const [draft, setDraft] = useState<ShiftDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -134,7 +141,7 @@ export default function DutyShiftsView() {
     setBusy(true);
     try {
       for (const en of entries) await saveShiftSchedule(en);
-      setWeekStart(startOfWeek(draft.from));
+      setWeekOffset(daysBetween(today, draft.from));
       setDraft(null);
     } catch {
       setError("Could not save the shift. Please try again.");
@@ -271,13 +278,13 @@ export default function DutyShiftsView() {
             </select>
           </div>
           <div className="flex items-center gap-1.5">
-            <button onClick={() => setWeekStart(addDays(weekStart, -7))} className={ui.secondaryBtn} aria-label="Previous week">
+            <button onClick={() => setWeekOffset(weekOffset - 7)} className={ui.secondaryBtn} aria-label="Previous 7 days">
               <ChevronLeft size={14} />
             </button>
-            <button onClick={() => setWeekStart(startOfWeek(today))} className={ui.secondaryBtn}>
-              This week
+            <button onClick={() => setWeekOffset(0)} disabled={weekOffset === 0} className={`${ui.secondaryBtn} disabled:opacity-50 disabled:cursor-default`}>
+              Today
             </button>
-            <button onClick={() => setWeekStart(addDays(weekStart, 7))} className={ui.secondaryBtn} aria-label="Next week">
+            <button onClick={() => setWeekOffset(weekOffset + 7)} className={ui.secondaryBtn} aria-label="Next 7 days">
               <ChevronRight size={14} />
             </button>
             <span className="text-xs font-semibold text-slate-600 ml-1">
@@ -291,8 +298,9 @@ export default function DutyShiftsView() {
               <tr>
                 <th className={`${ui.th} sticky left-0 bg-slate-50`}>Staff</th>
                 {days.map(d => (
-                  <th key={d} className={`${ui.th} text-center ${d === today ? "text-emerald-700" : ""}`}>
+                  <th key={d} className={`${ui.th} text-center ${d === today ? "text-emerald-700 bg-emerald-50" : ""}`}>
                     {dayLabel(d)}
+                    {d === today && <div className="text-[9px] font-extrabold text-emerald-700">TODAY</div>}
                   </th>
                 ))}
               </tr>
