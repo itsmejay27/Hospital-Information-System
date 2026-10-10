@@ -36,6 +36,35 @@ function startOfWeek(iso: string): string {
 const dayLabel = (iso: string) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
 
+/** Work-day picker order (Monday first); values are Date.getDay() numbers. */
+const WEEKDAYS: [number, string][] = [
+  [1, "Mon"],
+  [2, "Tue"],
+  [3, "Wed"],
+  [4, "Thu"],
+  [5, "Fri"],
+  [6, "Sat"],
+  [0, "Sun"],
+];
+const PATTERNS: [string, number[]][] = [
+  ["Mon – Fri", [1, 2, 3, 4, 5]],
+  ["Mon / Wed / Fri", [1, 3, 5]],
+  ["Tue / Thu / Sat", [2, 4, 6]],
+  ["Every day", [0, 1, 2, 3, 4, 5, 6]],
+];
+const MAX_RANGE_DAYS = 92;
+
+/** Every date from `from` to `until` (inclusive) that falls on one of the chosen weekdays. */
+function patternDates(from: string, until: string, weekdays: number[]): string[] {
+  const out: string[] = [];
+  for (let d = from; d <= until && out.length <= MAX_RANGE_DAYS; d = addDays(d, 1)) {
+    if (weekdays.includes(new Date(`${d}T00:00:00`).getDay())) out.push(d);
+  }
+  return out;
+}
+
+type ShiftDraft = { userId: string; from: string; until: string; weekdays: number[]; shift: DutyShift; area: string; notes: string };
+
 export default function DutyShiftsView() {
   const confirm = useConfirm();
   const { user } = useAuth();
@@ -46,7 +75,7 @@ export default function DutyShiftsView() {
   const today = todayIso();
   const [weekStart, setWeekStart] = useState(startOfWeek(today));
   const [roleFilter, setRoleFilter] = useState<"all" | Role>("all");
-  const [draft, setDraft] = useState<{ userId: string; date: string; shift: DutyShift; area: string; notes: string; repeatDays: string } | null>(null);
+  const [draft, setDraft] = useState<ShiftDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -67,14 +96,18 @@ export default function DutyShiftsView() {
     if (!draft) return;
     const person = usersList.find(u => u.id === draft.userId);
     if (!person) return setError("Select a staff member.");
-    if (!draft.date) return setError("Select a date.");
-    const repeat = Math.min(31, Math.max(1, Number(draft.repeatDays) || 1));
-    const entries: ShiftSchedule[] = Array.from({ length: repeat }, (_, i) => ({
+    if (draft.weekdays.length === 0) return setError("Pick the work days (for example Mon, Wed and Fri).");
+    if (!draft.from || !draft.until) return setError("Select the From and Until dates.");
+    if (draft.until < draft.from) return setError("The Until date is before the From date.");
+    if (addDays(draft.from, MAX_RANGE_DAYS) < draft.until) return setError(`Schedule at most ${MAX_RANGE_DAYS} days (about 3 months) at a time.`);
+    const dates = patternDates(draft.from, draft.until, draft.weekdays);
+    if (dates.length === 0) return setError("None of the chosen work days fall between these dates.");
+    const entries: ShiftSchedule[] = dates.map(date => ({
       id: newId("SHF"),
       userId: person.id,
       staffName: person.name,
       role: person.role,
-      date: addDays(draft.date, i),
+      date,
       shift: draft.shift,
       area: draft.area.trim() || person.department,
       assignedBy: user.name,
@@ -97,10 +130,11 @@ export default function DutyShiftsView() {
         break;
       }
     }
-    if (clash) return setError(`${person.name} already has the ${clash.s.shift} shift on ${clash.s.date}, which overlaps.`);
+    if (clash) return setError(`${person.name} already has the ${clash.s.shift} shift on ${dayLabel(clash.s.date)}, which overlaps. Remove it first or change the days.`);
     setBusy(true);
     try {
       for (const en of entries) await saveShiftSchedule(en);
+      setWeekStart(startOfWeek(draft.from));
       setDraft(null);
     } catch {
       setError("Could not save the shift. Please try again.");
@@ -125,7 +159,15 @@ export default function DutyShiftsView() {
             <button
               onClick={() => {
                 setError(null);
-                setDraft({ userId: usersList[0]?.id || "", date: today, shift: shiftsForRole(usersList[0]?.role || "nurse")[0], area: "", notes: "", repeatDays: "1" });
+                setDraft({
+                  userId: usersList[0]?.id || "",
+                  from: today,
+                  until: addDays(today, 27),
+                  weekdays: [],
+                  shift: shiftsForRole(usersList[0]?.role || "nurse")[0],
+                  area: "",
+                  notes: "",
+                });
               }}
               className={ui.primaryBtn}
             >
@@ -345,21 +387,52 @@ export default function DutyShiftsView() {
                   ))}
               </select>
             </div>
+            <div>
+              <span className={ui.label}>Work Days *</span>
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Work days">
+                {WEEKDAYS.map(([n, name]) => {
+                  const on = draft.weekdays.includes(n);
+                  return (
+                    <button
+                      key={n}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => {
+                        setError(null);
+                        setDraft({ ...draft, weekdays: on ? draft.weekdays.filter(x => x !== n) : [...draft.weekdays, n] });
+                      }}
+                      className={`w-12 py-2 rounded-lg text-xs font-bold border cursor-pointer ${
+                        on ? "bg-emerald-600 text-white border-emerald-600" : "bg-white text-slate-600 border-slate-300 hover:bg-slate-50"
+                      }`}
+                    >
+                      {name}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5 text-[11px]">
+                <span className="text-slate-400">Quick pick:</span>
+                {PATTERNS.map(([name, days]) => (
+                  <button
+                    key={name}
+                    type="button"
+                    onClick={() => {
+                      setError(null);
+                      setDraft({ ...draft, weekdays: days });
+                    }} className="font-semibold text-emerald-700 hover:underline cursor-pointer">
+                    {name}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={ui.label}>Start Date *</label>
-                <input type="date" value={draft.date} onChange={e => setDraft({ ...draft, date: e.target.value })} className={ui.input} />
+                <label className={ui.label}>From *</label>
+                <input type="date" value={draft.from} onChange={e => setDraft({ ...draft, from: e.target.value })} className={ui.input} />
               </div>
               <div>
-                <label className={ui.label}>Number of Days</label>
-                <input
-                  type="number"
-                  min={1}
-                  max={31}
-                  value={draft.repeatDays}
-                  onChange={e => setDraft({ ...draft, repeatDays: e.target.value })}
-                  className={ui.input}
-                />
+                <label className={ui.label}>Until *</label>
+                <input type="date" value={draft.until} onChange={e => setDraft({ ...draft, until: e.target.value })} className={ui.input} />
               </div>
               <div>
                 <label className={ui.label}>Shift *</label>
@@ -389,6 +462,22 @@ export default function DutyShiftsView() {
               <label className={ui.label}>Notes</label>
               <input value={draft.notes} onChange={e => setDraft({ ...draft, notes: e.target.value })} className={ui.input} />
             </div>
+            {(() => {
+              if (draft.weekdays.length === 0 || !draft.from || !draft.until || draft.until < draft.from) return null;
+              const dates = patternDates(draft.from, draft.until, draft.weekdays);
+              const names = WEEKDAYS.filter(([n]) => draft.weekdays.includes(n)).map(([, name]) => name);
+              return (
+                <div className="p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900">
+                  <b>{dates.length} shift{dates.length === 1 ? "" : "s"}</b>: every {names.join(", ")} from {dayLabel(draft.from)} until {dayLabel(draft.until)}
+                  {dates.length > 0 && (
+                    <div className="text-[11px] text-emerald-800 mt-0.5">
+                      {dates.slice(0, 6).map(dayLabel).join(" • ")}
+                      {dates.length > 6 ? " • …" : ""}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </form>
         </Modal>
       )}

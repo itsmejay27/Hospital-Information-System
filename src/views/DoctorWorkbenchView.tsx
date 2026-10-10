@@ -44,6 +44,8 @@ interface Props {
   onAddMedication: (med: MedicationOrder) => void;
   initialPatientId?: string;
   onSignOut?: () => void;
+  /** View only: consultations, medicines, labs and claims without any way to add or change them. */
+  readOnly?: boolean;
 }
 
 export default function DoctorWorkbenchView({
@@ -56,6 +58,7 @@ export default function DoctorWorkbenchView({
   medications,
   onAddMedication,
   initialPatientId,
+  readOnly = false,
 }: Props) {
   const { claims = [], addClaim: contextAddClaim } = useOpdData();
   const [selectedPatientId, setSelectedPatientId] = useState(
@@ -171,15 +174,19 @@ export default function DoctorWorkbenchView({
           </div>
           <div className="min-w-0">
             <h1 className="text-lg font-bold text-slate-900 leading-tight">Doctor Workbench & Encounters</h1>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Attending: <span className="font-semibold text-slate-800">{user.name}</span>
-              <span className="font-mono"> • {user.licenseNumber || "PRC Verified"}</span>
-            </p>
+            {readOnly ? (
+              <p className="text-xs font-semibold text-amber-800 mt-0.5">View only — only doctors can write consultations, prescriptions, lab orders and claims.</p>
+            ) : (
+              <p className="text-xs text-slate-500 mt-0.5">
+                Attending: <span className="font-semibold text-slate-800">{user.name}</span>
+                <span className="font-mono"> • {user.licenseNumber || "PRC Verified"}</span>
+              </p>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           <label htmlFor="patient-select" className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
-            Active Consultation
+            {readOnly ? "Patient" : "Active Consultation"}
           </label>
           <select
             id="patient-select"
@@ -212,6 +219,7 @@ export default function DoctorWorkbenchView({
       />
 
       {/* Prominent Clinical Action Bar */}
+      {!readOnly && (
       <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
@@ -256,11 +264,13 @@ export default function DoctorWorkbenchView({
           </button>
         </div>
       </div>
+      )}
 
       {/* Main Clinical Workspace Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* Left Column: SOAP Clinical Encounter Workspace (7 Cols) */}
         <div className="xl:col-span-7 space-y-6">
+          {!readOnly && (
           <form onSubmit={handleSaveSoapRecord} className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
@@ -444,6 +454,7 @@ export default function DoctorWorkbenchView({
               </button>
             </div>
           </form>
+          )}
 
           {/* Consultation History for this Patient */}
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs space-y-3">
@@ -462,7 +473,27 @@ export default function DoctorWorkbenchView({
                       <span className="font-bold text-slate-900">{rec.diagnosis}</span>
                       <span className="text-[10px] font-mono text-slate-500">{rec.date} • {rec.type}</span>
                     </div>
-                    <p className="text-slate-600 line-clamp-2">{rec.assessment}</p>
+                    {readOnly ? (
+                      <div className="grid sm:grid-cols-2 gap-2 pt-1">
+                        {(
+                          [
+                            ["Subjective", rec.subjective],
+                            ["Objective", rec.objective],
+                            ["Assessment", rec.assessment],
+                            ["Plan", rec.plan],
+                          ] as const
+                        ).map(([k, v]) =>
+                          v ? (
+                            <div key={k}>
+                              <div className="text-[10px] font-bold uppercase text-slate-400">{k}</div>
+                              <p className="text-slate-700 whitespace-pre-line">{v}</p>
+                            </div>
+                          ) : null
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-slate-600 line-clamp-2">{rec.assessment}</p>
+                    )}
                     <div className="flex items-center justify-between pt-1 text-[10px] text-slate-400">
                       <span>Attending: {rec.doctor}</span>
                       {rec.icd10Code && <span className="font-mono bg-slate-200 px-1.5 py-0.5 rounded text-slate-700 font-bold">{rec.icd10Code}</span>}
@@ -485,27 +516,31 @@ export default function DoctorWorkbenchView({
                   Active Medications ({patientMeds.length})
                 </h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsRxModalOpen(true)}
-                className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-1 border border-indigo-200 transition-colors cursor-pointer"
-              >
-                <Plus size={13} strokeWidth={2.5} />
-                <span>+ New Rx</span>
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => setIsRxModalOpen(true)}
+                  className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-1 border border-indigo-200 transition-colors cursor-pointer"
+                >
+                  <Plus size={13} strokeWidth={2.5} />
+                  <span>+ New Rx</span>
+                </button>
+              )}
             </div>
 
             {patientMeds.length === 0 ? (
               <div className="py-6 text-center text-slate-400 text-xs space-y-2">
                 <p className="italic">No active medications prescribed for {selectedPatient.name}.</p>
-                <button
-                  type="button"
-                  onClick={() => setIsRxModalOpen(true)}
-                  className="text-indigo-600 hover:text-indigo-700 font-semibold inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus size={14} />
-                  <span>Issue e-Prescription</span>
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setIsRxModalOpen(true)}
+                    className="text-indigo-600 hover:text-indigo-700 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    <span>Issue e-Prescription</span>
+                  </button>
+                )}
               </div>
             ) : (
               <table className="w-full text-left text-xs border-collapse">
@@ -549,27 +584,31 @@ export default function DoctorWorkbenchView({
                   Diagnostic Orders ({patientLabs.length})
                 </h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsLabModalOpen(true)}
-                className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs flex items-center gap-1 border border-amber-200 transition-colors cursor-pointer"
-              >
-                <Plus size={13} strokeWidth={2.5} />
-                <span>+ Order Lab</span>
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => setIsLabModalOpen(true)}
+                  className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 font-bold text-xs flex items-center gap-1 border border-amber-200 transition-colors cursor-pointer"
+                >
+                  <Plus size={13} strokeWidth={2.5} />
+                  <span>+ Order Lab</span>
+                </button>
+              )}
             </div>
 
             {patientLabs.length === 0 ? (
               <div className="py-6 text-center text-slate-400 text-xs space-y-2">
                 <p className="italic">No laboratory or imaging orders recorded for this patient.</p>
-                <button
-                  type="button"
-                  onClick={() => setIsLabModalOpen(true)}
-                  className="text-amber-700 hover:text-amber-800 font-semibold inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus size={14} />
-                  <span>Order Diagnostic Test</span>
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setIsLabModalOpen(true)}
+                    className="text-amber-700 hover:text-amber-800 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    <span>Order Diagnostic Test</span>
+                  </button>
+                )}
               </div>
             ) : (
               <table className="w-full text-left text-xs border-collapse">
@@ -616,27 +655,31 @@ export default function DoctorWorkbenchView({
                   PhilHealth eClaims ({patientClaims.length})
                 </h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsClaimModalOpen(true)}
-                className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center gap-1 border border-emerald-200 transition-colors cursor-pointer"
-              >
-                <Plus size={13} strokeWidth={2.5} />
-                <span>+ File eClaim</span>
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => setIsClaimModalOpen(true)}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-xs flex items-center gap-1 border border-emerald-200 transition-colors cursor-pointer"
+                >
+                  <Plus size={13} strokeWidth={2.5} />
+                  <span>+ File eClaim</span>
+                </button>
+              )}
             </div>
 
             {patientClaims.length === 0 ? (
               <div className="py-6 text-center text-slate-400 text-xs space-y-2">
                 <p className="italic">No eClaims filed yet for this patient encounter.</p>
-                <button
-                  type="button"
-                  onClick={() => setIsClaimModalOpen(true)}
-                  className="text-emerald-700 hover:text-emerald-800 font-semibold inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <Plus size={14} />
-                  <span>Transmit CF2 eClaim</span>
-                </button>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    onClick={() => setIsClaimModalOpen(true)}
+                    className="text-emerald-700 hover:text-emerald-800 font-semibold inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus size={14} />
+                    <span>Transmit CF2 eClaim</span>
+                  </button>
+                )}
               </div>
             ) : (
               <table className="w-full text-left text-xs border-collapse">

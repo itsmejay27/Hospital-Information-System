@@ -12,10 +12,12 @@ import NurseNotesTab from "./nursing/NurseNotesTab";
 import NurseLabsTab from "./nursing/NurseLabsTab";
 import EndorsementTab from "./nursing/EndorsementTab";
 import ChiefComplaintTab from "./nursing/ChiefComplaintTab";
+import VitalsBmiView from "./VitalsBmiView";
 
-export type NursingTab = "careplan" | "orders" | "notes" | "labs" | "endorsement" | "complaint";
+export type NursingTab = "vitals" | "careplan" | "orders" | "notes" | "labs" | "endorsement" | "complaint";
 
 export const NURSING_TABS: { id: NursingTab; label: string }[] = [
+  { id: "vitals", label: "Vitals & BMI" },
   { id: "careplan", label: "Care Plan (ADPIE)" },
   { id: "orders", label: "Doctor's Orders" },
   { id: "notes", label: "Nurses' Notes" },
@@ -26,7 +28,7 @@ export const NURSING_TABS: { id: NursingTab; label: string }[] = [
 
 export default function NursingStationView() {
   const { user } = useAuth();
-  const { patients } = useOpdData();
+  const { patients, treatments, addTreatment, selectedPatient } = useOpdData();
   const { doctorOrders, carePlans } = useWardData();
   const [params, setParams] = useSearchParams();
 
@@ -56,7 +58,7 @@ export default function NursingStationView() {
       <PageHeader
         icon={<ClipboardList size={20} />}
         title="Nursing Station"
-        description="Nursing care plans, doctor's orders, nurses' notes, laboratory results, shift endorsements and chief complaints."
+        description="Vitals, nursing care plans, doctor's orders, nurses' notes, laboratory results, shift endorsements and chief complaints."
         actions={
           <div className="flex items-center gap-2">
             <label className="text-[11px] font-bold uppercase text-slate-500">Patient</label>
@@ -99,6 +101,17 @@ export default function NursingStationView() {
         })}
       </div>
 
+      {/* Nurses record vitals here (Clinical Care is view only for them) */}
+      {tab === "vitals" && (
+        <VitalsBmiView
+          key={patientId}
+          user={user}
+          patients={patients}
+          treatments={treatments}
+          onAddTreatment={addTreatment}
+          initialPatientId={patientId || selectedPatient?.id}
+        />
+      )}
       {tab === "careplan" && <CarePlanTab {...tabProps} />}
       {tab === "orders" && <DoctorOrdersTab {...tabProps} />}
       {tab === "notes" && <NurseNotesTab {...tabProps} />}
