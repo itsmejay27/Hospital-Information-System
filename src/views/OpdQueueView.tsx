@@ -56,7 +56,8 @@ export default function OpdQueueView({
   const patients = propsPatients || contextPatients;
 
   const [searchTerm, setSearchTerm] = useState(globalSearchQuery || "");
-  const [statusFilter, setStatusFilter] = useState<string>("All");
+  // Patients who finished, were referred or discharged leave the live queue (they stay under "Done")
+  const [statusFilter, setStatusFilter] = useState<string>("Active");
   const [triageFilter, setTriageFilter] = useState<string>("All");
 
   React.useEffect(() => {
@@ -78,7 +79,9 @@ export default function OpdQueueView({
       item.chiefComplaint.toLowerCase().includes(activeSearch) ||
       (item.roomOrBooth && item.roomOrBooth.toLowerCase().includes(activeSearch));
 
-    const matchesStatus = statusFilter === "All" || item.status === statusFilter;
+    const active = item.status === "Waiting" || item.status === "In-Consultation";
+    const matchesStatus =
+      statusFilter === "All" || (statusFilter === "Active" ? active : statusFilter === "Done" ? !active : item.status === statusFilter);
     const matchesTriage = triageFilter === "All" || item.triageTier === triageFilter;
 
     return matchesSearch && matchesStatus && matchesTriage;
@@ -302,7 +305,13 @@ export default function OpdQueueView({
             {/* Pill Status Filter */}
             <div className="flex flex-wrap items-center gap-1.5 text-xs">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mr-1">Status:</span>
-              {["All", "Waiting", "In-Consultation", "Completed"].map(s => (
+              {[
+                ["Active", "In Queue"],
+                ["Waiting", "Waiting"],
+                ["In-Consultation", "In-Consultation"],
+                ["Done", "Done / Discharged"],
+                ["All", "All"],
+              ].map(([s, label]) => (
                 <button
                   key={s}
                   onClick={() => setStatusFilter(s)}
@@ -312,7 +321,7 @@ export default function OpdQueueView({
                       : "bg-slate-100 hover:bg-slate-200 text-slate-600"
                   }`}
                 >
-                  {s}
+                  {label}
                 </button>
               ))}
             </div>
@@ -339,7 +348,7 @@ export default function OpdQueueView({
               {filteredQueue.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-slate-400 italic">
-                    No patients currently matching the selected queue filters.
+                    {statusFilter === "Active" ? "No patients in the queue right now." : "No patients currently matching the selected queue filters."}
                   </td>
                 </tr>
               ) : (

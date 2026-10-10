@@ -1,13 +1,14 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useOpdData } from "../context/OpdDataContext";
-import { MovementType, PatientMovement, ROLE_LABELS, TriageTier } from "../types";
-import { useCollection } from "../hooks/useCollection";
+import { MovementType, ROLE_LABELS } from "../types";
+import { useMovementHistory } from "../hooks/useMovementHistory";
 import { dt } from "../services/time";
 import { downloadCsv, esc, printDocument } from "../services/print";
 import PageHeader from "../components/PageHeader";
 import * as ui from "../components/tableStyles";
 import { History, Search } from "../components/Icons";
+import PatientRecordPanel from "../components/PatientRecordPanel";
+import { movementBadge, movementStyle, tierStyle, tierText } from "../components/movementStyles";
 
 type Filter = "all" | "discharged" | "transferred" | "admitted" | "condition" | "opd";
 const FILTERS: [Filter, string, MovementType[]][] = [
@@ -19,25 +20,14 @@ const FILTERS: [Filter, string, MovementType[]][] = [
   ["condition", "Condition Changes", ["Condition Updated"]],
 ];
 
-const typeStyle: Record<MovementType, string> = {
-  "Moved to OPD Ward": "bg-teal-50 text-teal-700 border-teal-200",
-  Admitted: "bg-sky-50 text-sky-700 border-sky-200",
-  "Ward / Bed Transfer": "bg-violet-50 text-violet-700 border-violet-200",
-  "Referred / Transferred Out": "bg-indigo-50 text-indigo-700 border-indigo-200",
-  Discharged: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  "Sent Home (OPD)": "bg-emerald-50 text-emerald-700 border-emerald-200",
-  "Condition Updated": "bg-amber-50 text-amber-800 border-amber-200",
-};
-const tierText = (t?: TriageTier) => (t ? t[0].toUpperCase() + t.slice(1) : "");
 
 /**
  * Transfer & Discharge History: every admission, ward/bed transfer, referral to another facility,
- * discharge and condition change, newest first. Older records (made before this history existed)
- * are rebuilt from the discharge, referral and admission records.
+ * discharge and condition change, newest first. View History opens the patient's complete record.
  */
 export default function PatientHistoryView() {
-  const { discharges, referrals, admissions } = useOpdData();
-  const movements = useCollection<PatientMovement>("patient_movements");
+  const movements = useMovementHistory();
+  const rows = movements.rows;
   const [params, setParams] = useSearchParams();
   const patientFilter = params.get("patient") || "";
   const [filter, setFilter] = useState<Filter>("all");
@@ -45,80 +35,7 @@ export default function PatientHistoryView() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
-  const rows = useMemo(() => {
-    const logged = new Set(movements.items.map(m => `${m.sourceId}|${m.type}`));
-    const legacy: PatientMovement[] = [];
-    const add = (m: PatientMovement) => {
-      if (!logged.has(`${m.sourceId}|${m.type}`)) legacy.push(m);
-    };
-    discharges.forEach(d => {
-      const outside = /Tertiary|Referred/i.test(d.disposition);
-      const admitted = /Inpatient Ward/i.test(d.disposition);
-      add({
-        id: `legacy-${d.id}`,
-        patientId: d.patientId,
-        patientName: d.patientName,
-        type: admitted ? "Admitted" : outside ? "Referred / Transferred Out" : "Discharged",
-        to: admitted ? "Inpatient ward" : outside ? d.disposition : "Home",
-        conditionBefore: d.triageBeforeDischarge,
-        conditionAfter: admitted ? undefined : "stable",
-        details: `${d.disposition}${d.conditionAtDischarge ? ` • Condition: ${d.conditionAtDischarge}` : ""}${d.followUpDate ? ` • Follow-up ${d.followUpDate}` : ""}`,
-        at: d.dischargeDate,
-        by: d.clearedByDoctor,
-        byRole: "doctor",
-        sourceId: d.id,
-      });
-    });
-    referrals.forEach(r =>
-      add({
-        id: `legacy-${r.id}`,
-        patientId: r.patientId,
-        patientName: r.patientName,
-        type: "Referred / Transferred Out",
-        from: r.referredFrom,
-        to: r.referredTo,
-        details: `${r.priority}: ${r.reason} (${r.status})`,
-        at: r.timestamp,
-        by: r.referringDoctor,
-        byRole: "doctor",
-        sourceId: r.id,
-      })
-    );
-    admissions.forEach(a => {
-      // If the patient was transferred since, the first transfer's "from" is the original bed
-      const firstTransfer = movements.items
-        .filter(m => m.sourceId === a.id && m.type === "Ward / Bed Transfer")
-        .sort((x, y) => x.at.localeCompare(y.at))[0];
-      add({
-        id: `legacy-adm-${a.id}`,
-        patientId: a.patientId,
-        patientName: a.patientName,
-        type: "Admitted",
-        from: "OPD",
-        to: firstTransfer?.from || `${a.ward} / ${a.bed}`,
-        details: a.reason,
-        at: a.admissionDate,
-        by: a.admittingStaff,
-        byRole: "staff",
-        sourceId: a.id,
-      });
-      if (a.status === "Discharged")
-        add({
-          id: `legacy-dis-${a.id}`,
-          patientId: a.patientId,
-          patientName: a.patientName,
-          type: "Discharged",
-          from: `${a.ward} / ${a.bed}`,
-          to: "Home",
-          details: "Bed vacated",
-          at: a.dischargeDate || a.admissionDate,
-          by: a.attendingPhysician,
-          byRole: "doctor",
-          sourceId: a.id,
-        });
-    });
-    return [...movements.items, ...legacy].sort((x, y) => y.at.localeCompare(x.at));
-  }, [movements.items, discharges, referrals, admissions]);
+  const [viewing, setViewing] = useState<{ id: string; name: string } | null>(null);
 
   const types = FILTERS.find(f => f[0] === filter)![2];
   const q = search.toLowerCase();
@@ -188,21 +105,51 @@ export default function PatientHistoryView() {
             <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
             <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search patient, ward, hospital..." className={`${ui.input} pl-8`} />
           </div>
-          <label className="text-[11px] text-slate-500 flex items-center gap-1">
-            From <input type="date" value={from} onChange={e => setFrom(e.target.value)} className={`${ui.input} w-auto`} />
-          </label>
-          <label className="text-[11px] text-slate-500 flex items-center gap-1">
-            To <input type="date" value={to} onChange={e => setTo(e.target.value)} className={`${ui.input} w-auto`} />
-          </label>
-          {patientFilter && (
-            <button onClick={() => setParams({})} className={ui.secondaryBtn}>
-              Show all patients
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-[11px] font-semibold text-slate-500 flex items-center gap-1.5">
+              From <input type="date" value={from} onChange={e => setFrom(e.target.value)} className={ui.inlineInput} />
+            </label>
+            <label className="text-[11px] font-semibold text-slate-500 flex items-center gap-1.5">
+              To <input type="date" value={to} onChange={e => setTo(e.target.value)} className={ui.inlineInput} />
+            </label>
+            {(from || to || search) && (
+              <button
+                onClick={() => {
+                  setFrom("");
+                  setTo("");
+                  setSearch("");
+                }}
+                className="text-[11px] font-semibold text-slate-500 hover:text-slate-800 cursor-pointer"
+              >
+                Clear
+              </button>
+            )}
+            {patientFilter && (
+              <>
+                <button onClick={() => setViewing({ id: patientFilter, name: patientName || patientFilter })} className={ui.primaryBtn}>
+                  <History size={14} /> View Full History
+                </button>
+                <button onClick={() => setParams({})} className={ui.secondaryBtn}>
+                  Show all patients
+                </button>
+              </>
+            )}
+          </div>
         </div>
         {movements.error && <div className="px-4 py-2 text-xs font-semibold text-rose-700">{movements.error}</div>}
         <div className={ui.tableScroll}>
-          <table className={ui.table}>
+          {/* Fixed column widths and two-line cells keep every row the same size; the full text is in View History */}
+          <table className={`${ui.table} table-fixed min-w-[1250px]`}>
+            <colgroup>
+              <col className="w-[104px]" />
+              <col className="w-[165px]" />
+              <col className="w-[188px]" />
+              <col className="w-[185px]" />
+              <col className="w-[132px]" />
+              <col />
+              <col className="w-[150px]" />
+              <col className="w-[128px]" />
+            </colgroup>
             <thead className={ui.thead}>
               <tr>
                 <th className={ui.th}>Date &amp; Time</th>
@@ -212,61 +159,87 @@ export default function PatientHistoryView() {
                 <th className={ui.th}>Condition</th>
                 <th className={ui.th}>Details</th>
                 <th className={ui.th}>Recorded By</th>
+                <th className={`${ui.th} text-right`}>History</th>
               </tr>
             </thead>
             <tbody>
               {movements.loading && (
                 <tr>
-                  <td colSpan={7} className={ui.emptyCell}>Loading…</td>
+                  <td colSpan={8} className={ui.emptyCell}>Loading…</td>
                 </tr>
               )}
               {!movements.loading && shown.length === 0 && (
                 <tr>
-                  <td colSpan={7} className={ui.emptyCell}>No records for this filter.</td>
+                  <td colSpan={8} className={ui.emptyCell}>No records for this filter.</td>
                 </tr>
               )}
-              {shown.map(m => (
-                <tr key={m.id} className={ui.tr}>
-                  <td className={`${ui.td} font-mono whitespace-nowrap`}>{dt(m.at)}</td>
-                  <td className={ui.td}>
-                    <button onClick={() => setParams({ patient: m.patientId })} className="font-bold text-slate-900 hover:text-emerald-700 hover:underline text-left cursor-pointer">
-                      {m.patientName}
-                    </button>
-                    <div className="text-[10px] font-mono text-slate-400">{m.patientId}</div>
-                  </td>
-                  <td className={ui.td}>
-                    <span className={`${ui.badge} ${typeStyle[m.type]}`}>{m.type}</span>
-                  </td>
-                  <td className={ui.td}>
-                    {m.from && <div className="text-slate-500">{m.from}</div>}
-                    {m.to && <div className="font-semibold text-slate-900">→ {m.to}</div>}
-                  </td>
-                  <td className={`${ui.td} whitespace-nowrap`}>
-                    {m.conditionBefore && m.conditionAfter && m.conditionBefore === m.conditionAfter ? (
-                      <span className="text-emerald-700 font-bold">{tierText(m.conditionAfter)}</span>
-                    ) : m.conditionBefore || m.conditionAfter ? (
-                      <>
-                        {m.conditionBefore && <span className={m.conditionBefore === "critical" ? "text-rose-700 font-bold" : ""}>{tierText(m.conditionBefore)}</span>}
-                        {m.conditionBefore && m.conditionAfter && " → "}
-                        {m.conditionAfter && <span className="text-emerald-700 font-bold">{tierText(m.conditionAfter)}</span>}
-                      </>
-                    ) : (
-                      <span className="text-slate-300">—</span>
-                    )}
-                  </td>
-                  <td className={ui.td}>
-                    <div className="max-w-[280px] text-slate-600">{m.details || "—"}</div>
-                  </td>
-                  <td className={ui.td}>
-                    {m.by}
-                    <div className="text-[10px] text-slate-400">{ROLE_LABELS[m.byRole] || m.byRole}</div>
-                  </td>
-                </tr>
-              ))}
+              {shown.map(m => {
+                const [date, ...time] = dt(m.at).split(" ");
+                return (
+                  <tr key={m.id} className="h-16 border-b border-slate-100 last:border-0 hover:bg-slate-50/70">
+                    <td className={`${ui.td} align-middle font-mono whitespace-nowrap`}>
+                      <div className="text-slate-800">{date}</div>
+                      <div className="text-[10px] text-slate-500">{time.join(" ")}</div>
+                    </td>
+                    <td className={`${ui.td} align-middle`}>
+                      <button
+                        onClick={() => setParams({ patient: m.patientId })}
+                        title={`Show only ${m.patientName}`}
+                        className="block w-full truncate font-bold text-slate-900 hover:text-emerald-700 hover:underline text-left cursor-pointer"
+                      >
+                        {m.patientName}
+                      </button>
+                      <div className="text-[10px] font-mono text-slate-400 truncate">{m.patientId}</div>
+                    </td>
+                    <td className={`${ui.td} align-middle`}>
+                      <span className={`${movementBadge} ${movementStyle[m.type]}`}>{m.type}</span>
+                    </td>
+                    <td className={`${ui.td} align-middle`} title={[m.from, m.to].filter(Boolean).join(" → ")}>
+                      <div className="truncate text-slate-500">{m.from || "—"}</div>
+                      {m.to && <div className="truncate font-semibold text-slate-900">→ {m.to}</div>}
+                    </td>
+                    <td className={`${ui.td} align-middle`}>
+                      {m.conditionBefore || m.conditionAfter ? (
+                        <div className="flex flex-col items-start gap-1 whitespace-nowrap">
+                          {m.conditionBefore && m.conditionBefore !== m.conditionAfter && (
+                            <span className={`${ui.badge} ${tierStyle[m.conditionBefore]}`}>{tierText(m.conditionBefore)}</span>
+                          )}
+                          {m.conditionAfter && (
+                            <span className="flex items-center gap-1">
+                              {m.conditionBefore && m.conditionBefore !== m.conditionAfter && <span className="text-slate-400">→</span>}
+                              <span className={`${ui.badge} ${tierStyle[m.conditionAfter]}`}>{tierText(m.conditionAfter)}</span>
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className={`${ui.td} align-middle`} title={m.details || ""}>
+                      <p className="line-clamp-2 break-words text-slate-600">{m.details || "—"}</p>
+                    </td>
+                    <td className={`${ui.td} align-middle`}>
+                      <div className="truncate" title={m.by}>
+                        {m.by}
+                      </div>
+                      <div className="text-[10px] text-slate-400 truncate">{ROLE_LABELS[m.byRole] || m.byRole}</div>
+                    </td>
+                    <td className="px-2 py-2.5 align-middle text-right">
+                      <button
+                        onClick={() => setViewing({ id: m.patientId, name: m.patientName })}
+                        className="inline-flex items-center gap-1 whitespace-nowrap px-2.5 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 text-[11px] font-bold cursor-pointer"
+                      >
+                        <History size={12} /> View History
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
+      {viewing && <PatientRecordPanel patientId={viewing.id} patientName={viewing.name} onClose={() => setViewing(null)} />}
     </div>
   );
 }
