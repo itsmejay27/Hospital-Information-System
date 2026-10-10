@@ -27,6 +27,19 @@ function addDays(iso: string, days: number): string {
   return todayIso(d);
 }
 
+/** How far the roster is from today, e.g. "Starting today", "Next week", "2 weeks ago", "3 days ahead". */
+function rangeName(offset: number): string {
+  if (offset === 0) return "Starting today";
+  const n = Math.abs(offset);
+  const ahead = offset > 0;
+  if (n % 7 === 0) {
+    const w = n / 7;
+    if (w === 1) return ahead ? "Next week" : "Last week";
+    return ahead ? `${w} weeks ahead` : `${w} weeks ago`;
+  }
+  return ahead ? `${n} day${n === 1 ? "" : "s"} ahead` : `${n} day${n === 1 ? "" : "s"} ago`;
+}
+
 /** Whole days from `from` to `to` (both YYYY-MM-DD). */
 function daysBetween(from: string, to: string): number {
   return Math.round((new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / 86400000);
@@ -281,15 +294,23 @@ export default function DutyShiftsView() {
             <button onClick={() => setWeekOffset(weekOffset - 7)} className={ui.secondaryBtn} aria-label="Previous 7 days">
               <ChevronLeft size={14} />
             </button>
-            <button onClick={() => setWeekOffset(0)} disabled={weekOffset === 0} className={`${ui.secondaryBtn} disabled:opacity-50 disabled:cursor-default`}>
-              Today
-            </button>
             <button onClick={() => setWeekOffset(weekOffset + 7)} className={ui.secondaryBtn} aria-label="Next 7 days">
               <ChevronRight size={14} />
             </button>
             <span className="text-xs font-semibold text-slate-600 ml-1">
               {dayLabel(days[0])} – {dayLabel(days[6])}
             </span>
+            <span
+              className={`${ui.badge} ${weekOffset === 0 ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-slate-100 text-slate-600 border-slate-200"}`}
+            >
+              {rangeName(weekOffset)}
+            </span>
+            {/* Shown only when looking at another week: jumps back to the 7 days starting today */}
+            {weekOffset !== 0 && (
+              <button onClick={() => setWeekOffset(0)} className={ui.secondaryBtn}>
+                Back to Today
+              </button>
+            )}
           </div>
         </div>
         <div className={ui.tableScroll}>
