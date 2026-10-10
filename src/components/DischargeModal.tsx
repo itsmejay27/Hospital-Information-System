@@ -36,7 +36,13 @@ export default function DischargeModal({
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Form State
-  const initialPatId = defaultPatientId || selectedPatient?.id || patients[0]?.id || "";
+  // Start with the given patient, else the active patient, else the first one not yet discharged
+  const firstChoice = () =>
+    defaultPatientId ||
+    (selectedPatient && selectedPatient.admissionStatus !== "Discharged" ? selectedPatient.id : "") ||
+    patients.find(p => p.admissionStatus !== "Discharged")?.id ||
+    "";
+  const initialPatId = firstChoice();
   const [selectedPatId, setSelectedPatId] = useState<string>(initialPatId);
 
   // Step 1: Clinical Encounter Resolution
@@ -76,7 +82,7 @@ export default function DischargeModal({
   // Every time the dialog opens, start clean for the chosen patient (never reuse a previous patient's data)
   useEffect(() => {
     if (!isOpen) return;
-    setSelectedPatId(defaultPatientId || selectedPatient?.id || patients[0]?.id || "");
+    setSelectedPatId(firstChoice());
     setStep(1);
     setFinalDiagnosis("");
     setIcd10Code("");
@@ -106,6 +112,7 @@ export default function DischargeModal({
   const stepProblem = (s: number): string | null => {
     if (s === 1) {
       if (!currentPatient) return "Select the patient.";
+      if (currentPatient.admissionStatus === "Discharged") return `${currentPatient.name} is already discharged.`;
       if (!finalDiagnosis.trim()) return "Enter the final diagnosis.";
       if (!clinicalResolution.trim()) return "Summarize the patient's response to treatment.";
     }
