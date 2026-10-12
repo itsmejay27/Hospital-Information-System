@@ -108,7 +108,8 @@ export default function IncidentsView({ embedded = false }: { embedded?: boolean
       closedAt: reviewing.status === "Closed" ? reviewing.closedAt || timestamp().slice(0, 16) : undefined,
     };
     setBusy(true);
-    const err = await incidents.save(updated, `Incident ${updated.id} → ${updated.status}`, { patientId: updated.patientId, patientName: updated.patientName });
+    // Update only: the report was filed by someone else, so it must not go through the "file a report" rule
+    const err = await incidents.update(updated, `Incident ${updated.id} → ${updated.status}`, { patientId: updated.patientId, patientName: updated.patientName });
     setBusy(false);
     if (err) return setError(err);
     setReviewing(null);
