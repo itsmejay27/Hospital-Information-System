@@ -44,6 +44,28 @@ export function useCollection<T extends { id: string }>(store: string) {
     [store, logAction]
   );
 
+  /**
+   * Changes a record that already exists (no insert). Use it when the person editing is not the one
+   * allowed to create the record, e.g. Legal Counsel reviewing a nurse's incident report: an upsert
+   * would also be checked against the create rule and be refused.
+   */
+  const update = useCallback(
+    async (item: T, action: string, patient?: { patientId?: string; patientName?: string }): Promise<string | null> => {
+      try {
+        await hospitalDb.update(store, item);
+      } catch (err) {
+        const msg = (err as { message?: string })?.message || "";
+        return msg.includes("row-level security") || msg.includes("permission")
+          ? "Your account is not allowed to make this change."
+          : `Could not save: ${msg || "please try again."}`;
+      }
+      setItems(prev => prev.map(i => (i.id === item.id ? item : i)));
+      logAction(action, patient);
+      return null;
+    },
+    [store, logAction]
+  );
+
   /** Inserts a new record only (never overwrites); for records a role may create but not edit. */
   const add = useCallback(
     async (item: T, action: string, patient?: { patientId?: string; patientName?: string }): Promise<string | null> => {
@@ -60,5 +82,5 @@ export function useCollection<T extends { id: string }>(store: string) {
     [store, logAction]
   );
 
-  return { items, loading, error, reload, save, add };
+  return { items, loading, error, reload, save, add, update };
 }
