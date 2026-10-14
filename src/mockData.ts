@@ -627,19 +627,6 @@ export const INITIAL_OPD_DISCHARGES: OpdDischarge[] = [
   },
 ];
 
-export const ICD10_CATALOG = [
-  { code: "I10", name: "Essential (primary) hypertension", category: "Cardiovascular" },
-  { code: "K35.80", name: "Acute appendicitis, unspecified", category: "Gastrointestinal" },
-  { code: "I50.9", name: "Heart failure, unspecified", category: "Cardiovascular" },
-  { code: "A09", name: "Infectious gastroenteritis and colitis", category: "Infectious" },
-  { code: "E78.0", name: "Pure hypercholesterolemia", category: "Endocrine/Metabolic" },
-  { code: "E11.9", name: "Type 2 diabetes mellitus without complications", category: "Endocrine/Metabolic" },
-  { code: "J06.9", name: "Acute upper respiratory infection, unspecified", category: "Respiratory" },
-  { code: "S29.9", name: "Unspecified injury of thorax", category: "Trauma" },
-  { code: "M54.5", name: "Low back pain", category: "Musculoskeletal" },
-  { code: "R51", name: "Headache, unspecified", category: "Neurology" },
-];
-
 export const INITIAL_HEALTH_RECORDS: HealthRecord[] = [
   {
     id: "EHR-2026-0910",

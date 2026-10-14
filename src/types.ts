@@ -252,6 +252,9 @@ export interface HealthRecord {
   plan: string;
   notes: string;
   internalClinicianNotes?: string;
+  /** Set when a doctor edits the note after it was signed. */
+  amendedAt?: string;
+  amendedBy?: string;
   vitals: {
     bp: string;
     hr: string;

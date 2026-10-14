@@ -67,6 +67,8 @@ interface OpdDataContextType {
   // Clinical Records
   records: HealthRecord[];
   addRecord: (record: HealthRecord) => void;
+  /** Saves changes to a signed consultation note (the record carries who edited it and when). */
+  updateRecord: (record: HealthRecord) => void;
   medications: MedicationOrder[];
   addMedication: (med: MedicationOrder) => void;
   administerMedication: (medId: string, nurseName: string, nurseLicense?: string) => void;
@@ -529,6 +531,12 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
     setRecords(prev => [newRecord, ...prev]);
     hospitalDb.saveRecord(newRecord).catch(reportSaveError);
     logAction(`Signed clinical note (${newRecord.type})`, { patientId: newRecord.patientId, patientName: newRecord.patientName });
+  };
+
+  const updateRecord = (record: HealthRecord) => {
+    setRecords(prev => prev.map(r => (r.id === record.id ? record : r)));
+    hospitalDb.saveRecord(record).catch(reportSaveError);
+    logAction(`Edited clinical note ${record.id} (${record.diagnosis})`, { patientId: record.patientId, patientName: record.patientName });
   };
 
   const addMedication = (newMed: MedicationOrder) => {
@@ -1021,6 +1029,7 @@ export function OpdDataProvider({ children }: { children: React.ReactNode }) {
         vacateBed,
         records,
         addRecord,
+        updateRecord,
         medications,
         addMedication,
         administerMedication,
