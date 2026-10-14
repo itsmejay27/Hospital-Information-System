@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import { User, Role } from "../types";
 import { DEMO_USERS } from "../mockData";
 import { supabase, isSupabaseConfigured } from "../services/supabase";
+import { clearAllSoapDrafts } from "../services/soapDraft";
 
 interface AuthSession {
   token: string;
@@ -311,6 +312,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setToken(null);
     saveSession(null, null);
+    clearAllSoapDrafts();
   };
 
   const refreshProfile = useCallback(async () => {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import PatientInfoBar from "../components/PatientInfoBar";
 import {
   User,
@@ -9,7 +9,9 @@ import {
   PhilHealthClaim,
 } from "../types";
 import { useOpdData } from "../context/OpdDataContext";
-import { ICD10_CATALOG } from "../mockData";
+import { ICD10_COMMON, ICD10_GROUPS, findIcd10 } from "../services/icd10";
+import { clearSoapDraft, loadSoapDraft, saveSoapDraft } from "../services/soapDraft";
+import { dt } from "../services/time";
 import {
   Stethoscope,
   FileText,
@@ -31,7 +33,7 @@ import PrescriptionModal from "../components/PrescriptionModal";
 import LabOrderModal from "../components/LabOrderModal";
 import EClaimModal from "../components/EClaimModal";
 import PatientHistoryTimeline from "../components/PatientHistoryTimeline";
-import { uid, localDate } from "../services/ids";
+import { uid, localDate, timestamp } from "../services/ids";
 
 interface Props {
   user: User;
@@ -48,6 +50,32 @@ interface Props {
   readOnly?: boolean;
 }
 
+interface SoapForm {
+  /** Set while editing a signed note. */
+  editingId?: string;
+  visitType: HealthRecord["type"];
+  diagnosis: string;
+  icd10Code: string;
+  differentialDiagnosis: string;
+  subjective: string;
+  objective: string;
+  assessment: string;
+  plan: string;
+  internalNotes: string;
+}
+
+const BLANK_SOAP: SoapForm = {
+  visitType: "OPD Visit",
+  diagnosis: "",
+  icd10Code: "",
+  differentialDiagnosis: "",
+  subjective: "",
+  objective: "",
+  assessment: "",
+  plan: "",
+  internalNotes: "",
+};
+
 export default function DoctorWorkbenchView({
   user,
   patients,
@@ -60,7 +88,7 @@ export default function DoctorWorkbenchView({
   initialPatientId,
   readOnly = false,
 }: Props) {
-  const { claims = [], addClaim: contextAddClaim } = useOpdData();
+  const { claims = [], addClaim: contextAddClaim, treatments, updateRecord } = useOpdData();
   const [selectedPatientId, setSelectedPatientId] = useState(
     initialPatientId || patients[0]?.id || "P-2024-001"
   );
@@ -85,64 +113,116 @@ export default function DoctorWorkbenchView({
       registeredAt: "2026-03-01",
     };
 
-  // SOAP State
-  const [visitType, setVisitType] = useState<HealthRecord["type"]>("OPD Visit");
-  const [diagnosis, setDiagnosis] = useState("Essential Hypertension Stage 1");
-  const [icd10Code, setIcd10Code] = useState("I10");
-  const [differentialDiagnosis, setDifferentialDiagnosis] = useState("White coat hypertension, Renovascular disease");
-  const [subjective, setSubjective] = useState(
-    "Patient reports recurring dull headaches in occipital region over past 2 weeks, exacerbated during stressful work hours. Denies chest pain, palpitations, or visual changes."
-  );
-  const [objective, setObjective] = useState(
-    "Alert, oriented x 3, in no acute respiratory distress. S1/S2 distinct, regular rhythm, no murmurs. Lungs clear to auscultation bilaterally. Abdomen soft, non-tender, no organomegaly. Extremities warm with no peripheral edema."
-  );
-  const [assessment, setAssessment] = useState(
-    "1. Essential (primary) hypertension, Stage 1 - uncomplicated\n2. Tension-type occipital headaches secondary to elevated BP"
-  );
-  const [plan, setPlan] = useState(
-    "1. Start Amlodipine 5mg OD orally every morning\n2. Low sodium DASH diet (<2g NaCl/day), 30 mins moderate daily aerobic exercise\n3. Home BP monitoring log twice daily (AM/PM)\n4. Follow-up consultation in 2 weeks with repeat BP log"
-  );
-  const [internalNotes, setInternalNotes] = useState(
-    "Patient is motivated and compliant. PhilHealth Konsulta package covers generic anti-hypertensive medications."
-  );
+  // SOAP form: starts empty (examples are shown as placeholders). Unsaved typing is kept per patient
+  // in a draft, so leaving the page or switching patients does not lose it.
+  const [form, setForm] = useState<SoapForm>(BLANK_SOAP);
+  const [draftRestored, setDraftRestored] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    const draft = loadSoapDraft<SoapForm>(user.id, selectedPatientId);
+    setForm(draft ? { ...BLANK_SOAP, ...draft } : BLANK_SOAP);
+    setDraftRestored(!!draft);
+  }, [user.id, selectedPatientId]);
+  const update = (patch: Partial<SoapForm>) =>
+    setForm(prev => {
+      const next = { ...prev, ...patch };
+      saveSoapDraft(user.id, selectedPatientId, next);
+      return next;
+    });
+  const field =
+    (k: keyof SoapForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
+      update({ [k]: e.target.value } as Partial<SoapForm>);
+  const resetForm = () => {
+    clearSoapDraft(user.id, selectedPatientId);
+    setForm(BLANK_SOAP);
+    setDraftRestored(false);
+  };
+  const hasDraft = JSON.stringify(form) !== JSON.stringify(BLANK_SOAP);
+  const editingRecord = form.editingId ? records.find(r => r.id === form.editingId) : undefined;
+  const icdKnown = !form.icd10Code || !!findIcd10(form.icd10Code);
+  const [icdOther, setIcdOther] = useState(false);
+  useEffect(() => setIcdOther(!icdKnown), [icdKnown, selectedPatientId]);
 
   const notify = (msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 5000);
   };
 
-  // Submit SOAP Note
+  /** Latest vitals recorded for the patient (Vitals & BMI), used in the signed note. */
+  const latestVitals = (): HealthRecord["vitals"] => {
+    const v = treatments
+      .filter(t => t.patientId === selectedPatient.id && t.structuredVitals)
+      .sort((x, y) => (y.timestamp || "").localeCompare(x.timestamp || ""))[0]?.structuredVitals;
+    if (!v) return { bp: "", hr: "", temp: "", wt: "" };
+    return {
+      bp: `${v.systolicBp}/${v.diastolicBp} mmHg`,
+      hr: `${v.heartRate} bpm`,
+      temp: `${v.temperature} °C`,
+      wt: v.weightKg ? `${v.weightKg} kg` : "",
+      spo2: `${v.spo2}%`,
+      rr: `${v.respiratoryRate} cpm`,
+      bmi: v.bmi ? String(v.bmi) : undefined,
+      bmiCategory: v.bmiCategory,
+    };
+  };
+
+  // Submit SOAP Note (new note, or changes to a signed one)
   const handleSaveSoapRecord = (e: React.FormEvent) => {
     e.preventDefault();
-    const newRecord: HealthRecord = {
-      id: `REC-2026-${uid()}`,
-      patientId: selectedPatient.id,
-      patientName: selectedPatient.name,
-      date: localDate(),
-      type: visitType,
-      doctor: user.name,
-      doctorLicense: user.licenseNumber || "PRC-MD-AUTH",
-      diagnosis: diagnosis,
-      icd10Code: icd10Code,
-      differentialDiagnosis: differentialDiagnosis.split(",").map(d => d.trim()),
-      subjective: subjective,
-      objective: objective,
-      assessment: assessment,
-      plan: plan,
-      notes: assessment,
-      internalClinicianNotes: internalNotes,
-      vitals: {
-        bp: "128/82 mmHg",
-        hr: "76 bpm",
-        temp: "36.8 °C",
-        wt: "68.5 kg",
-        spo2: "99%",
-        rr: "18 cpm",
-      },
+    const fields = {
+      type: form.visitType,
+      diagnosis: form.diagnosis.trim(),
+      icd10Code: form.icd10Code.trim() || undefined,
+      differentialDiagnosis: form.differentialDiagnosis
+        .split(",")
+        .map(d => d.trim())
+        .filter(Boolean),
+      subjective: form.subjective.trim(),
+      objective: form.objective.trim(),
+      assessment: form.assessment.trim(),
+      plan: form.plan.trim(),
+      notes: form.assessment.trim(),
+      internalClinicianNotes: form.internalNotes.trim() || undefined,
     };
+    if (editingRecord) {
+      updateRecord({
+        ...editingRecord,
+        ...fields,
+        amendedAt: timestamp().slice(0, 16),
+        amendedBy: user.licenseNumber ? `${user.name} (${user.licenseNumber})` : user.name,
+      });
+      notify(`Changes to the consultation of ${editingRecord.date} saved for ${selectedPatient.name}.`);
+    } else {
+      onAddRecord({
+        id: `REC-2026-${uid()}`,
+        patientId: selectedPatient.id,
+        patientName: selectedPatient.name,
+        date: localDate(),
+        doctor: user.name,
+        doctorLicense: user.licenseNumber || "PRC-MD-AUTH",
+        ...fields,
+        vitals: latestVitals(),
+      });
+      notify(`SOAP Clinical Encounter note officially signed and archived for ${selectedPatient.name}.`);
+    }
+    resetForm();
+  };
 
-    onAddRecord(newRecord);
-    notify(`SOAP Clinical Encounter note officially signed and archived for ${selectedPatient.name}.`);
+  const startEdit = (rec: HealthRecord) => {
+    update({
+      editingId: rec.id,
+      visitType: rec.type,
+      diagnosis: rec.diagnosis,
+      icd10Code: rec.icd10Code || "",
+      differentialDiagnosis: (rec.differentialDiagnosis || []).join(", "),
+      subjective: rec.subjective,
+      objective: rec.objective,
+      assessment: rec.assessment,
+      plan: rec.plan,
+      internalNotes: rec.internalClinicianNotes || "",
+    });
+    setDraftRestored(false);
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   // Filtered lists for selected patient
@@ -271,19 +351,19 @@ export default function DoctorWorkbenchView({
         {/* Left Column: SOAP Clinical Encounter Workspace (7 Cols) */}
         <div className="xl:col-span-7 space-y-6">
           {!readOnly && (
-          <form onSubmit={handleSaveSoapRecord} className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-5">
+          <form ref={formRef} onSubmit={handleSaveSoapRecord} className={`bg-white rounded-2xl border p-6 shadow-xs space-y-5 ${editingRecord ? "border-amber-300" : "border-slate-200/80"}`}>
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <FileText size={18} className="text-teal-600" />
                 <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
-                  Clinical Consultation & SOAP Notes
+                  {editingRecord ? "Edit Consultation Note" : "Clinical Consultation & SOAP Notes"}
                 </h3>
               </div>
               <div className="flex items-center gap-2">
                 <label className="text-[10px] font-bold uppercase text-slate-400">Encounter Type:</label>
                 <select
-                  value={visitType}
-                  onChange={e => setVisitType(e.target.value as HealthRecord["type"])}
+                  value={form.visitType}
+                  onChange={field("visitType")}
                   className="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-lg px-2.5 py-1 text-slate-700"
                 >
                   <option value="OPD Visit">OPD Visit</option>
@@ -294,6 +374,25 @@ export default function DoctorWorkbenchView({
               </div>
             </div>
 
+            {editingRecord && (
+              <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900">
+                <span>
+                  Editing the consultation of <b>{editingRecord.date}</b> by {editingRecord.doctor}. Saving keeps a note of who edited it and when.
+                </span>
+                <button type="button" onClick={resetForm} className="font-bold text-amber-800 hover:underline cursor-pointer">
+                  Cancel edit
+                </button>
+              </div>
+            )}
+            {!editingRecord && hasDraft && (
+              <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-sky-50 border border-sky-200 text-xs text-sky-900">
+                <span>{draftRestored ? "Your unsaved notes for this patient were restored." : "Unsaved notes are kept for this patient if you leave this page."}</span>
+                <button type="button" onClick={resetForm} className="font-bold text-sky-800 hover:underline cursor-pointer">
+                  Clear form
+                </button>
+              </div>
+            )}
+
             {/* Diagnosis & ICD-10 */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="sm:col-span-2">
@@ -302,8 +401,8 @@ export default function DoctorWorkbenchView({
                 </label>
                 <input
                   type="text"
-                  value={diagnosis}
-                  onChange={e => setDiagnosis(e.target.value)}
+                  value={form.diagnosis}
+                  onChange={field("diagnosis")}
                   className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:border-teal-500 focus:outline-hidden"
                   placeholder="e.g. Essential Hypertension Stage 1"
                   required
@@ -314,20 +413,44 @@ export default function DoctorWorkbenchView({
                   ICD-10 Code
                 </label>
                 <select
-                  value={icd10Code}
+                  aria-label="ICD-10 code"
+                  value={icdOther ? "__other" : form.icd10Code}
                   onChange={e => {
-                    setIcd10Code(e.target.value);
-                    const matched = ICD10_CATALOG.find(c => c.code === e.target.value);
-                    if (matched) setDiagnosis(matched.name);
+                    const code = e.target.value;
+                    if (code === "__other") {
+                      setIcdOther(true);
+                      return update({ icd10Code: "" });
+                    }
+                    setIcdOther(false);
+                    const entry = findIcd10(code);
+                    // Fill the diagnosis only if it is empty or still the previous code's name
+                    const prev = findIcd10(form.icd10Code);
+                    const fillName = entry && (!form.diagnosis.trim() || form.diagnosis === prev?.name);
+                    update({ icd10Code: code, ...(fillName ? { diagnosis: entry.name } : {}) });
                   }}
-                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-xs font-mono font-semibold text-slate-900 focus:bg-white focus:border-teal-500 focus:outline-hidden"
+                  className="w-full bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 text-xs font-semibold text-slate-900 focus:bg-white focus:border-teal-500 focus:outline-hidden"
                 >
-                  {ICD10_CATALOG.map(c => (
-                    <option key={c.code} value={c.code}>
-                      {c.code} - {c.name.slice(0, 24)}...
-                    </option>
+                  <option value="">— Select a code —</option>
+                  {ICD10_GROUPS.map(group => (
+                    <optgroup key={group} label={group}>
+                      {ICD10_COMMON.filter(c => c.group === group).map(c => (
+                        <option key={c.code} value={c.code}>
+                          {c.code} — {c.name}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
+                  <option value="__other">Other code (type it)…</option>
                 </select>
+                {icdOther && (
+                  <input
+                    aria-label="Other ICD-10 code"
+                    value={form.icd10Code}
+                    onChange={e => update({ icd10Code: e.target.value.toUpperCase() })}
+                    placeholder="e.g. K35.8"
+                    className="mt-1.5 w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs font-mono font-semibold text-slate-900 focus:border-teal-500 focus:outline-hidden"
+                  />
+                )}
               </div>
             </div>
 
@@ -338,8 +461,8 @@ export default function DoctorWorkbenchView({
               </label>
               <input
                 type="text"
-                value={differentialDiagnosis}
-                onChange={e => setDifferentialDiagnosis(e.target.value)}
+                value={form.differentialDiagnosis}
+                onChange={field("differentialDiagnosis")}
                 className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-800 focus:bg-white focus:border-teal-500 focus:outline-hidden"
                 placeholder="Separate with commas..."
               />
@@ -357,10 +480,10 @@ export default function DoctorWorkbenchView({
               </div>
               <textarea
                 rows={3}
-                value={subjective}
-                onChange={e => setSubjective(e.target.value)}
+                value={form.subjective}
+                onChange={field("subjective")}
                 className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs text-slate-800 focus:bg-white focus:border-teal-500 focus:outline-hidden leading-relaxed"
-                placeholder="Patient history of present illness..."
+                placeholder="e.g. Recurring dull occipital headaches for 2 weeks, worse when stressed. Denies chest pain, palpitations or visual changes."
                 required
               />
             </div>
@@ -377,10 +500,10 @@ export default function DoctorWorkbenchView({
               </div>
               <textarea
                 rows={3}
-                value={objective}
-                onChange={e => setObjective(e.target.value)}
+                value={form.objective}
+                onChange={field("objective")}
                 className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs text-slate-800 focus:bg-white focus:border-teal-500 focus:outline-hidden leading-relaxed"
-                placeholder="Physical examination notes..."
+                placeholder="e.g. Alert, oriented x3, no distress. BP 145/92. S1/S2 regular, no murmurs. Lungs clear."
                 required
               />
             </div>
@@ -397,10 +520,10 @@ export default function DoctorWorkbenchView({
               </div>
               <textarea
                 rows={2}
-                value={assessment}
-                onChange={e => setAssessment(e.target.value)}
+                value={form.assessment}
+                onChange={field("assessment")}
                 className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs text-slate-800 focus:bg-white focus:border-teal-500 focus:outline-hidden leading-relaxed"
-                placeholder="Clinical assessment..."
+                placeholder="e.g. Essential (primary) hypertension, Stage 1, uncomplicated."
                 required
               />
             </div>
@@ -417,10 +540,10 @@ export default function DoctorWorkbenchView({
               </div>
               <textarea
                 rows={3}
-                value={plan}
-                onChange={e => setPlan(e.target.value)}
+                value={form.plan}
+                onChange={field("plan")}
                 className="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 text-xs text-slate-800 focus:bg-white focus:border-teal-500 focus:outline-hidden leading-relaxed"
-                placeholder="Actionable care plan..."
+                placeholder="e.g. Amlodipine 5 mg once daily; low-salt diet; home BP log twice daily; follow up in 2 weeks."
                 required
               />
             </div>
@@ -433,8 +556,8 @@ export default function DoctorWorkbenchView({
               </label>
               <input
                 type="text"
-                value={internalNotes}
-                onChange={e => setInternalNotes(e.target.value)}
+                value={form.internalNotes}
+                onChange={field("internalNotes")}
                 className="w-full bg-amber-50/60 border border-amber-200 rounded-lg px-3 py-2 text-xs text-slate-800 focus:bg-white focus:border-amber-500 focus:outline-hidden"
                 placeholder="Private clinical thoughts or insurance compliance details..."
               />
@@ -450,7 +573,7 @@ export default function DoctorWorkbenchView({
                 className="bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
               >
                 <Check size={16} strokeWidth={2.5} />
-                <span>Save & Sign SOAP Encounter</span>
+                <span>{editingRecord ? "Save Changes" : "Save & Sign SOAP Encounter"}</span>
               </button>
             </div>
           </form>
@@ -494,9 +617,29 @@ export default function DoctorWorkbenchView({
                     ) : (
                       <p className="text-slate-600 line-clamp-2">{rec.assessment}</p>
                     )}
-                    <div className="flex items-center justify-between pt-1 text-[10px] text-slate-400">
-                      <span>Attending: {rec.doctor}</span>
-                      {rec.icd10Code && <span className="font-mono bg-slate-200 px-1.5 py-0.5 rounded text-slate-700 font-bold">{rec.icd10Code}</span>}
+                    <div className="flex items-center justify-between gap-2 pt-1 text-[10px] text-slate-400">
+                      <span>
+                        Attending: {rec.doctor}
+                        {rec.amendedAt && (
+                          <span className="text-amber-700">
+                            {" "}
+                            • Edited {dt(rec.amendedAt)} by {rec.amendedBy}
+                          </span>
+                        )}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        {rec.icd10Code && <span className="font-mono bg-slate-200 px-1.5 py-0.5 rounded text-slate-700 font-bold">{rec.icd10Code}</span>}
+                        {!readOnly && (
+                          <button
+                            type="button"
+                            onClick={() => startEdit(rec)}
+                            disabled={form.editingId === rec.id}
+                            className="px-2 py-0.5 rounded-md border border-slate-300 bg-white hover:bg-teal-50 hover:text-teal-800 text-slate-600 font-bold cursor-pointer disabled:opacity-50 disabled:cursor-default"
+                          >
+                            {form.editingId === rec.id ? "Editing…" : "Edit"}
+                          </button>
+                        )}
+                      </span>
                     </div>
                   </div>
                 ))}

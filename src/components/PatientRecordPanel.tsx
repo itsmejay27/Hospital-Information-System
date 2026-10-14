@@ -338,6 +338,7 @@ export default function PatientRecordPanel({ patientId, patientName, onClose }: 
                     </div>
                     <div className="text-[10px] text-slate-400">
                       {r.type} • {r.doctor}
+                      {r.amendedAt && <span className="text-amber-700"> • Edited {dt(r.amendedAt)} by {r.amendedBy}</span>}
                     </div>
                     <div className="grid sm:grid-cols-2 gap-2 pt-1">
                       {(
