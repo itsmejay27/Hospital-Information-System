@@ -538,6 +538,23 @@ export function PublicHomePage() {
 export function PublicAboutPage() {
   const { hospitalConfig } = useOpdData();
   const navigate = useNavigate();
+  const [founderPhoto, setFounderPhoto] = useState<string | undefined>();
+
+  // The founder photo comes from the public directory, the only staff photo
+  // source visitors can read. Falls back to initials when none is published.
+  useEffect(() => {
+    let active = true;
+    hospitalDb
+      .getAll<PublicDirectoryEntry>("public_directory")
+      .then(list => {
+        const founder = list.find(e => /jacobe/i.test(e.name)) || list.find(e => /founder/i.test(e.title || ""));
+        if (active) setFounderPhoto(founder?.photo);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
@@ -556,9 +573,17 @@ export function PublicAboutPage() {
           {/* Founder Section */}
           <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs space-y-4">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-2xl font-bold shrink-0 shadow-xs">
-                MJ
-              </div>
+              {founderPhoto ? (
+                <img
+                  src={founderPhoto}
+                  alt="Dr. Mark Arkiel Jacobe"
+                  className="w-16 h-16 rounded-2xl object-cover border border-slate-200 shrink-0 shadow-xs"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-2xl font-bold shrink-0 shadow-xs">
+                  MJ
+                </div>
+              )}
               <div>
                 <div className="text-[10px] uppercase font-bold text-teal-600 tracking-wider">
                   Founder & Medical Director
